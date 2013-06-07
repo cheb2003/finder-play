@@ -1,0 +1,32 @@
+﻿<?xml version="1.0" encoding="UTF-8" ?>  
+<!DOCTYPE configuration>
+
+<configuration>
+
+	<appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+		<encoding>UTF-8</encoding>
+		<layout class="ch.qos.logback.classic.PatternLayout">
+			<pattern>%date{ISO8601} %-5level %logger{36} %X{sourceThread} %X{akkaSource} - %msg%n</pattern>
+		</layout>
+	</appender>
+	<appender name="rootFile" class="ch.qos.logback.core.FileAppender">
+		<encoding>UTF-8</encoding>
+		<file>index.log</file>
+		<append>false</append>
+		<encoder>
+            <pattern>%date{ISO8601} %-5level %logger{36} %X{sourceThread} %X{akkaSource} - %msg%n</pattern>
+		</encoder>
+	</appender>
+	<!-- <logger name="com.jolbox" additivity="false">
+		<level value="debug" />
+		<appender-ref ref="rootFile" />
+		<appender-ref ref="STDOUT" />
+	</logger> -->
+	<root level="info">
+		<appender-ref ref="STDOUT" />
+		<appender-ref ref="rootFile" />
+	</root>
+
+
+
+</configuration>  
