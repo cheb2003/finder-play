@@ -40,7 +40,7 @@ class IndexUnitActor extends Actor with ActorLogging with MongoUtil {
   //val sort = MongoDBObject("productid_int" -> 1)
 
   private val pIdField = new IntField("pId", 0, Field.Store.YES);
-  private val pNameField = new TextField("pName", "aa", Field.Store.YES)
+  private val pNameField = new TextField("pName", "", Field.Store.YES)
   private val priceField = new DoubleField("unitPrice", 0.0f, Field.Store.YES)
   private val indexCodeField = new StringField("indexCode", "", Field.Store.YES)
   private val isOneSaleField = new IntField("isOneSale", 0, Field.Store.YES)
@@ -51,11 +51,16 @@ class IndexUnitActor extends Actor with ActorLogging with MongoUtil {
   private val pNameBrField = new TextField("pNameBR", "", Field.Store.YES)
   private val createTimeField = new StringField("createTime", "", Field.Store.YES)
   //osell
-  private val productTypeIdField = new IntField("productTypeId", 0, Field.Store.YES)
-  private val isQualityProductField = new IntField("isQualityProduct", 0, Field.Store.YES)
+  private val productTypeIdField = new IntField("pTypeId", 0, Field.Store.YES)
+  private val isQualityProductField = new IntField("isQuality", 0, Field.Store.YES)
   private val ventureStatusField = new IntField("ventureStatus", 0, Field.Store.YES)
 
   private val isTaobaoField = new IntField("isTaobao", 0, Field.Store.YES)
+
+  private val productBrandIdField = new IntField("pBrandId", 0, Field.Store.YES)
+  private val businessBrandField = new IntField("businessBrand", 0, Field.Store.YES)
+
+
 
   private var doc: Document = null
 
@@ -126,6 +131,19 @@ class IndexUnitActor extends Actor with ActorLogging with MongoUtil {
         } catch {
           case e: Exception =>
         }
+        try {
+          productBrandIdField.setIntValue(mvp[Int](x, "productbrandid_int"))
+          doc.add(productBrandIdField)
+        } catch {
+          case e: Exception =>
+        }
+        try {
+          businessBrandField.setStringValue(mvp[String](x, "businessbrand_nvarchar"))
+          doc.add(businessBrandField)
+        } catch {
+          case e: Exception =>
+        }
+
 
         skuField.setStringValue(mv[String](x, "productkeyid_nvarchar"))
         list = x.as[MongoDBList]("ec_productlanguage")

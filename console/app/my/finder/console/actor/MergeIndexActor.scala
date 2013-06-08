@@ -21,8 +21,8 @@ class MergeIndexActor extends Actor with ActorLogging{
       log.info("合并索引，{}",key);
       val prefix = Util.getPrefixPath(workDir,key)
 
-      val analyzer = new StandardAnalyzer(Version.LUCENE_40);
-      val iwc = new IndexWriterConfig(Version.LUCENE_40, analyzer)
+      val analyzer = new StandardAnalyzer(Version.LUCENE_43);
+      val iwc = new IndexWriterConfig(Version.LUCENE_43, analyzer)
       iwc.setRAMBufferSizeMB(128)
       iwc.setOpenMode(IndexWriterConfig.OpenMode.CREATE_OR_APPEND)
 

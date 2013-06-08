@@ -2,7 +2,6 @@ package my.finder.console.service
 import com.mongodb.casbah.Imports._
 import play.api.Play.current
 import scala.collection.mutable.ListBuffer
-import my.finder.common.util.Config
 
 /**
  *
@@ -24,15 +23,12 @@ object MongoManager {
       addresses.toList
     }
     def credentials:List[MongoCredential] = {
-      var i = 0;
+      val i = 1
       val credentials = ListBuffer[MongoCredential]()
-      while (i < mongoCount.get) {
-        i += 1
-        val user: Option[String] = current.configuration.getString("mongoDBUser" + i)
-        val password: Option[String] = current.configuration.getString("mongoDBPassword" + i)
-        val db: Option[String] = current.configuration.getString("mongoAuthDB" + i)
-        credentials += MongoCredential(user.get,db.get,password.get.toCharArray)
-      }
+      val user: Option[String] = current.configuration.getString("mongoDBUser" + i)
+      val password: Option[String] = current.configuration.getString("mongoDBPassword" + i)
+      val db: Option[String] = current.configuration.getString("mongoAuthDB" + i)
+      credentials += MongoCredential(user.get,db.get,password.get.toCharArray)
       credentials.toList
     }
     synchronized{

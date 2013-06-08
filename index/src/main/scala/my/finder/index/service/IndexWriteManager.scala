@@ -31,7 +31,7 @@ object IndexWriteManager{
       if (writer == null) {
         val directory = FSDirectory.open(new File(prefix))
         val analyzer = new MyAnalyzer();
-        val iwc = new IndexWriterConfig(Version.LUCENE_40, analyzer)
+        val iwc = new IndexWriterConfig(Version.LUCENE_43, analyzer)
         iwc.setRAMBufferSizeMB(128)
         iwc.setOpenMode(IndexWriterConfig.OpenMode.CREATE_OR_APPEND)
         writer = new IndexWriter(directory,iwc)
@@ -50,7 +50,7 @@ object IndexWriteManager{
       if (writer == null) {
         val directory = FSDirectory.open(new File(prefix))
         val analyzer = new MyAnalyzer();
-        val iwc = new IndexWriterConfig(Version.LUCENE_40, analyzer)
+        val iwc = new IndexWriterConfig(Version.LUCENE_43, analyzer)
         iwc.setRAMBufferSizeMB(128)
         iwc.setOpenMode(IndexWriterConfig.OpenMode.CREATE_OR_APPEND)
         writer = new IndexWriter(directory,iwc)

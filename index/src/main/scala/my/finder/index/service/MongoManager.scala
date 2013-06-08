@@ -24,15 +24,12 @@ object MongoManager {
       addresses.toList
     }
     def credentials:List[MongoCredential] = {
-      var i = 0;
+      val i = 1;
       val credentials = ListBuffer[MongoCredential]()
-      while (i < mongoCount) {
-        i += 1
-        val user: String = Config.get("mongoDBUser" + i)
-        val password: String = Config.get("mongoDBPassword" + i)
-        val db: String = Config.get("mongoAuthDB" + i)
-        credentials += MongoCredential(user,db,password.toCharArray)
-      }
+      val user: String = Config.get("mongoDBUser" + i)
+      val password: String = Config.get("mongoDBPassword" + i)
+      val db: String = Config.get("mongoAuthDB" + i)
+      credentials += MongoCredential(user,db,password.toCharArray)
       credentials.toList
     }
     synchronized{
