@@ -21,7 +21,7 @@ import scala.Some
 object Application extends Controller {
 
   val dinobuydb = current.configuration.getString("dinobuydb")
-  val fields = MongoDBObject("productkeyid_nvarchar" -> 1 , "ec_product.venturestatus_tinyint" -> 1)
+  val fields = MongoDBObject("productkeyid_nvarchar" -> 1 , "ec_product.venturestatus_tinyint" -> 1,"ec_product.venturelevelnew_tinyint" -> 1)
   def index = Action {
     Ok(views.html.index("Your new application is ready."))
   }
@@ -31,13 +31,17 @@ object Application extends Controller {
     val keyword = request.getQueryString("keyword").getOrElse("")
     val term:Term = new Term("pName", keyword)
     val pq:TermQuery = new TermQuery(term)
-    val skuTerm:Term = new Term("sku", "A")
+    /*val skuTerm:Term = new Term("sku", "A")
     val skupq:PrefixQuery = new PrefixQuery(skuTerm)
+    val nrq = NumericRangeQuery.newIntRange("qdwproductstatus_int",0,1,true,true);*/
+
     val bq = new BooleanQuery()
     bq.add(pq,BooleanClause.Occur.MUST)
-    bq.add(skupq,BooleanClause.Occur.MUST)
+    /*bq.add(nrq, BooleanClause.Occur.MUST);
+
+    bq.add(skupq,BooleanClause.Occur.MUST)*/
     val searcher:IndexSearcher = SearcherManager.searcher
-    val size = 100
+    val size = 1000
     val start = (page - 1) * size + 1;
 
     val sortField:SortField  = SortField.FIELD_SCORE
@@ -64,7 +68,9 @@ object Application extends Controller {
       val items = productColl.find("productid_int" $in ids, fields, 0, size)
 
       for (x <- items) {
-        sb.append(x.as[String]("productkeyid_nvarchar")).append(',').append(x.as[DBObject]("ec_product").as[Int]("venturestatus_tinyint")).append("\r\n")
+        if(x.as[DBObject]("ec_product").as[Int]("venturelevelnew_tinyint") == 0){
+          sb.append(x.as[String]("productkeyid_nvarchar")).append(',').append(x.as[DBObject]("ec_product").as[Int]("venturestatus_tinyint")).append("\r\n")
+        }
       }
     }
     Ok(sb.toString())
@@ -253,5 +259,7 @@ object Application extends Controller {
     }
   }
 
-
+  def test = Action(parse.text) { request =>
+    Ok("Got: " + request.body)
+  }
 }
