@@ -2,7 +2,6 @@ package my.finder.index.actor
 
 import akka.actor.{ActorLogging, Actor}
 import my.finder.common.util.{Util, MongoUtil, Config}
-import my.finder.index.service.MongoManager.mongoClient
 import com.mongodb.casbah.Imports._
 import org.apache.lucene.document._
 
