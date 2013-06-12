@@ -11,6 +11,8 @@ import org.apache.commons.lang.StringUtils
 import java.util.Date
 import org.apache.lucene.index.IndexWriter
 import java.io.File
+import my.finder.index.service.DBService
+import scala.slick.session.Database
 
 /**
  *

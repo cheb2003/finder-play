@@ -1,0 +1,259 @@
+{
+	"auto_complete":
+	{
+		"selected_items":
+		[
+			[
+				"D",
+				"DBService"
+			],
+			[
+				"ip",
+				"import"
+			]
+		]
+	},
+	"buffers":
+	[
+		{
+			"file": "index/src/main/scala/my/finder/index/IndexApp.scala",
+			"settings":
+			{
+				"buffer_size": 559,
+				"line_ending": "Windows"
+			}
+		},
+		{
+			"file": "index/src/main/scala/my/finder/index/actor/IndexUnitActor.scala",
+			"settings":
+			{
+				"buffer_size": 10619,
+				"line_ending": "Windows"
+			}
+		}
+	],
+	"build_system": "",
+	"command_palette":
+	{
+		"height": 311.0,
+		"selected_items":
+		[
+			[
+				"git",
+				"Git: Init"
+			],
+			[
+				"giti",
+				"Git: Init"
+			],
+			[
+				"install",
+				"Package Control: Install Package"
+			]
+		],
+		"width": 400.0
+	},
+	"console":
+	{
+		"height": 132.0
+	},
+	"distraction_free":
+	{
+		"menu_visible": true,
+		"show_minimap": false,
+		"show_open_files": false,
+		"show_tabs": false,
+		"side_bar_visible": false,
+		"status_bar_visible": false
+	},
+	"file_history":
+	[
+		"/E/dev/scalaworkspace/finder-play/index/src/main/scala/my/finder/index/service/DBService.scala",
+		"/E/dev/scalaworkspace/finder-play/index/src/main/resources/index.properties",
+		"/E/dev/scalaworkspace/finder-play/index/src/main/scala/my/finder/index/IndexApp.scala",
+		"/E/dev/scalaworkspace/finder-play/finder-play.sublime-workspace",
+		"/E/dev/scalaworkspace/finder-play/finder-play.sublime-project",
+		"/D/快盘/dev/dinosea/pom.xml",
+		"/E/dev/scalaworkspace/finder-play/project/Build.scala",
+		"/E/dev/scalaworkspace/finder-play/index/build.sbt",
+		"/D/快盘/dev/dinosea/src/main/resources/conf.properties",
+		"/E/dev/scalaworkspace/finder-play/index/src/main/scala/my/finder/index/service/DBService",
+		"/E/dev/scalaworkspace/finder-play1/a.txt",
+		"/C/Documents and Settings/Administrator/Application Data/Sublime Text 2/Packages/Git/Git.sublime-settings",
+		"/C/Documents and Settings/Administrator/Application Data/Sublime Text 2/Packages/User/Git.sublime-settings"
+	],
+	"find":
+	{
+		"height": 36.0
+	},
+	"find_in_files":
+	{
+		"height": 0.0,
+		"where_history":
+		[
+		]
+	},
+	"find_state":
+	{
+		"case_sensitive": false,
+		"find_history":
+		[
+			"package",
+			"net",
+			"sjsjdfkj"
+		],
+		"highlight": true,
+		"in_selection": false,
+		"preserve_case": false,
+		"regex": false,
+		"replace_history":
+		[
+		],
+		"reverse": false,
+		"show_context": true,
+		"use_buffer2": true,
+		"whole_word": false,
+		"wrap": true
+	},
+	"groups":
+	[
+		{
+			"selected": 1,
+			"sheets":
+			[
+				{
+					"buffer": 0,
+					"file": "index/src/main/scala/my/finder/index/IndexApp.scala",
+					"settings":
+					{
+						"buffer_size": 559,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								297,
+								297
+							]
+						],
+						"settings":
+						{
+							"syntax": "Packages/Scala/Scala.tmLanguage"
+						},
+						"translation.x": 0.0,
+						"translation.y": 0.0,
+						"zoom_level": 1.0
+					},
+					"type": "text"
+				},
+				{
+					"buffer": 1,
+					"file": "index/src/main/scala/my/finder/index/actor/IndexUnitActor.scala",
+					"settings":
+					{
+						"buffer_size": 10619,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								752,
+								752
+							]
+						],
+						"settings":
+						{
+							"syntax": "Packages/Scala/Scala.tmLanguage",
+							"tab_size": 2,
+							"translate_tabs_to_spaces": true
+						},
+						"translation.x": 0.0,
+						"translation.y": 0.0,
+						"zoom_level": 1.0
+					},
+					"type": "text"
+				}
+			]
+		}
+	],
+	"incremental_find":
+	{
+		"height": 0.0
+	},
+	"input":
+	{
+		"height": 32.0
+	},
+	"layout":
+	{
+		"cells":
+		[
+			[
+				0,
+				0,
+				1,
+				1
+			]
+		],
+		"cols":
+		[
+			0.0,
+			1.0
+		],
+		"rows":
+		[
+			0.0,
+			1.0
+		]
+	},
+	"menu_visible": true,
+	"replace":
+	{
+		"height": 0.0
+	},
+	"save_all_on_build": true,
+	"select_file":
+	{
+		"height": 0.0,
+		"selected_items":
+		[
+			[
+				"indexunit",
+				"index/src/main/scala/my/finder/index/actor/IndexUnitActor.scala"
+			],
+			[
+				"index.pro",
+				"index/src/main/resources/index.properties"
+			],
+			[
+				"indexapp",
+				"index/src/main/scala/my/finder/index/IndexApp.scala"
+			],
+			[
+				"build",
+				"index/build.sbt"
+			],
+			[
+				"bui",
+				"project/Build.scala"
+			]
+		],
+		"width": 0.0
+	},
+	"select_project":
+	{
+		"height": 0.0,
+		"selected_items":
+		[
+		],
+		"width": 0.0
+	},
+	"show_minimap": true,
+	"show_open_files": true,
+	"show_tabs": true,
+	"side_bar_visible": true,
+	"side_bar_width": 250.0,
+	"status_bar_visible": true
+}

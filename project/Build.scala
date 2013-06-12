@@ -7,6 +7,7 @@ object ApplicationBuild extends Build {
 
   val appDependencies = Seq(
     // Add your project dependencies here,
+    "com.typesafe.slick" %% "slick" % "1.0.1",
     "org.reactivemongo" %% "reactivemongo" % "0.9",
     "org.reactivemongo" %% "play2-reactivemongo" % "0.9",
     "commons-lang" % "commons-lang" % "2.6",
