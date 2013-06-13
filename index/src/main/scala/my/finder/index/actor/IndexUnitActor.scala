@@ -13,11 +13,16 @@ import org.apache.lucene.index.IndexWriter
 import java.io.File
 import my.finder.index.service.DBService
 import scala.slick.session.Database
+import scala.slick.jdbc.{GetResult, StaticQuery => Q}
+import scala.collection.mutable.ListBuffer
 
 /**
  *
  */
+case class SegmentWord(sku:String,word:String)
+
 class IndexUnitActor extends Actor with ActorLogging with MongoUtil {
+  implicit val getSegmentWordResult = GetResult(r => SegmentWord(r.<<, r.<<))
   val workDir = Config.get("workDir")
   val dinobuydb = Config.get("dinobuydb")
 
@@ -198,7 +203,6 @@ class IndexUnitActor extends Actor with ActorLogging with MongoUtil {
       val items: MongoCursor = productColl.find(q, fields)
       log.info("index inc item {}",items.size)
       for (x <- items) {
-
         try{
           if(writeDoc(x, writer)) successCount += 1 else skipCount += 1
         } catch {
@@ -231,6 +235,21 @@ class IndexUnitActor extends Actor with ActorLogging with MongoUtil {
       val time3 = System.currentTimeMillis()
       //val items: MongoCursor = productColl.find("ec_product.createtime_datetime" $lt now, fields).skip(Integer.valueOf((msg.seq * 2).toString())).limit(2000)
       val items: MongoCursor = productColl.find("productid_int" $in msg.ids, fields,0,indexBatchSize)
+
+      val db = Database.forDataSource(DBService.dataSource)
+      val sb = new StringBuffer()
+      sb.append("select ProductKeyID_nvarchar as sku,SegmentWord_nvarchar as word from QDW_TB_ProductTitleSegmentWord where ProductKeyID_nvarchar in (")
+      for (x <- items) {
+        sb.append('\'').append(mv[String](x,"productkeyid_nvarchar")).append("',")
+      }
+      val segmentWords = ListBuffer[SegmentWord]()
+
+
+      val q = Q.queryNA[SegmentWord](sb.substring(0,sb.length() - 1))
+      for(x <- q){
+        segmentWords += x
+      }
+
       val time4 = System.currentTimeMillis()
       log.info("load items {}",time4 - time3)
 
