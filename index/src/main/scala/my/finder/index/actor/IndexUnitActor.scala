@@ -15,14 +15,15 @@ import my.finder.index.service.DBService
 import scala.slick.session.Database
 import scala.slick.jdbc.{GetResult, StaticQuery => Q}
 import scala.collection.mutable.ListBuffer
+import java.sql.{ResultSet, Statement, Connection}
 
 /**
  *
  */
-case class SegmentWord(sku:String,word:String)
+case class SegmentWord(sku:String,word:String,lang:String)
 
 class IndexUnitActor extends Actor with ActorLogging with MongoUtil {
-  implicit val getSegmentWordResult = GetResult(r => SegmentWord(r.<<, r.<<))
+  implicit val getSegmentWordResult = GetResult(r => SegmentWord(r.<<, r.<<,r.<<))
   val workDir = Config.get("workDir")
   val dinobuydb = Config.get("dinobuydb")
 
@@ -54,6 +55,9 @@ class IndexUnitActor extends Actor with ActorLogging with MongoUtil {
   private val skuField = new StringField("sku", "", Field.Store.YES)
   private val businessNameField = new StringField("businessName", "", Field.Store.YES)
   private val pNameRuField = new TextField("pNameRU", "", Field.Store.YES)
+  private val segmentWordRuField = new TextField("segmentWordRu", "", Field.Store.YES)
+  private val segmentWordBrField = new TextField("segmentWordBr", "", Field.Store.YES)
+  private val segmentWordEnField = new TextField("segmentWordEn", "", Field.Store.YES)
   private val pNameBrField = new TextField("pNameBR", "", Field.Store.YES)
   private val createTimeField = new StringField("createTime", "", Field.Store.YES)
   //osell
@@ -74,7 +78,7 @@ class IndexUnitActor extends Actor with ActorLogging with MongoUtil {
     val mongo = MongoManager()
     productColl = mongo(dinobuydb)("ec_productinformation")
   }
-  def writeDoc(x: DBObject, writer: IndexWriter):Boolean = {
+  def writeDoc(x: DBObject,words:List[SegmentWord], writer: IndexWriter):Boolean = {
     var list: MongoDBList = null
     try {
       if (mvp[Int](x, "qdwproductstatus_int") < 2 && mvp[Boolean](x, "isstopsale_bit") == false
@@ -84,6 +88,7 @@ class IndexUnitActor extends Actor with ActorLogging with MongoUtil {
         pIdField.setIntValue(x.as[Int]("productid_int"));
         pNameField.setStringValue(StringUtils.defaultIfBlank(mvp[String](x, "productaliasname_nvarchar"), StringUtils.defaultIfBlank(mvp[String](x, "businessbrand_nvarchar"), "")) + ' ' + mvp[String](x, "productaliasname_nvarchar"))
         indexCodeField.setStringValue(mvp[String](x, "indexcode_nvarchar"))
+
         try {
           createTimeField.setStringValue(DateTools.dateToString(mvp[Date](x, "createtime_datetime"), DateTools.Resolution.MINUTE))
           doc.add(createTimeField)
@@ -150,8 +155,27 @@ class IndexUnitActor extends Actor with ActorLogging with MongoUtil {
           case e: Exception =>
         }
 
+        val sku = mv[String](x, "productkeyid_nvarchar")
+        skuField.setStringValue(sku)
+        if(words.length > 0){
+          for(x <- words) {
+            if (x.sku == sku) {
+              if(x.lang.toLowerCase() =="ru"){
+                segmentWordRuField.setStringValue(x.word.replace("|"," "))
+                doc.add(segmentWordRuField)
+              }
+              if(x.lang.toLowerCase() == "en"){
+                segmentWordEnField.setStringValue(x.word.replace("|"," "))
+                doc.add(segmentWordEnField)
+              }
+              if(x.lang.toLowerCase() == "pt"){
+                segmentWordBrField.setStringValue(x.word.replace("|"," "))
+                doc.add(segmentWordBrField)
+              }
+            }
+          }
+        }
 
-        skuField.setStringValue(mv[String](x, "productkeyid_nvarchar"))
         list = x.as[MongoDBList]("ec_productlanguage")
         for (y <- 0 until list.length) {
           if (list.as[DBObject](y).as[String]("language_nvarchar").toLowerCase() == "ru") {
@@ -167,6 +191,9 @@ class IndexUnitActor extends Actor with ActorLogging with MongoUtil {
         doc.add(pNameField)
         doc.add(indexCodeField)
         doc.add(skuField)
+
+
+
         writer.addDocument(doc)
         true
         //successCount += 1
@@ -204,7 +231,7 @@ class IndexUnitActor extends Actor with ActorLogging with MongoUtil {
       log.info("index inc item {}",items.size)
       for (x <- items) {
         try{
-          if(writeDoc(x, writer)) successCount += 1 else skipCount += 1
+          if(writeDoc(x,null, writer)) successCount += 1 else skipCount += 1
         } catch {
           case e:Exception => failCount += 1
         }
@@ -225,62 +252,100 @@ class IndexUnitActor extends Actor with ActorLogging with MongoUtil {
       consoleRoot ! CompleteIncIndexTask(msg.name, msg.date,successCount,failCount,skipCount)
     }
     case msg: IndexTaskMessage => {
-      //log.info("recevie indextaskmessage {}",msg.date)
-      val time1 = System.currentTimeMillis()
-      val writer = IndexWriteManager.getIndexWriter(msg.name, msg.date)
-      //val now:Date = msg.date
-      var successCount:Int = 0
-      var failCount:Int = 0
-      var skipCount:Int = 0
-      val time3 = System.currentTimeMillis()
-      //val items: MongoCursor = productColl.find("ec_product.createtime_datetime" $lt now, fields).skip(Integer.valueOf((msg.seq * 2).toString())).limit(2000)
-      val items: MongoCursor = productColl.find("productid_int" $in msg.ids, fields,0,indexBatchSize)
+      try{
+        //log.info("recevie indextaskmessage {}",msg.date)
+        val time1 = System.currentTimeMillis()
+        val writer = IndexWriteManager.getIndexWriter(msg.name, msg.date)
+        //val now:Date = msg.date
+        var successCount:Int = 0
+        var failCount:Int = 0
+        var skipCount:Int = 0
+        var time3 = System.currentTimeMillis()
+        //val items: MongoCursor = productColl.find("ec_product.createtime_datetime" $lt now, fields).skip(Integer.valueOf((msg.seq * 2).toString())).limit(2000)
+        val items: MongoCursor = productColl.find("productid_int" $in msg.ids, fields,0,indexBatchSize)
+        val lst = items.toList
 
-      val db = Database.forDataSource(DBService.dataSource)
+
+        var time4 = System.currentTimeMillis()
+        log.info("load items {}",time4 - time3)
+        time3 = System.currentTimeMillis()
+        val words = getSegmentWords(lst)
+        time4 = System.currentTimeMillis()
+        log.info("load words {}",time4 - time3)
+
+        //log.info("find items {}",time4 - time3)
+
+
+        //log.info("spent {} millisecond in finding items {}",time2 - time1,items.size)
+        for (x <- lst) {
+          /*if(!b) b = true else log.info("load item {}",time3 -time4)
+          time3 = System.currentTimeMillis()*/
+          try{
+            if(writeDoc(x,words, writer)) successCount += 1 else skipCount += 1
+            //if(writeDoc(x,List(), writer)) successCount += 1 else skipCount += 1
+          } catch {
+            case e:Exception => failCount + 1
+          }
+          //time4 = System.currentTimeMillis()
+        }
+        /*for (x <- 1 to 100) {
+          writeDoc(null, writer)
+        }*/
+        val indexManager = context.actorFor("akka://console@127.0.0.1:2552/user/root")
+        indexManager ! CompleteSubTask(msg.name, msg.date, msg.seq, successCount, failCount, skipCount)
+        val time2 = System.currentTimeMillis()
+        items.close()
+        val arr = new Array[Int](5)
+        arr(0) = Integer.valueOf((time2 - time1).toString)
+        arr(1) = successCount
+        arr(2) = failCount
+        arr(3) = skipCount
+        arr(4) = items.size
+        log.info("index time {} success {} fail {} skip {} total {}",arr);
+      } catch {
+        case e:Exception => log.error("{}",e)
+      }
+    }
+  }
+  def getSegmentWords(items:List[DBObject]):List[SegmentWord] = {
+    /*val db = Database.forDataSource(DBService.dataSource)
+    val sb = new StringBuffer()
+    sb.append("select ProductKeyID_nvarchar as sku,SegmentWord_nvarchar as word from QDW_TB_ProductTitleSegmentWord where ProductKeyID_nvarchar in (")
+    for (x <- items) {
+      sb.append('\'').append(mv[String](x,"productkeyid_nvarchar")).append("',")
+    }
+    val segmentWords = ListBuffer[SegmentWord]()
+
+
+    val q = Q.queryNA[SegmentWord](sb.substring(0,sb.length() - 1))
+    for(x <- q){
+      segmentWords += x
+    }*/
+    val list = ListBuffer[SegmentWord]()
+    var conn:Connection = null
+    var stmt:Statement = null
+    var rs:ResultSet = null
+    try{
+      conn = DBService.dataSource.getConnection()
+      stmt = conn.createStatement()
       val sb = new StringBuffer()
-      sb.append("select ProductKeyID_nvarchar as sku,SegmentWord_nvarchar as word from QDW_TB_ProductTitleSegmentWord where ProductKeyID_nvarchar in (")
+      sb.append("select ProductKeyID_nvarchar as sku,SegmentWord_nvarchar as word,LanguageCode_nvarchar as lang from QDW_TB_ProductTitleSegmentWord WITH (NOLOCK) where ProductKeyID_nvarchar in (")
       for (x <- items) {
         sb.append('\'').append(mv[String](x,"productkeyid_nvarchar")).append("',")
       }
-      val segmentWords = ListBuffer[SegmentWord]()
-
-
-      val q = Q.queryNA[SegmentWord](sb.substring(0,sb.length() - 1))
-      for(x <- q){
-        segmentWords += x
+      val sql = sb.substring(0,sb.length() - 1) + ")"
+      rs = stmt.executeQuery(sql)
+      while(rs.next()){
+        list += SegmentWord(rs.getString("sku"),rs.getString("word"),rs.getString("lang"))
       }
-
-      val time4 = System.currentTimeMillis()
-      log.info("load items {}",time4 - time3)
-
-      //log.info("find items {}",time4 - time3)
-
-
-      //log.info("spent {} millisecond in finding items {}",time2 - time1,items.size)
-      for (x <- items) {
-        /*if(!b) b = true else log.info("load item {}",time3 -time4)
-        time3 = System.currentTimeMillis()*/
-        try{
-          if(writeDoc(x, writer)) successCount += 1 else skipCount += 1
-        } catch {
-          case e:Exception => failCount += 1
-        }
-        //time4 = System.currentTimeMillis()
+    } catch {
+      case e:Exception => {
+        if(rs != null) rs.close()
+        if(stmt != null) stmt.close()
+        if(conn != null) conn.close()
       }
-      /*for (x <- 1 to 100) {
-        writeDoc(null, writer)
-      }*/
-      val indexManager = context.actorFor("akka://console@127.0.0.1:2552/user/root")
-      indexManager ! CompleteSubTask(msg.name, msg.date, msg.seq, successCount, failCount, skipCount)
-      val time2 = System.currentTimeMillis()
-      items.close()
-      val arr = new Array[Int](5)
-      arr(0) = Integer.valueOf((time2 - time1).toString)
-      arr(1) = successCount
-      arr(2) = failCount
-      arr(3) = skipCount
-      arr(4) = items.size
-      log.info("index time {} success {} fail {} skip {} total {}",arr);
     }
+
+    list.toList
   }
 }

@@ -58,6 +58,7 @@ class PartitionIndexTaskActor extends Actor with ActorLogging {
     }
   }
   private def sendMsg(name: String, runId: Date, seq: Long,ids:ListBuffer[Int], total: Long) {
+    log.info("seq-----------------------" + seq)
     indexRootActor ! IndexTaskMessage(Constants.DD_PRODUCT, runId, seq,ids)
     indexRootManager ! CreateSubTask(name, runId, total)
   }
@@ -70,8 +71,15 @@ class PartitionIndexTaskActor extends Actor with ActorLogging {
     var j = 0
     val minItem = productColl.find().sort(MongoDBObject("productid_int" -> 1)).limit(1)
     val maxItem = productColl.find().sort(MongoDBObject("productid_int" -> -1)).limit(1)
-    val minId = minItem.next().as[Int]("productid_int")
     val maxId = maxItem.next().as[Int]("productid_int")
+
+    val minId = if(current.configuration.getBoolean("debugIndex").get) {
+      maxId - current.configuration.getInt("debugItemCount").get
+    } else {
+      minItem.next().as[Int]("productid_int")
+    }
+
+
     val totalCount: Long = maxId - minId + 1
     val total: Long = totalCount / ddProductIndexSize + 1
     log.info("minId=========={}",minId)
