@@ -2,6 +2,7 @@
 import akka.actor.{ ActorSystem, Props}
 import com.typesafe.config.ConfigFactory
 import my.finder.console.actor.{MessageFacade, ConsoleRootActor}
+import my.finder.console.service.IndexManage
 import play.api._
 import play.api.Play.current
 /**
@@ -12,6 +13,7 @@ object Global extends GlobalSettings {
   private var system:ActorSystem = null
   override def onStart(app: Application) {
     synchronized{
+      IndexManage.init
       if(system == null){
         system = ActorSystem.create("console", ConfigFactory.load().getConfig("console"))
         val root = system.actorOf(Props[ConsoleRootActor], "root")

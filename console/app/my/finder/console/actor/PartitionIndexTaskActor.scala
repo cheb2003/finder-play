@@ -58,7 +58,6 @@ class PartitionIndexTaskActor extends Actor with ActorLogging {
     }
   }
   private def sendMsg(name: String, runId: Date, seq: Long,ids:ListBuffer[Int], total: Long) {
-    log.info("seq-----------------------" + seq)
     indexRootActor ! IndexTaskMessage(Constants.DD_PRODUCT, runId, seq,ids)
     indexRootManager ! CreateSubTask(name, runId, total)
   }

@@ -10,12 +10,14 @@ import my.finder.common.message.{CompleteIncIndexTask, IndexIncremetionalTaskMes
 import org.apache.commons.lang.StringUtils
 import java.util.Date
 import org.apache.lucene.index.IndexWriter
-import java.io.File
+import java.io.{FileWriter, File}
 import my.finder.index.service.DBService
 import scala.slick.session.Database
 import scala.slick.jdbc.{GetResult, StaticQuery => Q}
 import scala.collection.mutable.ListBuffer
 import java.sql.{ResultSet, Statement, Connection}
+import scala.io.Source
+import scalax.io.support.FileUtils
 
 /**
  *
@@ -219,19 +221,27 @@ class IndexUnitActor extends Actor with ActorLogging with MongoUtil {
 
       val incPath = Util.getIncrementalPath(msg.name,msg.date)
       val timeFile = new File(workDir + "/" + incPath + "/time")
+      //val lastId:Int = Integer.valueOf(Source.fromFile(timeFile).getLines().next())
       val from = new Date(timeFile.lastModified())
-      val to = new Date
+      //val to = new Date
       var successCount = 0
       var failCount = 0
       var skipCount = 0
-      val q = "ec_product.createtime_datetime" $gte from $lt to
+      //val q = "ec_product.createtime_datetime" $gte from $lt to
+      val q = "ec_product.createtime_datetime" $gte from
+
+      //val q = "productid_int" $gte from $lt to
       val writer = IndexWriteManager.getIncIndexWriter(msg.name, msg.date)
 
-      val items: MongoCursor = productColl.find(q, fields)
+      val items: MongoCursor = productColl.find(q, fields).limit(50)
       log.info("index inc item {}",items.size)
+      var maxDate:Date = from
       for (x <- items) {
         try{
           if(writeDoc(x,null, writer)) successCount += 1 else skipCount += 1
+          if(mvp[Date](x, "createtime_datetime").after(maxDate)){
+            maxDate = mvp[Date](x, "createtime_datetime")
+          }
         } catch {
           case e:Exception => failCount += 1
         }
@@ -244,7 +254,10 @@ class IndexUnitActor extends Actor with ActorLogging with MongoUtil {
       //TODO 应该时间排序取最后一个记录的时间，作为lastupdatetime
       timeFile.delete()
       timeFile.createNewFile()
-      timeFile.setLastModified(to.getTime)
+      timeFile.setLastModified(maxDate.getTime)
+      /*val wf:FileWriter = new FileWriter(timeFile)
+      wf.write(maxId.toString)
+      wf.close()*/
       val time2 = System.currentTimeMillis();
       log.info("index incremental spent {}",time2 - time1)
       val consoleRoot = context.actorFor("akka://console@127.0.0.1:2552/user/root")

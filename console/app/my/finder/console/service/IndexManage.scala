@@ -31,7 +31,7 @@ object IndexManage {
       Index(name,ListBuffer[String](),"")*/
       ddIndex
     }
-    val dir = current.configuration.getString("dinobuydb").get
+    val dir = current.configuration.getString("workDir").get
 
     //val files: util.Collection[File] = FileUtils.listFilesAndDirs(file,null,new PrefixFileFilter(Constants.DD_PRODUCT))
     var max:String = ""
