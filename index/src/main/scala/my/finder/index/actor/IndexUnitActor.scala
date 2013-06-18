@@ -40,7 +40,7 @@ class IndexUnitActor extends Actor with ActorLogging with MongoUtil {
     , "ec_product.isaliexpress_tinyint" -> 1, "productkeyid_nvarchar" -> 1
     , "ec_productlanguage" -> 1, "ec_product.createtime_datetime" -> 1
     , "ec_product.businessname_nvarchar" -> 1, "ec_product.isstopsale_bit" -> 1
-    , "ec_product.qdwproductstatus_int" -> 1
+    , "ec_product.qdwproductstatus_int" -> 1,"ec_product.excavatekeywords_nvarchar" -> 1
     //osell需要的属性
     , "ec_product.producttypeid_int" -> 1,"ec_product.isqualityproduct_tinyint" -> 1
     , "ec_product.venturestatus_tinyint" -> 1
@@ -60,6 +60,7 @@ class IndexUnitActor extends Actor with ActorLogging with MongoUtil {
   private val segmentWordRuField = new TextField("segmentWordRu", "", Field.Store.YES)
   private val segmentWordBrField = new TextField("segmentWordBr", "", Field.Store.YES)
   private val segmentWordEnField = new TextField("segmentWordEn", "", Field.Store.YES)
+  private val sourceKeywordField = new TextField("sourceKeyword", "", Field.Store.YES)
   private val pNameBrField = new TextField("pNameBR", "", Field.Store.YES)
   private val createTimeField = new StringField("createTime", "", Field.Store.YES)
   //osell
@@ -101,6 +102,17 @@ class IndexUnitActor extends Actor with ActorLogging with MongoUtil {
           businessNameField.setStringValue(mvp[String](x, "businessname_nvarchar"))
           doc.add(businessNameField)
         }
+
+        try {
+          val strs = mvp[String](x, "excavatekeywords_nvarchar").split(",")
+          if(strs.length > 1){
+            sourceKeywordField.setStringValue(strs(strs.length - 1))
+            doc.add(sourceKeywordField)
+          }
+        } catch {
+          case e: Exception =>
+        }
+
         try {
           priceField.setDoubleValue(list.as[DBObject](0).as[Double]("unitprice_money"))
           doc.add(priceField)
@@ -204,7 +216,7 @@ class IndexUnitActor extends Actor with ActorLogging with MongoUtil {
         false
       }
     } catch {
-      case e: Exception => log.error("index item fail,productId {};", x.as[Int]("productid_int")); throw e//failCount += 1
+      case e: Exception => log.error("index item fail,productId {};{}", x.as[Int]("productid_int"));e.printStackTrace(); throw e//failCount += 1
     }
 
     /*doc = new Document
@@ -232,13 +244,17 @@ class IndexUnitActor extends Actor with ActorLogging with MongoUtil {
 
       //val q = "productid_int" $gte from $lt to
       val writer = IndexWriteManager.getIncIndexWriter(msg.name, msg.date)
-
-      val items: MongoCursor = productColl.find(q, fields).limit(50)
+      log.info("reading data")
+      val items: MongoCursor = productColl.find(q, fields).limit(200)
+      val lst = items.toList
+      log.info("readed data")
+      //val words = getSegmentWords(lst)
+      //log.info("readed data1")
       log.info("index inc item {}",items.size)
       var maxDate:Date = from
-      for (x <- items) {
+      for (x <- lst) {
         try{
-          if(writeDoc(x,null, writer)) successCount += 1 else skipCount += 1
+          if(writeDoc(x,List(), writer)) successCount += 1 else skipCount += 1
           if(mvp[Date](x, "createtime_datetime").after(maxDate)){
             maxDate = mvp[Date](x, "createtime_datetime")
           }
@@ -247,6 +263,7 @@ class IndexUnitActor extends Actor with ActorLogging with MongoUtil {
         }
 
       }
+      log.info("readed data2")
       /*for (x <- 1 to 100) {
         writeDoc(null, writer)
       }*/

@@ -19,6 +19,7 @@ import scala.Some
 
 import play.api.data._
 import play.api.data.Forms._
+import org.apache.lucene.queryparser.classic.{QueryParserBase, QueryParser}
 
 object Application extends Controller {
 
@@ -264,21 +265,40 @@ object Application extends Controller {
   def test = Action { implicit request =>
     val form = Form(
       tuple(
-        "id" -> number,
-        "name" -> text
+        "keyword" -> text,
+        "country" -> text,
+        "indexCode" -> text,
+        "range" -> text,
+        "currentPage" -> number,
+        "size" -> number,
+        "sort" -> text
       )
     )
     /*val anyData = Map("id" -> "111", "name" -> "secret")
     val (id, name) = form.bind(anyData).get*/
-    val v = form.bindFromRequest.data
+    val queryParams = form.bindFromRequest.data
     //Ok("Got: " + id + name)
-    val id = v("id")
+    var keyword = getParam[String](queryParams,"keyword","")
+    val country = getParam[String](queryParams,"country","")
+    val indexCode = getParam[String](queryParams,"indexCode","")
+    val range = getParam[String](queryParams,"range","")
+    var currentPage = getParam[Int](queryParams,"currentPage",1)
+    var size = getParam[Int](queryParams,"size",100)
+    val sort = getParam[String](queryParams,"sort","")
+    if(currentPage < 1){
+      currentPage = 1
+    }
+    if(size < 1 || size > 100){
+      size = 20
+    }
 
-    val name = fn[String](v,"name","ff")
-    Ok("Got: " + id + name)
-    //Ok("Got: ")
+    keyword = keyword.trim()
+    keyword = QueryParserBase.escape(keyword);
+
+    //Ok("Got: " + id + name)
+    Ok("Got: ")
   }
-  def fn[T](v:Map[String,Any],key:String,default:T):T = {
+  def getParam[T](v:Map[String,Any],key:String,default:T):T = {
     if(v.contains("name")) v("name").asInstanceOf[T]  else default
   }
 }
