@@ -17,6 +17,8 @@ import play.api.Play._
 import com.mongodb.casbah.Imports._
 import scala.Some
 
+import play.api.data._
+import play.api.data.Forms._
 
 object Application extends Controller {
 
@@ -259,7 +261,24 @@ object Application extends Controller {
     }
   }
 
-  def test = Action(parse.text) { request =>
-    Ok("Got: " + request.body)
+  def test = Action { implicit request =>
+    val form = Form(
+      tuple(
+        "id" -> number,
+        "name" -> text
+      )
+    )
+    /*val anyData = Map("id" -> "111", "name" -> "secret")
+    val (id, name) = form.bind(anyData).get*/
+    val v = form.bindFromRequest.data
+    //Ok("Got: " + id + name)
+    val id = v("id")
+
+    val name = fn[String](v,"name","ff")
+    Ok("Got: " + id + name)
+    //Ok("Got: ")
+  }
+  def fn[T](v:Map[String,Any],key:String,default:T):T = {
+    if(v.contains("name")) v("name").asInstanceOf[T]  else default
   }
 }
