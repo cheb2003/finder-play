@@ -20,6 +20,7 @@ import scala.Some
 import play.api.data._
 import play.api.data.Forms._
 import org.apache.lucene.queryparser.classic.{QueryParserBase, QueryParser}
+import org.apache.lucene.document.FieldType
 
 object Application extends Controller {
 
@@ -109,7 +110,7 @@ object Application extends Controller {
       productAliasName = productAliasName.trim
       val bq:BooleanQuery  = new BooleanQuery()
       if(productAliasName != ""){
-        val keywords = productAliasName.split(" ")
+        val keywords = productAliasName.toLowerCase().split(" ")
         val bqKeyEn:BooleanQuery  = new BooleanQuery()
         //search title
         for (k <- keywords) {
@@ -131,8 +132,10 @@ object Application extends Controller {
         val typeIds = productTypeId.split(",")
         val bqTypeIds = new BooleanQuery()
         for (typeId <- typeIds) {
-          val term:Term = new Term("pTypeId", typeId);
-          val q:TermQuery = new TermQuery(term)
+          //val term:Term = new Term("pTypeId", typeId);
+
+          //val q:TermQuery = new TermQuery(term)
+          val q = NumericRangeQuery.newIntRange("pTypeId",Integer.valueOf(typeId),Integer.valueOf(typeId),true,true)
           bqTypeIds.add(q,BooleanClause.Occur.SHOULD)
         }
         bq.add(bqTypeIds,BooleanClause.Occur.MUST)
@@ -153,27 +156,30 @@ object Application extends Controller {
         val brandIds = productBrandId.split(",")
         val bqBrandId = new BooleanQuery()
         for (brand <- brandIds) {
-          val term:Term = new Term("pBrandId", brand);
-          val q:TermQuery = new TermQuery(term)
+          //val term:Term = new Term("pBrandId", brand);
+          //val q:TermQuery = new TermQuery(term)
+          val q = NumericRangeQuery.newIntRange("pBrandId",Integer.valueOf(brand),Integer.valueOf(brand),true,true)
           bqBrandId.add(q,BooleanClause.Occur.SHOULD)
         }
         bq.add(bqBrandId,BooleanClause.Occur.MUST)
       }
       if (isTaobaoStr != "") {
-        val term:Term = new Term("isTaobao", isTaobaoStr);
-        val q:TermQuery = new TermQuery(term)
+        /*val term:Term = new Term("isTaobao", isTaobaoStr);
+        val q:TermQuery = new TermQuery(term)*/
+        val q = NumericRangeQuery.newIntRange("isTaobao",Integer.valueOf(isTaobaoStr),Integer.valueOf(isTaobaoStr),true,true)
         bq.add(q,BooleanClause.Occur.MUST)
       }
       if (isQualityStr != "") {
-        val term:Term = new Term("isQuality", isQualityStr);
-        val q:TermQuery = new TermQuery(term)
+        /*val term:Term = new Term("isQuality", isQualityStr);
+        val q:TermQuery = new TermQuery(term)*/
+        val q = NumericRangeQuery.newIntRange("isQuality",Integer.valueOf(isQualityStr),Integer.valueOf(isQualityStr),true,true)
         bq.add(q,BooleanClause.Occur.MUST)
       }
 
 
 
       if(businessBrand != ""){
-        val businessBrandTerm:Term = new Term("businessBrand", businessBrand);
+        val businessBrandTerm:Term = new Term("businessBrand", businessBrand.toLowerCase());
         val businessBrandPQ:PrefixQuery = new PrefixQuery(businessBrandTerm);
         bq.add(businessBrandPQ, BooleanClause.Occur.MUST)
       }
