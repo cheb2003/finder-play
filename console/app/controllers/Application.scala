@@ -30,14 +30,18 @@ object Application extends Controller {
     //Ok("hello world")
   }
   def hello(name:String) = Action {implicit request =>
-
     rootActor ! CommandParseMessage(Constants.DD_PRODUCT)
     Ok("hello")
   }
 
   def inc = Action {implicit request =>
-    rootActor ! IndexIncremetionalTaskMessage("",null)
+    rootActor ! IndexIncremetionalTaskMessage(Constants.DD_PRODUCT,null)
     Ok("inc")
+  }
+
+  def incDD = Action {implicit request =>
+    rootActor ! IndexIncremetionalTaskMessage(Constants.OLD_DD_PRODUCT,null)
+    Ok("incDD")
   }
   
 }

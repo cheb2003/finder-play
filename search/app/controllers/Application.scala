@@ -81,16 +81,28 @@ object Application extends Controller {
   }
 
   def search = Action {
-    request =>
-      val indexCode = request.getQueryString("indexcode").getOrElse("")
+    implicit request =>
+      val form = Form(
+        tuple(
+          "indexcode" -> text,
+          "producttypeid" -> text,
+          "productkeyid" -> text,
+          "productbrandid" -> text,
+          "ranges" -> text,
+          "size" -> number,
+          "sort" -> text,
+          "productaliasname" -> text,
+          "businessbrand" -> text,
+          "page" -> number,
+          "isTaobao" -> text,
+          "isQuality" -> text
+        )
+      )
+      /*val indexCode = request.getQueryString("indexcode").getOrElse("")
       val productTypeId = request.getQueryString("producttypeid").getOrElse("")
       val productKeyId = request.getQueryString("productkeyid").getOrElse("")
       val productBrandId = request.getQueryString("productbrandid").getOrElse("")
-      /*val unitPrice = request.getQueryString("unitprice").getOrElse("")
-      val createTime = request.getQueryString("createtime").getOrElse("")
-      val isQualityProduct = request.getQueryString("isqualityproduct").getOrElse("")
-      val ventureStatus = request.getQueryString("venturestatus").getOrElse("")
-      val qdwProductStatus = request.getQueryString("qdwproductstatus").getOrElse("")*/
+      
       val range = request.getQueryString("ranges").getOrElse("")
       val sort = request.getQueryString("sort").getOrElse("")
 
@@ -100,14 +112,30 @@ object Application extends Controller {
       val currentPage:Int = if(request.getQueryString("page") == Some("") || request.getQueryString("page") == None) 1 else Integer.valueOf(request.getQueryString("page").get)
       val isTaobaoStr:String = request.getQueryString("isTaobao").getOrElse("")
       val isQualityStr:String = request.getQueryString("isQuality").getOrElse("")
-      var size:Int = if(request.getQueryString("size") == Some("")) 100 else Integer.valueOf(request.getQueryString("size").getOrElse("100"))
+      var size:Int = if(request.getQueryString("size") == Some("")) 100 else Integer.valueOf(request.getQueryString("size").getOrElse("100"))*/
+
+      val queryParams = form.bindFromRequest.data
+      //Ok("Got: " + id + name)
+      val indexCode = getParam[String](queryParams,"indexcode","")
+      val productTypeId = getParam[String](queryParams,"producttypeid","")
+      val productKeyId = getParam[String](queryParams,"productkeyid","")
+      val range = getParam[String](queryParams,"ranges","")
+      val page = getParamInt(queryParams,"page",1)
+      var size = getParamInt(queryParams,"size",20)
+      val sort = getParam[String](queryParams,"sort","")
+      val productAliasName = getParam[String](queryParams,"productaliasname","").trim
+      val businessBrand = getParam[String](queryParams,"businessbrand","")
+      val isTaobaoStr = getParam[String](queryParams,"istaobao","")
+      val isQualityStr = getParam[String](queryParams,"isquality","")
+      val productBrandId = getParam[String](queryParams,"productbrandid","")
+
+
 
 
       if (size < 1 || size > 1000) {
         size = 100;
       }
 
-      productAliasName = productAliasName.trim
       val bq:BooleanQuery  = new BooleanQuery()
       if(productAliasName != ""){
         val keywords = productAliasName.toLowerCase().split(" ")
@@ -190,7 +218,7 @@ object Application extends Controller {
 
       val searcher:IndexSearcher = SearcherManager.searcher
 
-      val start = (currentPage - 1) * size + 1;
+      val start = (page - 1) * size + 1;
       //分页
       val tsdc:TopFieldCollector = TopFieldCollector.create(sot, start + size, false, false, false, false);
       println(bq)
@@ -305,6 +333,9 @@ object Application extends Controller {
     Ok("Got: ")
   }
   def getParam[T](v:Map[String,Any],key:String,default:T):T = {
-    if(v.contains("name")) v("name").asInstanceOf[T]  else default
+    if(v.contains(key)) v(key).asInstanceOf[T]  else default
+  }
+  def getParamInt(v:Map[String,Any],key:String,default:Int):Int = {
+    if(v.contains(key)) Integer.valueOf(v(key).toString)  else default
   }
 }
