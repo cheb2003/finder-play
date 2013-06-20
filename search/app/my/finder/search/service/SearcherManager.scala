@@ -11,11 +11,16 @@ import org.apache.lucene.search.IndexSearcher
  */
 object SearcherManager {
   val wordDir = current.configuration.getString("indexDir")
-  val searcher = init
-  def init:IndexSearcher = {
+  val oldDir = current.configuration.getString("oldDir")
+  var searcher:IndexSearcher = null
+  var oldIncSearcher:IndexSearcher = null
+  def init = {
     val dir:Directory = FSDirectory.open(new File(wordDir.get));
     val reader = DirectoryReader.open(dir);
-    val searcher:IndexSearcher = new IndexSearcher(reader);
-    searcher
+    searcher  = new IndexSearcher(reader);
+
+    val oldDirectory:Directory = FSDirectory.open(new File(oldDir.get))
+    val oldReader = DirectoryReader.open(oldDirectory)
+    oldIncSearcher = new IndexSearcher(oldReader)
   }
 }
