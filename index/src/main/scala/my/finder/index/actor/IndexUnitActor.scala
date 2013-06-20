@@ -6,18 +6,21 @@ import com.mongodb.casbah.Imports._
 import org.apache.lucene.document._
 
 import my.finder.index.service.{MongoManager, IndexWriteManager}
-import my.finder.common.message.{CompleteIncIndexTask, IndexIncremetionalTaskMessage, CompleteSubTask, IndexTaskMessage}
+import my.finder.common.message._
 import org.apache.commons.lang.StringUtils
 import java.util.Date
 import org.apache.lucene.index.IndexWriter
+import scala.concurrent.duration._
+import scala.concurrent.ExecutionContext.Implicits.global
 import java.io.{FileWriter, File}
 import my.finder.index.service.DBService
 import scala.slick.session.Database
 import scala.slick.jdbc.{GetResult, StaticQuery => Q}
 import scala.collection.mutable.ListBuffer
-import java.sql.{ResultSet, Statement, Connection}
+import java.sql.{PreparedStatement, ResultSet, Statement, Connection}
 import scala.io.Source
 import scalax.io.support.FileUtils
+import java.text.SimpleDateFormat
 
 /**
  *
@@ -27,6 +30,7 @@ case class SegmentWord(sku:String,word:String,lang:String)
 class IndexUnitActor extends Actor with ActorLogging with MongoUtil {
   implicit val getSegmentWordResult = GetResult(r => SegmentWord(r.<<, r.<<,r.<<))
   val workDir = Config.get("workDir")
+  val oldDir = Config.get("oldDir")
   val dinobuydb = Config.get("dinobuydb")
 
   val indexBatchSize = Integer.valueOf(Config.get("indexBatchSize"))
@@ -76,6 +80,14 @@ class IndexUnitActor extends Actor with ActorLogging with MongoUtil {
 
 
   private var doc: Document = null
+
+  private val oldpIdField = new IntField("pId", 0, Field.Store.YES);
+  private val oldpNameField = new TextField("pName", "", Field.Store.YES)
+  private val oldcreateTimeField = new StringField("createTime", "", Field.Store.YES)
+  private val oldsourceKeywordField = new TextField("sourceKeyword", "", Field.Store.YES)
+
+
+
 
   override def preStart() {
     val mongo = MongoManager()
@@ -227,6 +239,86 @@ class IndexUnitActor extends Actor with ActorLogging with MongoUtil {
     writer.addDocument(doc)*/
   }
   def receive = {
+    case msg:OldIndexIncremetionalTaskMessage => {
+      val timeFile = new File(oldDir + "/time")
+      val from = new Date(timeFile.lastModified())
+      var successCount:Int = 0
+
+      var conn:Connection = null
+      var stmt:PreparedStatement = null
+      var rs:ResultSet = null
+      val writer = IndexWriteManager.getOldIncIndexWriter(null,null)
+      var maxDate:Date = from
+      try{
+        val sdf: SimpleDateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss")
+
+        val sql = "select top 100 productid_int as pId,ProductAliasName_nvarchar as alias,ExcavateKeyWords_nvarchar as keyword,CreateTime_datetime as date from ec_product where CreateTime_datetime > '" + sdf.format(from) + "'"
+        log.info("old inc sql:{} ",sql)
+        conn = DBService.dataSource.getConnection()
+        stmt = conn.prepareStatement(sql)
+        rs = stmt.executeQuery()
+
+        while(rs.next()){
+          val doc = new Document
+          try{
+            oldcreateTimeField.setStringValue(DateTools.dateToString(rs.getDate("date"), DateTools.Resolution.MINUTE))
+            doc.add(oldcreateTimeField)
+          } catch {
+            case e:Exception =>
+          }
+
+          try{
+            oldpIdField.setIntValue(rs.getInt("pId"));
+            doc.add(oldpIdField)
+          } catch {
+            case e:Exception =>
+          }
+
+          try{
+            oldpNameField.setStringValue(rs.getString("alias"));
+            doc.add(oldpNameField)
+          } catch {
+            case e:Exception =>
+          }
+
+
+          try{
+            val strs = rs.getString("keyword").split(",")
+            if(strs.length > 1){
+              oldsourceKeywordField.setStringValue(strs(strs.length - 1))
+              doc.add(oldsourceKeywordField)
+            }
+          } catch {
+            case e:Exception =>
+          }
+          if(rs.getDate("date").after(maxDate)){
+            maxDate = rs.getDate("date")
+          }
+          writer.addDocument(doc)
+          successCount += 1
+        }
+      } catch {
+        case e:Exception => {
+          e.printStackTrace()
+          /*if(rs != null) rs.close()
+          if(stmt != null) stmt.close()
+          if(conn != null) conn.close()*/
+        }
+      } finally {
+        if(rs != null) rs.close()
+        if(stmt != null) stmt.close()
+        if(conn != null) conn.close()
+      }
+
+      timeFile.delete()
+      timeFile.createNewFile()
+      timeFile.setLastModified(maxDate.getTime)
+      writer.commit()
+      log.info("index old incremental {}",successCount)
+      context.system.scheduler.scheduleOnce(10 seconds){
+        self ! OldIndexIncremetionalTaskMessage("",null)
+      }
+    }
     case msg:IndexIncremetionalTaskMessage => {
       log.info("receive incrementional index message")
       val time1 = System.currentTimeMillis();
@@ -245,7 +337,7 @@ class IndexUnitActor extends Actor with ActorLogging with MongoUtil {
       //val q = "productid_int" $gte from $lt to
       val writer = IndexWriteManager.getIncIndexWriter(msg.name, msg.date)
       log.info("reading data")
-      val items: MongoCursor = productColl.find(q, fields).limit(200)
+      val items: MongoCursor = productColl.find(q, fields).limit(2000)
       val lst = items.toList
       log.info("readed data")
       //val words = getSegmentWords(lst)
@@ -370,10 +462,12 @@ class IndexUnitActor extends Actor with ActorLogging with MongoUtil {
       }
     } catch {
       case e:Exception => {
-        if(rs != null) rs.close()
-        if(stmt != null) stmt.close()
-        if(conn != null) conn.close()
+
       }
+    } finally {
+      if(rs != null) rs.close()
+      if(stmt != null) stmt.close()
+      if(conn != null) conn.close()
     }
 
     list.toList

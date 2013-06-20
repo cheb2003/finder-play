@@ -23,6 +23,8 @@ class ConsoleRootActor extends Actor with ActorLogging {
   def receive = {
     case msg:IndexIncremetionalTaskMessage => partitionActor ! msg
 
+    case msg:OldIndexIncremetionalTaskMessage => partitionActor ! msg
+
 
     case msg: GetIndexesPathMessage => {
 

@@ -50,6 +50,10 @@ class PartitionIndexTaskActor extends Actor with ActorLogging {
       val i = IndexManage.get(Constants.DD_PRODUCT)
       indexRootActor ! IndexIncremetionalTaskMessage(i.name, i.using)
     }
+
+    case msg: OldIndexIncremetionalTaskMessage => {
+      indexRootActor ! OldIndexIncremetionalTaskMessage("", null)
+    }
     //分发子任务
     case msg: PartitionIndexTaskMessage => {
       if (msg.name == Constants.DD_PRODUCT) {

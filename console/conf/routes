@@ -6,6 +6,7 @@
 GET     /                           controllers.Application.index
 GET     /hello/:name                controllers.Application.hello(name:String)
 GET     /inc                        controllers.Application.inc
+GET     /incDD                      controllers.Application.incDD
 
 # Map static resources from the /public folder to the /assets URL path
 GET     /assets/*file               controllers.Assets.at(path="/public", file)

@@ -5,6 +5,7 @@ import scala.collection.mutable.ListBuffer
 
 case class IndexTaskMessage(name:String,date:Date,seq:Long,ids:ListBuffer[Int]);
 case class IndexIncremetionalTaskMessage(name:String,date:Date);
+case class OldIndexIncremetionalTaskMessage(name:String,date:Date);
 case class PartitionIndexTaskMessage(name:String)
 case class CommandParseMessage(command:String)
 case class CompleteSubTask(name:String,date:Date,seq:Long,successCount:Int,failCount:Int,skipCount:Int)

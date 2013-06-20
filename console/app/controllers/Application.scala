@@ -2,7 +2,7 @@ package controllers
 
 import play.api.mvc._
 import play.api.libs.json.{Json, JsValue}
-import my.finder.common.message.{IndexIncremetionalTaskMessage, CommandParseMessage}
+import my.finder.common.message.{OldIndexIncremetionalTaskMessage, IndexIncremetionalTaskMessage, CommandParseMessage}
 import my.finder.common.util.{Constants}
 import my.finder.console.actor.MessageFacade.rootActor
 
@@ -40,7 +40,7 @@ object Application extends Controller {
   }
 
   def incDD = Action {implicit request =>
-    rootActor ! IndexIncremetionalTaskMessage(Constants.OLD_DD_PRODUCT,null)
+    rootActor ! OldIndexIncremetionalTaskMessage(Constants.OLD_DD_PRODUCT,null)
     Ok("incDD")
   }
   

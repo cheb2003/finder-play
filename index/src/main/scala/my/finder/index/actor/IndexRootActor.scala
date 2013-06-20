@@ -1,7 +1,7 @@
 package my.finder.index.actor
 
 import akka.actor.{Props, Actor}
-import my.finder.common.message.{IndexIncremetionalTaskMessage, CloseIndexWriterMessage, CompleteSubTask, IndexTaskMessage}
+import my.finder.common.message._
 import akka.routing.RoundRobinRouter
 import my.finder.index.service.IndexWriteManager
 
@@ -16,6 +16,9 @@ class IndexRootActor extends Actor{
       units ! msg
     }
     case msg:IndexIncremetionalTaskMessage => {
+      units ! msg
+    }
+    case msg:OldIndexIncremetionalTaskMessage => {
       units ! msg
     }
     case msg:CloseIndexWriterMessage => {

@@ -20,6 +20,8 @@ object IndexWriteManager{
 
   private var writerMap = Map[String, IndexWriter]()
   val workDir = Config.get("workDir")
+  val oldDir = Config.get("oldDir")
+  private var oldIncWriter:IndexWriter = null
 
   def getIndexWriter(name: String, date: Date): IndexWriter = {
     synchronized {
@@ -57,6 +59,20 @@ object IndexWriteManager{
         writerMap += (key -> writer)
       }
       writer
+    }
+  }
+  def getOldIncIndexWriter(name: String, date: Date): IndexWriter = {
+    synchronized {
+      if (oldIncWriter == null) {
+        val directory = FSDirectory.open(new File(oldDir))
+        val analyzer = new MyAnalyzer();
+        val iwc = new IndexWriterConfig(Version.LUCENE_43, analyzer)
+        iwc.setRAMBufferSizeMB(128)
+        iwc.setOpenMode(IndexWriterConfig.OpenMode.CREATE_OR_APPEND)
+        oldIncWriter = new IndexWriter(directory,iwc)
+
+      }
+      oldIncWriter
     }
   }
 
