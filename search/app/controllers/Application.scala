@@ -94,8 +94,8 @@ object Application extends Controller {
           "productaliasname" -> text,
           "businessbrand" -> text,
           "page" -> number,
-          "isTaobao" -> text,
-          "isQuality" -> text
+          "istaobao" -> text,
+          "isquality" -> text
         )
       )
       /*val indexCode = request.getQueryString("indexcode").getOrElse("")
@@ -420,5 +420,91 @@ object Application extends Controller {
   }
   def getParamInt(v:Map[String,Any],key:String,default:Int):Int = {
     if(v.contains(key)) Integer.valueOf(v(key).toString)  else default
+  }
+
+  def searchOldDDInctest = Action {
+    implicit request =>
+      val form = Form(
+        tuple(
+          "keyword" -> text,
+          "page" -> text,
+          "size" -> text
+        )
+      )
+
+
+      val queryParams = form.bindFromRequest.data
+      val page = getParamInt(queryParams,"page",1)
+      var size = getParamInt(queryParams,"size",20)
+      val keyword = getParam[String](queryParams,"keyword","").trim
+
+
+
+
+
+      if (size < 1 || size > 1000) {
+        size = 100;
+      }
+
+      val bq:BooleanQuery  = new BooleanQuery()
+      if(keyword != ""){
+        val keywords = keyword.toLowerCase().split(" ")
+        val bqKeyEn:BooleanQuery  = new BooleanQuery()
+        //search title
+        for (k <- keywords) {
+          val term:Term = new Term("pName", k)
+          val pq:PrefixQuery = new PrefixQuery(term)
+          bqKeyEn.add(pq, BooleanClause.Occur.MUST)
+        }
+        bq.add(bqKeyEn, BooleanClause.Occur.SHOULD)
+      }
+
+      if(keyword != ""){
+        val keywords = keyword.toLowerCase().split(" ")
+        val bqKeyEn:BooleanQuery  = new BooleanQuery()
+        for (k <- keywords) {
+          val term:Term = new Term("sourceKeyword", k)
+          val pq:TermQuery = new TermQuery(term)
+          bqKeyEn.add(pq, BooleanClause.Occur.MUST)
+        }
+        bq.add(bqKeyEn, BooleanClause.Occur.SHOULD)
+      }
+
+
+      val sot:Sort  = sorts(null);
+      val ids = ListBuffer[String]()
+
+
+      val searcher:IndexSearcher = SearcherManager.oldIncSearcher
+
+
+
+      val start = (page - 1) * size + 1;
+      //分页
+      val tsdc:TopFieldCollector = TopFieldCollector.create(sot, start + size, false, false, false, false);
+      println(bq)
+      searcher.search(bq, tsdc);
+
+
+      //从0开始计算
+      val topDocs:TopDocs = tsdc.topDocs(start - 1, size);
+      val scoreDocs = topDocs.scoreDocs;
+      val total = tsdc.getTotalHits()
+      for (i <- 0 until scoreDocs.length) {
+        val indexDoc = searcher.getIndexReader().document(scoreDocs(i).doc);
+        ids += indexDoc.get("pName") + "####" + indexDoc.get("sourceKeyword") + "\r\n"
+      }
+
+      val sb = new StringBuffer()
+      for (x <- ids){
+        sb.append(x).append(',')
+      }
+
+      //Ok(Json.toJson(jsonObject).toString())
+      if (sb.length() > 0) {
+        Ok(Json.obj("productIds" -> sb.substring(0,sb.length() - 1), "totalHits" -> total))
+      } else {
+        Ok(Json.obj("productIds" -> "", "totalHits" -> total))
+      }
   }
 }

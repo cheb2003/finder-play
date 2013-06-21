@@ -5,6 +5,9 @@ import org.apache.lucene.store.{FSDirectory, Directory}
 import java.io.File
 import org.apache.lucene.index.DirectoryReader
 import org.apache.lucene.search.IndexSearcher
+import play.api.libs.concurrent.Akka
+import scala.concurrent.duration._
+import scala.concurrent.ExecutionContext.Implicits.global
 
 /**
  *
@@ -14,13 +17,32 @@ object SearcherManager {
   val oldDir = current.configuration.getString("oldDir")
   var searcher:IndexSearcher = null
   var oldIncSearcher:IndexSearcher = null
+  var oldReader:DirectoryReader = null
   def init = {
     val dir:Directory = FSDirectory.open(new File(wordDir.get));
     val reader = DirectoryReader.open(dir);
     searcher  = new IndexSearcher(reader);
 
     val oldDirectory:Directory = FSDirectory.open(new File(oldDir.get))
-    val oldReader = DirectoryReader.open(oldDirectory)
+    oldReader = DirectoryReader.open(oldDirectory)
+
     oldIncSearcher = new IndexSearcher(oldReader)
+     fn
+  }
+  def changeIncDD = {
+    println("changing inc dd")
+    val newReader = DirectoryReader.openIfChanged(oldReader);
+    if(newReader != null){
+      oldIncSearcher = new IndexSearcher(newReader)
+      oldReader.close()
+      oldReader = newReader
+      println("has change inc dd")
+    }
+    println("changed inc dd")
+  }
+  def fn = {
+    Akka.system.scheduler.schedule(0 second,10 second) {
+      changeIncDD
+    }
   }
 }

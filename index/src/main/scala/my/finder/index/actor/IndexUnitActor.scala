@@ -252,7 +252,7 @@ class IndexUnitActor extends Actor with ActorLogging with MongoUtil {
       try{
         val sdf: SimpleDateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss")
 
-        val sql = "select top 100 productid_int as pId,ProductAliasName_nvarchar as alias,ExcavateKeyWords_nvarchar as keyword,CreateTime_datetime as date from ec_product where CreateTime_datetime > '" + sdf.format(from) + "'"
+        val sql = "select top 100 productid_int as pId,ProductAliasName_nvarchar as alias,ExcavateKeyWords_nvarchar as keyword,CreateTime_datetime as date from ec_product with(nolock) where CreateTime_datetime > '" + sdf.format(from) + ".999'"
         log.info("old inc sql:{} ",sql)
         conn = DBService.dataSource.getConnection()
         stmt = conn.prepareStatement(sql)
@@ -261,7 +261,7 @@ class IndexUnitActor extends Actor with ActorLogging with MongoUtil {
         while(rs.next()){
           val doc = new Document
           try{
-            oldcreateTimeField.setStringValue(DateTools.dateToString(rs.getDate("date"), DateTools.Resolution.MINUTE))
+            oldcreateTimeField.setStringValue(DateTools.dateToString(rs.getTimestamp("date"), DateTools.Resolution.MINUTE))
             doc.add(oldcreateTimeField)
           } catch {
             case e:Exception =>
@@ -291,8 +291,10 @@ class IndexUnitActor extends Actor with ActorLogging with MongoUtil {
           } catch {
             case e:Exception =>
           }
-          if(rs.getDate("date").after(maxDate)){
-            maxDate = rs.getDate("date")
+          //log.info("item date {},maxDate {}",sdf.format(rs.getTimestamp("date")),sdf.format(maxDate))
+          if(rs.getTimestamp("date").after(maxDate)){
+            //log.info("set maxDate")
+            maxDate = rs.getTimestamp("date")
           }
           writer.addDocument(doc)
           successCount += 1
