@@ -8,10 +8,9 @@ import scala.collection.mutable.ListBuffer
 import java.lang.Double
 import java.lang.Long
 import org.apache.lucene.search._
-import my.finder.search.service.SearcherManager
+import my.finder.search.service.{Helper, SearcherManager, MongoManager}
 
 import org.apache.lucene.index.Term
-import my.finder.search.service.MongoManager
 import play.api.Play._
 
 import com.mongodb.casbah.Imports._
@@ -21,7 +20,12 @@ import play.api.data._
 import play.api.data.Forms._
 import org.apache.lucene.queryparser.classic.{QueryParserBase, QueryParser}
 import org.apache.lucene.document.FieldType
-
+import java.util
+import org.apache.commons.lang.ArrayUtils
+import org.apache.http.params.HttpProtocolParams
+import org.apache.lucene.util.Version
+import my.finder.common.util.MyAnalyzer
+;
 object Application extends Controller {
 
   val dinobuydb = current.configuration.getString("dinobuydb")
@@ -33,14 +37,19 @@ object Application extends Controller {
   def export = Action { request =>
     val page:Int = if(request.getQueryString("page") == Some("") || request.getQueryString("page") == None) 1 else Integer.valueOf(request.getQueryString("page").get)
     val keyword = request.getQueryString("keyword").getOrElse("")
-    val term:Term = new Term("pName", keyword)
-    val pq:TermQuery = new TermQuery(term)
+    val parse = new QueryParser(Version.LUCENE_43,"pName",new MyAnalyzer())
+    val q = parse.parse("\"" +keyword.toLowerCase() + "\"")
+    //val q = parse.parse(keyword.toLowerCase())
+    /*val term:Term = new Term("pName", "\"" +keyword + "\"")
+    val pq:TermQuery = new TermQuery(term)*/
     /*val skuTerm:Term = new Term("sku", "A")
     val skupq:PrefixQuery = new PrefixQuery(skuTerm)
     val nrq = NumericRangeQuery.newIntRange("qdwproductstatus_int",0,1,true,true);*/
 
-    val bq = new BooleanQuery()
-    bq.add(pq,BooleanClause.Occur.MUST)
+    /*val bq = new BooleanQuery()
+    
+    
+    bq.add(pq,BooleanClause.Occur.MUST)*/
     /*bq.add(nrq, BooleanClause.Occur.MUST);
 
     bq.add(skupq,BooleanClause.Occur.MUST)*/
@@ -53,8 +62,8 @@ object Application extends Controller {
 
     //分页
     val tsdc:TopFieldCollector = TopFieldCollector.create(sot, start + size, false, false, false, false);
-    println(bq)
-    searcher.search(bq, tsdc);
+    println(q)
+    searcher.search(q, tsdc);
 
     val ids = ListBuffer[Long]()
     //从0开始计算
@@ -72,7 +81,8 @@ object Application extends Controller {
       val items = productColl.find("productid_int" $in ids, fields, 0, size)
 
       for (x <- items) {
-        if(x.as[DBObject]("ec_product").as[Int]("venturelevelnew_tinyint") == 0){
+        if(x.as[DBObject]("ec_product").as[Int]("venturelevelnew_tinyint") == 0 || x.as[DBObject]("ec_product").as[Int]("venturelevelnew_tinyint") == null){
+
           sb.append(x.as[String]("productkeyid_nvarchar")).append(',').append(x.as[DBObject]("ec_product").as[Int]("venturestatus_tinyint")).append("\r\n")
         }
       }
@@ -333,23 +343,39 @@ object Application extends Controller {
 
   def sorts(sort:String):Sort = {
     //排序
-    var sortField:SortField  = null
-    if ("price-".equals(sort)) {
-      sortField = new SortField("unitPrice", SortField.Type.DOUBLE, true);
-    } else if ("price+".equals(sort)) {
-      sortField = new SortField("unitPrice", SortField.Type.DOUBLE, false);
-    } else if ("date-".equals(sort)) {
-      sortField = new SortField("createTime", SortField.Type.DOUBLE, true);
-    } else if ("date+".equals(sort)) {
-      sortField = new SortField("createTime", SortField.Type.DOUBLE, false);
+    val sortStrs:Array[String] = sort.split(",")
+    val lst = ListBuffer[SortField]()
+    for(s <- sortStrs){
+      var sortField:SortField  = null
+      if ("price-".equals(s)) {
+        sortField = new SortField("unitPrice", SortField.Type.DOUBLE, true);
+      } else if ("price+".equals(s)) {
+        sortField = new SortField("unitPrice", SortField.Type.DOUBLE, false);
+      } else if ("date-".equals(s)) {
+        sortField = new SortField("createTime", SortField.Type.DOUBLE, true);
+      } else if ("date+".equals(s)) {
+        sortField = new SortField("createTime", SortField.Type.DOUBLE, false);
+      } else if ("isqualityproduct-".equals(s)){
+        sortField = new SortField("isQuality", SortField.Type.INT, true);
+      } else if ("isqualityproduct+".equals(s)){
+        sortField = new SortField("isQuality", SortField.Type.INT, false);
+      }
+      if (sortField != null) {
+        lst += sortField
+      }
     }
+
     var sot:Sort = null;
-    if (sortField == null) {
+    if (lst.length == 0) {
       //默认按相关度排序
-      sortField = SortField.FIELD_SCORE;
-      sot = new Sort(sortField);
+      //sortField = ;
+      sot = new Sort(SortField.FIELD_SCORE);
     } else {
-      sot = new Sort(sortField);
+      val list = new util.ArrayList[SortField]();
+      for (x <- lst){
+        list.add(x)
+      }
+      sot = Helper.addSortField(list)
     }
     sot;
   }
@@ -368,11 +394,12 @@ object Application extends Controller {
           bq.add(query, BooleanClause.Occur.MUST);
         }
         if (parts(0).equals("isqualityproduct")) {
-          val query:TermRangeQuery = new TermRangeQuery("isQuality", new BytesRef(parts(1)), new BytesRef(parts(2)), true, true);
+          val query = NumericRangeQuery.newIntRange("isQuality", Integer.valueOf(parts(1)), Integer.valueOf(parts(2)), true, true);
           bq.add(query, BooleanClause.Occur.MUST);
         }
         if (parts(0).equals("venturestatus")) {
-          val query:TermRangeQuery = new TermRangeQuery("ventureStatus", new BytesRef(parts(1)), new BytesRef(parts(2)), true, true);
+          /*val query:TermRangeQuery = new TermRangeQuery("ventureStatus", new BytesRef(parts(1)), new BytesRef(parts(2)), true, true);*/
+          val query = NumericRangeQuery.newIntRange("ventureStatus", Integer.valueOf(parts(1)), Integer.valueOf(parts(2)), true, true);
           bq.add(query, BooleanClause.Occur.MUST);
         }
       }
