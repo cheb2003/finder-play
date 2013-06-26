@@ -1,5 +1,7 @@
 package my.finder.index.actor
 
+import edu.fudan.ml.types.Dictionary;
+import edu.fudan.nlp.cn.tag.CWSTagger;
 import akka.actor.{ActorLogging, Actor}
 import my.finder.common.util.{Util, MongoUtil, Config}
 import com.mongodb.casbah.Imports._
@@ -25,10 +27,10 @@ import java.text.SimpleDateFormat
 /**
  *
  */
-case class SegmentWord(sku:String,word:String,lang:String)
+case class SegmentWord(sku:String,word:String,lang:String,cn:String,titlecn:String)
 
 class IndexUnitActor extends Actor with ActorLogging with MongoUtil {
-  implicit val getSegmentWordResult = GetResult(r => SegmentWord(r.<<, r.<<,r.<<))
+  implicit val getSegmentWordResult = GetResult(r => SegmentWord(r.<<, r.<<,r.<<,r.<<,r.<<))
   val workDir = Config.get("workDir")
   val oldDir = Config.get("oldDir")
   val dinobuydb = Config.get("dinobuydb")
@@ -47,9 +49,9 @@ class IndexUnitActor extends Actor with ActorLogging with MongoUtil {
     , "ec_product.qdwproductstatus_int" -> 1,"ec_product.excavatekeywords_nvarchar" -> 1
     //osell需要的属性
     , "ec_product.producttypeid_int" -> 1,"ec_product.isqualityproduct_tinyint" -> 1
-    , "ec_product.venturestatus_tinyint" -> 1
+    , "ec_product.venturestatus_tinyint" -> 1,"ec_product.istaobao_tinyint" -> 1
 
-  )
+    )
   //val sort = MongoDBObject("productid_int" -> 1)
 
   private val pIdField = new IntField("pId", 0, Field.Store.YES);
@@ -61,11 +63,16 @@ class IndexUnitActor extends Actor with ActorLogging with MongoUtil {
   private val skuField = new StringField("sku", "", Field.Store.YES)
   private val businessNameField = new StringField("businessName", "", Field.Store.YES)
   private val pNameRuField = new TextField("pNameRU", "", Field.Store.YES)
+
   private val segmentWordRuField = new TextField("segmentWordRu", "", Field.Store.YES)
   private val segmentWordBrField = new TextField("segmentWordBr", "", Field.Store.YES)
   private val segmentWordEnField = new TextField("segmentWordEn", "", Field.Store.YES)
   private val sourceKeywordField = new TextField("sourceKeyword", "", Field.Store.YES)
+  private val sourceKeywordCNField = new StringField("sourceKeywordCN", "", Field.Store.YES)
+  private val skuOrderField = new IntField("skuOrder", 50, Field.Store.YES)
+
   private val pNameBrField = new TextField("pNameBR", "", Field.Store.YES)
+  private val pNameCnField = new TextField("pNameCN", "", Field.Store.YES)
   private val createTimeField = new StringField("createTime", "", Field.Store.YES)
   //osell
   private val productTypeIdField = new IntField("pTypeId", 0, Field.Store.YES)
@@ -85,11 +92,11 @@ class IndexUnitActor extends Actor with ActorLogging with MongoUtil {
   private val oldpNameField = new TextField("pName", "", Field.Store.YES)
   private val oldcreateTimeField = new StringField("createTime", "", Field.Store.YES)
   private val oldsourceKeywordField = new TextField("sourceKeyword", "", Field.Store.YES)
-
-
-
+  private val tag = new CWSTagger(Config.get("tag"))
 
   override def preStart() {
+    val dictionary = new Dictionary(Config.get("dict"));
+    tag.setDictionary(dictionary);
     val mongo = MongoManager()
     productColl = mongo(dinobuydb)("ec_productinformation")
   }
@@ -118,7 +125,7 @@ class IndexUnitActor extends Actor with ActorLogging with MongoUtil {
         try {
           val strs = mvp[String](x, "excavatekeywords_nvarchar").split(",")
           if(strs.length > 1){
-            sourceKeywordField.setStringValue(strs(strs.length - 1))
+            sourceKeywordField.setStringValue(strs(strs.length - 1).trim)
             doc.add(sourceKeywordField)
           }
         } catch {
@@ -182,6 +189,16 @@ class IndexUnitActor extends Actor with ActorLogging with MongoUtil {
         }
 
         val sku = mv[String](x, "productkeyid_nvarchar")
+        if(sku.charAt(0) == 'A') {
+          skuOrderField.setIntValue(0)
+        } else if(sku.charAt(0) == 'X') {
+          skuOrderField.setIntValue(1)
+        } else if(sku.charAt(0) == 'T') {
+          skuOrderField.setIntValue(2)
+        } else {
+          skuOrderField.setIntValue(50)
+        }
+        doc.add(skuOrderField)
         skuField.setStringValue(sku)
         if(words.length > 0){
           for(x <- words) {
@@ -199,7 +216,14 @@ class IndexUnitActor extends Actor with ActorLogging with MongoUtil {
                 doc.add(segmentWordBrField)
               }
             }
+
+            sourceKeywordCNField.setStringValue(tag.tag(x.cn.trim))
+            pNameCnField.setStringValue(tag.tag(x.titlecn.trim))
           }
+          
+          doc.add(sourceKeywordCNField)
+          doc.add(pNameCnField)
+
         }
 
         list = x.as[MongoDBList]("ec_productlanguage")
@@ -217,8 +241,6 @@ class IndexUnitActor extends Actor with ActorLogging with MongoUtil {
         doc.add(pNameField)
         doc.add(indexCodeField)
         doc.add(skuField)
-
-
 
         writer.addDocument(doc)
         true
@@ -384,14 +406,15 @@ class IndexUnitActor extends Actor with ActorLogging with MongoUtil {
         var successCount:Int = 0
         var failCount:Int = 0
         var skipCount:Int = 0
+        //read mongo data
         var time3 = System.currentTimeMillis()
         //val items: MongoCursor = productColl.find("ec_product.createtime_datetime" $lt now, fields).skip(Integer.valueOf((msg.seq * 2).toString())).limit(2000)
         val items: MongoCursor = productColl.find("productid_int" $in msg.ids, fields,0,indexBatchSize)
         val lst = items.toList
-
-
         var time4 = System.currentTimeMillis()
         log.info("load items {}",time4 - time3)
+
+        //read segmentWord
         time3 = System.currentTimeMillis()
         val words = getSegmentWords(lst)
         time4 = System.currentTimeMillis()
@@ -453,25 +476,24 @@ class IndexUnitActor extends Actor with ActorLogging with MongoUtil {
       conn = DBService.dataSource.getConnection()
       stmt = conn.createStatement()
       val sb = new StringBuffer()
-      sb.append("select ProductKeyID_nvarchar as sku,SegmentWord_nvarchar as word,LanguageCode_nvarchar as lang from QDW_TB_ProductTitleSegmentWord WITH (NOLOCK) where ProductKeyID_nvarchar in (")
+      sb.append("select ProductTitleCN_nvarchar as titlecn, ProductKeyID_nvarchar as sku,SearchKeyWordCN_nvarchar as wordcn,SegmentWord_nvarchar as word,LanguageCode_nvarchar as lang from QDW_TB_ProductTitleSegmentWord WITH (NOLOCK) where ProductKeyID_nvarchar in (")
       for (x <- items) {
         sb.append('\'').append(mv[String](x,"productkeyid_nvarchar")).append("',")
       }
       val sql = sb.substring(0,sb.length() - 1) + ")"
       rs = stmt.executeQuery(sql)
       while(rs.next()){
-        list += SegmentWord(rs.getString("sku"),rs.getString("word"),rs.getString("lang"))
+        list += SegmentWord(rs.getString("sku"),rs.getString("word"),rs.getString("lang"),rs.getString("wordcn"),rs.getString("titlecn"))
       }
     } catch {
       case e:Exception => {
-
+        e.printStackTrace()
       }
     } finally {
       if(rs != null) rs.close()
       if(stmt != null) stmt.close()
       if(conn != null) conn.close()
     }
-
     list.toList
   }
 }
