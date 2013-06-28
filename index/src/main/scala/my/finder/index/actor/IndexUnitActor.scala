@@ -50,8 +50,8 @@ class IndexUnitActor extends Actor with ActorLogging with MongoUtil {
     //osell需要的属性
     , "ec_product.producttypeid_int" -> 1,"ec_product.isqualityproduct_tinyint" -> 1
     , "ec_product.venturestatus_tinyint" -> 1,"ec_product.istaobao_tinyint" -> 1
-
-    )
+    , "ec_product.venturelevelnew_tinyint" -> 1
+  )
   //val sort = MongoDBObject("productid_int" -> 1)
 
   private val pIdField = new IntField("pId", 0, Field.Store.YES);
@@ -78,6 +78,7 @@ class IndexUnitActor extends Actor with ActorLogging with MongoUtil {
   private val productTypeIdField = new IntField("pTypeId", 0, Field.Store.YES)
   private val isQualityProductField = new IntField("isQuality", 0, Field.Store.YES)
   private val ventureStatusField = new IntField("ventureStatus", 0, Field.Store.YES)
+  private val ventureLevelNewField = new IntField("ventureLevelNew", 0, Field.Store.YES)
 
   private val isTaobaoField = new IntField("isTaobao", 0, Field.Store.YES)
 
@@ -92,19 +93,19 @@ class IndexUnitActor extends Actor with ActorLogging with MongoUtil {
   private val oldpNameField = new TextField("pName", "", Field.Store.YES)
   private val oldcreateTimeField = new StringField("createTime", "", Field.Store.YES)
   private val oldsourceKeywordField = new TextField("sourceKeyword", "", Field.Store.YES)
-  private val tag = new CWSTagger(Config.get("tag"))
+
 
   override def preStart() {
-    val dictionary = new Dictionary(Config.get("dict"));
-    tag.setDictionary(dictionary);
+
     val mongo = MongoManager()
     productColl = mongo(dinobuydb)("ec_productinformation")
   }
   def writeDoc(x: DBObject,words:List[SegmentWord], writer: IndexWriter):Boolean = {
     var list: MongoDBList = null
     try {
-      if (mvp[Int](x, "qdwproductstatus_int") < 2 && mvp[Boolean](x, "isstopsale_bit") == false
-        && x.as[MongoDBList]("ec_productprice").length > 0 && x.as[MongoDBList]("ec_productprice").as[DBObject](0).as[Double]("unitprice_money") > 0) {
+      /*if (mvp[Int](x, "qdwproductstatus_int") < 2 && mvp[Boolean](x, "isstopsale_bit") == false
+        && x.as[MongoDBList]("ec_productprice").length > 0 && x.as[MongoDBList]("ec_productprice").as[DBObject](0).as[Double]("unitprice_money") > 0) {*/
+      if(true){
         list = x.as[MongoDBList]("ec_productprice")
         doc = new Document()
         pIdField.setIntValue(x.as[Int]("productid_int"));
@@ -169,6 +170,14 @@ class IndexUnitActor extends Actor with ActorLogging with MongoUtil {
         } catch {
           case e: Exception =>
         }
+
+        try {
+          ventureLevelNewField.setIntValue(mvp[Int](x, "venturelevelnew_tinyint"))
+          doc.add(ventureLevelNewField)
+        } catch {
+          case e: Exception =>
+        }
+
         try {
           isTaobaoField.setIntValue(mvp[Int](x, "istaobao_tinyint"))
           doc.add(isTaobaoField)
@@ -217,8 +226,8 @@ class IndexUnitActor extends Actor with ActorLogging with MongoUtil {
               }
             }
 
-            sourceKeywordCNField.setStringValue(tag.tag(x.cn.trim))
-            pNameCnField.setStringValue(tag.tag(x.titlecn.trim))
+            sourceKeywordCNField.setStringValue(DBService.tag.tag(x.cn.trim))
+            pNameCnField.setStringValue(DBService.tag.tag(x.titlecn.trim))
           }
           
           doc.add(sourceKeywordCNField)
@@ -469,30 +478,35 @@ class IndexUnitActor extends Actor with ActorLogging with MongoUtil {
       segmentWords += x
     }*/
     val list = ListBuffer[SegmentWord]()
-    var conn:Connection = null
-    var stmt:Statement = null
-    var rs:ResultSet = null
-    try{
-      conn = DBService.dataSource.getConnection()
-      stmt = conn.createStatement()
-      val sb = new StringBuffer()
-      sb.append("select ProductTitleCN_nvarchar as titlecn, ProductKeyID_nvarchar as sku,SearchKeyWordCN_nvarchar as wordcn,SegmentWord_nvarchar as word,LanguageCode_nvarchar as lang from QDW_TB_ProductTitleSegmentWord WITH (NOLOCK) where ProductKeyID_nvarchar in (")
-      for (x <- items) {
-        sb.append('\'').append(mv[String](x,"productkeyid_nvarchar")).append("',")
+    if (items.length > 0) {
+
+      var conn: Connection = null
+      var stmt: Statement = null
+      var rs: ResultSet = null
+      try {
+        conn = DBService.dataSource.getConnection()
+        stmt = conn.createStatement()
+        val sb = new StringBuffer()
+        //sb.append("select ProductTitleCN_nvarchar as titlecn, ProductKeyID_nvarchar as sku,SearchKeyWordCN_nvarchar as wordcn,SegmentWord_nvarchar as word,LanguageCode_nvarchar as lang from QDW_TB_ProductTitleSegmentWord WITH (NOLOCK) where ProductKeyID_nvarchar in (")
+        sb.append("select ProductTitleCN_nvarchar as titlecn, ProductKeyID_nvarchar as sku,SearchKeyWordCN_nvarchar as wordcn,SegmentWord_nvarchar as word,LanguageCode_nvarchar as lang from QDW_TB_ProductTitleSegmentWord where ProductKeyID_nvarchar in (")
+        for (x <- items) {
+          sb.append('\'').append(mv[String](x, "productkeyid_nvarchar")).append("',")
+        }
+        val sql = sb.substring(0, sb.length() - 1) + ")"
+        rs = stmt.executeQuery(sql)
+        while (rs.next()) {
+          list += SegmentWord(rs.getString("sku"), rs.getString("word"), rs.getString("lang"), rs.getString("wordcn"), rs.getString("titlecn"))
+        }
+      } catch {
+        case e: Exception => {
+          e.printStackTrace()
+        }
+      } finally {
+        if (rs != null) rs.close()
+        if (stmt != null) stmt.close()
+        if (conn != null) conn.close()
       }
-      val sql = sb.substring(0,sb.length() - 1) + ")"
-      rs = stmt.executeQuery(sql)
-      while(rs.next()){
-        list += SegmentWord(rs.getString("sku"),rs.getString("word"),rs.getString("lang"),rs.getString("wordcn"),rs.getString("titlecn"))
-      }
-    } catch {
-      case e:Exception => {
-        e.printStackTrace()
-      }
-    } finally {
-      if(rs != null) rs.close()
-      if(stmt != null) stmt.close()
-      if(conn != null) conn.close()
+
     }
     list.toList
   }

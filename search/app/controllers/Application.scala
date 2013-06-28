@@ -25,7 +25,6 @@ import org.apache.commons.lang.ArrayUtils
 import org.apache.http.params.HttpProtocolParams
 import org.apache.lucene.util.Version
 import my.finder.common.util.MyAnalyzer
-;
 object Application extends Controller {
 
   val dinobuydb = current.configuration.getString("dinobuydb")
@@ -81,7 +80,8 @@ object Application extends Controller {
       val items = productColl.find("productid_int" $in ids, fields, 0, size)
 
       for (x <- items) {
-        if(x.as[DBObject]("ec_product").as[Int]("venturelevelnew_tinyint") == 0 || x.as[DBObject]("ec_product").as[Int]("venturelevelnew_tinyint") == null){
+        println("---------" + x.as[DBObject]("ec_product").as[Int]("venturelevelnew_tinyint"))
+        if(x.as[DBObject]("ec_product").as[Int]("venturelevelnew_tinyint") == 0 ){
 
           sb.append(x.as[String]("productkeyid_nvarchar")).append(',').append(x.as[DBObject]("ec_product").as[Int]("venturestatus_tinyint")).append("\r\n")
         }
@@ -126,18 +126,18 @@ object Application extends Controller {
 
       val queryParams = form.bindFromRequest.data
       //Ok("Got: " + id + name)
-      val indexCode = getParam[String](queryParams,"indexcode","")
-      val productTypeId = getParam[String](queryParams,"producttypeid","")
-      val productKeyId = getParam[String](queryParams,"productkeyid","")
-      val range = getParam[String](queryParams,"ranges","")
+      val indexCode = getParamString(queryParams,"indexcode","")
+      val productTypeId = getParamString(queryParams,"producttypeid","")
+      val productKeyId = getParamString(queryParams,"productkeyid","")
+      val range = getParamString(queryParams,"ranges","")
       val page = getParamInt(queryParams,"page",1)
       var size = getParamInt(queryParams,"size",20)
-      val sort = getParam[String](queryParams,"sort","")
-      val productAliasName = getParam[String](queryParams,"productaliasname","").trim
-      val businessBrand = getParam[String](queryParams,"businessbrand","")
-      val isTaobaoStr = getParam[String](queryParams,"istaobao","")
-      val isQualityStr = getParam[String](queryParams,"isquality","")
-      val productBrandId = getParam[String](queryParams,"productbrandid","")
+      val sort = getParamString(queryParams,"sort","")
+      val productAliasName = getParamString(queryParams,"productaliasname","").trim
+      val businessBrand = getParamString(queryParams,"businessbrand","")
+      val isTaobaoStr = getParamString(queryParams,"istaobao","")
+      val isQualityStr = getParamString(queryParams,"isquality","")
+      val productBrandId = getParamString(queryParams,"productbrandid","")
 
 
 
@@ -271,7 +271,7 @@ object Application extends Controller {
       val queryParams = form.bindFromRequest.data
       val page = getParamInt(queryParams,"page",1)
       var size = getParamInt(queryParams,"size",20)
-      val keyword = getParam[String](queryParams,"keyword","").trim
+      val keyword = getParamString(queryParams,"keyword","").trim
 
 
 
@@ -422,13 +422,13 @@ object Application extends Controller {
     val (id, name) = form.bind(anyData).get*/
     val queryParams = form.bindFromRequest.data
     //Ok("Got: " + id + name)
-    var keyword = getParam[String](queryParams,"keyword","")
-    val country = getParam[String](queryParams,"country","")
-    val indexCode = getParam[String](queryParams,"indexCode","")
-    val range = getParam[String](queryParams,"range","")
+    var keyword = getParamString(queryParams,"keyword","")
+    val country = getParamString(queryParams,"country","")
+    val indexCode = getParamString(queryParams,"indexCode","")
+    val range = getParamString(queryParams,"range","")
     var currentPage = getParam[Int](queryParams,"currentPage",1)
     var size = getParam[Int](queryParams,"size",100)
-    val sort = getParam[String](queryParams,"sort","")
+    val sort = getParamString(queryParams,"sort","")
     if(currentPage < 1){
       currentPage = 1
     }
@@ -442,11 +442,13 @@ object Application extends Controller {
     //Ok("Got: " + id + name)
     Ok("Got: ")
   }
-  def getParam[T](v:Map[String,Any],key:String,default:T):T = {
+ 
+  def getParamString(v:Map[String,Any],key:String,default:T):String = {
     if(v.contains(key)) v(key).asInstanceOf[T]  else default
   }
+ 
   def getParamInt(v:Map[String,Any],key:String,default:Int):Int = {
-    if(v.contains(key)) Integer.valueOf(v(key).toString)  else default
+      if(v.contains(key)) Integer.valueOf(v(key).toString)  else default
   }
 
   def searchOldDDInctest = Action {
@@ -463,7 +465,7 @@ object Application extends Controller {
       val queryParams = form.bindFromRequest.data
       val page = getParamInt(queryParams,"page",1)
       var size = getParamInt(queryParams,"size",20)
-      val keyword = getParam[String](queryParams,"keyword","").trim
+      val keyword = getParamString(queryParams,"keyword","").trim
 
 
 
@@ -534,4 +536,5 @@ object Application extends Controller {
         Ok(Json.obj("productIds" -> "", "totalHits" -> total))
       }
   }
+
 }

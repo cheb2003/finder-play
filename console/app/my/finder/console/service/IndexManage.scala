@@ -5,6 +5,7 @@ import java.io.File
 import scala.collection.mutable.ListBuffer
 import java.util.Date
 import play.api.Play._
+import scala.collection.mutable
 
 /**
  *
@@ -13,6 +14,7 @@ case class Index(name:String,ids:ListBuffer[String],var using:Date)
 
 object IndexManage {
 
+  val hashMap = new mutable.HashMap[String,ListBuffer[Index]]()
   var indexManage = ListBuffer[Index]()
   val ddIndex:Index = Index(Constants.DD_PRODUCT,ListBuffer[String](),null)
   def add(index:Index) = {
