@@ -22,6 +22,7 @@ import my.finder.common.message.PartitionIndexTaskMessage
 import akka.routing.RoundRobinRouter
 
 import play.api.Play.current
+import scala.util.control.Breaks._
 /**
  *
  *
@@ -35,10 +36,7 @@ class PartitionIndexTaskActor extends Actor with ActorLogging {
   val fields = MongoDBObject("productid_int" -> 1)
   //val indexActor = context.system.actorOf(Props[IndexDDProductActor].withRouter(FromConfig()),"node")
   val indexRootActor = context.actorFor("akka://index@127.0.0.1:2554/user/root")
-  //val unit = context.actorOf(Props[PartitionIndexTaskUnitActor].withRouter(RoundRobinRouter(nrOfInstances = 10)))
   val indexRootManager = context.actorFor("akka://console@127.0.0.1:2552/user/root/indexManager")
-  //val mergeIndex = context.actorOf(Props[MergeIndexActor],"mergeIndex")
-
 
   override def preStart() {
     mongoClient = MongoManager()
@@ -61,21 +59,21 @@ class PartitionIndexTaskActor extends Actor with ActorLogging {
       }
     }
   }
-  private def sendMsg(name: String, runId: Date, seq: Long,minId:Int, maxId:Int, total: Long) {
-    indexRootActor ! IndexTaskMessage(Constants.DD_PRODUCT, runId, seq,ids)
+  private def sendMsg(name: String, runId: Date, seq: Long,minId:Int, maxId:Int, total: Long, batchSize:Int) {
+    //println("----------------send message " + seq)
+    indexRootActor ! IndexTaskMessage(Constants.DD_PRODUCT, runId, seq, minId, maxId, batchSize)
     indexRootManager ! CreateSubTask(name, runId, total)
   }
 
   def partitionDDProduct() = {
     val now = new Date()
+    
     log.info("create index {}",now)
     val set:ListBuffer[Int] = new ListBuffer[Int]
-    var i = 0
-    var j = 0
+    
     val minItem = productColl.find().sort(MongoDBObject("productid_int" -> 1)).limit(1)
     val maxItem = productColl.find().sort(MongoDBObject("productid_int" -> -1)).limit(1)
     val maxId = maxItem.next().as[Int]("productid_int")
-
     val minId = if(current.configuration.getBoolean("debugIndex").get) {
       maxId - current.configuration.getInt("debugItemCount").get
     } else {
@@ -87,19 +85,17 @@ class PartitionIndexTaskActor extends Actor with ActorLogging {
     val total: Long = totalCount / ddProductIndexSize + 1
     log.info("minId=========={}",minId)
     log.info("maxId=========={}",maxId)
-    /*for (y <- minId to maxId) {
-      set += y
-      i += 1
-      if (i == ddProductIndexSize) {
-        i = 0
+    var id = minId
+    var j = 0
+    breakable {
+      while(true){
+        if(id >= maxId){
+          break  
+        }
         j += 1
-        sendMsg(Constants.DD_PRODUCT, now, j, set, total)
-        set.remove(0, set.length)
+        sendMsg(Constants.DD_PRODUCT, now, j, id, id + ddProductIndexSize - 1, total, ddProductIndexSize)
+        id += ddProductIndexSize
       }
-    }*/
-    if (i > 0) {
-      j += 1
-      sendMsg(Constants.DD_PRODUCT, now, j, set, total)
     }
   }
 }

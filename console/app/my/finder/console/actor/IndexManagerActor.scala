@@ -21,6 +21,9 @@ class IndexManagerActor extends Actor with ActorLogging{
       val failCount = obj("failCount") + msg.failCount
       obj += ("completed" -> i,"successCount" -> successCount,"failCount" -> failCount)
       subTaskMap += (key -> obj)
+      /*if(msg.seq > 1000){
+        log.info("completed sub task {},{},{},current {}/{}", Array(msg.name,msg.date,msg.seq,i,subTaskMap(key)("total")))
+      }*/
       log.info("completed sub task {},{},{},current {}/{}", Array(msg.name,msg.date,msg.seq,i,subTaskMap(key)("total")))
       if(subTaskMap(key)("completed") >= subTaskMap(key)("total")){
         val indexRoot = context.actorFor("akka://index@127.0.0.1:2554/user/root")

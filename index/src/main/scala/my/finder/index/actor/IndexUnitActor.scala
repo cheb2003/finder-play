@@ -37,6 +37,7 @@ class IndexUnitActor extends Actor with ActorLogging with MongoUtil {
 
   val indexBatchSize = Integer.valueOf(Config.get("indexBatchSize"))
   var productColl:MongoCollection = null
+  
 
 
   val fields = MongoDBObject("productid_int" -> 1, "ec_product.productaliasname_nvarchar" -> 1
@@ -264,7 +265,7 @@ class IndexUnitActor extends Actor with ActorLogging with MongoUtil {
     doc.add(pNameField)
     doc.add(indexCodeField)
     doc.add(skuField)
-    writer.addDocument(doc)*/
+      writer.addDocument(doc)*/
   }
   def receive = {
     case msg:OldIndexIncremetionalTaskMessage => {
@@ -415,7 +416,8 @@ class IndexUnitActor extends Actor with ActorLogging with MongoUtil {
         //read mongo data
         var time3 = System.currentTimeMillis()
         //val items: MongoCursor = productColl.find("ec_product.createtime_datetime" $lt now, fields).skip(Integer.valueOf((msg.seq * 2).toString())).limit(2000)
-        val items: MongoCursor = productColl.find("productid_int" $in msg.ids, fields,0,indexBatchSize)
+        var q:DBObject = ("productid_int" $gte msg.minId $lte msg.maxId) ++ ("ec_product.qdwproductstatus_int" $lt 2) ++ ("ec_product.isstopsale_bit" -> false) ++ ("ec_productprice.unitprice_money" $gt 0) 
+        val items: MongoCursor = productColl.find(q, fields, 0, msg.batchSize)
         val lst = items.toList
         var time4 = System.currentTimeMillis()
         log.info("load items {}",time4 - time3)
@@ -434,7 +436,7 @@ class IndexUnitActor extends Actor with ActorLogging with MongoUtil {
           /*if(!b) b = true else log.info("load item {}",time3 -time4)
           time3 = System.currentTimeMillis()*/
           try{
-            if(writeDoc(x,words, writer)) successCount += 1 else skipCount += 1
+            if(writeDoc(x, words, writer)) successCount += 1 else skipCount += 1
             //if(writeDoc(x,List(), writer)) successCount += 1 else skipCount += 1
           } catch {
             case e:Exception => failCount + 1
@@ -461,19 +463,7 @@ class IndexUnitActor extends Actor with ActorLogging with MongoUtil {
     }
   }
   def getSegmentWords(items:List[DBObject]):List[SegmentWord] = {
-    /*val db = Database.forDataSource(DBService.dataSource)
-    val sb = new StringBuffer()
-    sb.append("select ProductKeyID_nvarchar as sku,SegmentWord_nvarchar as word from QDW_TB_ProductTitleSegmentWord where ProductKeyID_nvarchar in (")
-    for (x <- items) {
-      sb.append('\'').append(mv[String](x,"productkeyid_nvarchar")).append("',")
-    }
-    val segmentWords = ListBuffer[SegmentWord]()
-
-
-    val q = Q.queryNA[SegmentWord](sb.substring(0,sb.length() - 1))
-    for(x <- q){
-      segmentWords += x
-    }*/
+    
     val list = ListBuffer[SegmentWord]()
     if (items.length > 0) {
 
@@ -502,9 +492,10 @@ class IndexUnitActor extends Actor with ActorLogging with MongoUtil {
         if (rs != null) rs.close()
         if (stmt != null) stmt.close()
         if (conn != null) conn.close()
+        println("close Connection")
       }
 
     }
-    list.toList
+    list.toList 
   }
 }

@@ -3,7 +3,7 @@ package my.finder.common.message
 import java.util.Date
 import scala.collection.mutable.ListBuffer
 
-case class IndexTaskMessage(name:String,date:Date,seq:Long,minId:Int,maxId:Int);
+case class IndexTaskMessage(name:String,date:Date,seq:Long,minId:Int,maxId:Int,batchSize:Int);
 case class IndexIncremetionalTaskMessage(name:String,date:Date);
 case class OldIndexIncremetionalTaskMessage(name:String,date:Date);
 case class PartitionIndexTaskMessage(name:String)
