@@ -96,16 +96,15 @@ class IndexUnitActor extends Actor with ActorLogging with MongoUtil {
 
 
   override def preStart() {
-
     val mongo = MongoManager()
     productColl = mongo(dinobuydb)("ec_productinformation")
   }
   def writeDoc(x: DBObject,words:List[SegmentWord], writer: IndexWriter):Boolean = {
     var list: MongoDBList = null
     try {
-      /*if (mvp[Int](x, "qdwproductstatus_int") < 2 && mvp[Boolean](x, "isstopsale_bit") == false
-        && x.as[MongoDBList]("ec_productprice").length > 0 && x.as[MongoDBList]("ec_productprice").as[DBObject](0).as[Double]("unitprice_money") > 0) {*/
-      if(true){
+      if (mvp[Int](x, "qdwproductstatus_int") < 2 && mvp[Boolean](x, "isstopsale_bit") == false
+         && x.as[MongoDBList]("ec_productprice").length > 0 && x.as[MongoDBList]("ec_productprice").as[DBObject](0).as[Double]("unitprice_money") > 0) {
+      
         list = x.as[MongoDBList]("ec_productprice")
         doc = new Document()
         pIdField.setIntValue(x.as[Int]("productid_int"));
@@ -229,10 +228,8 @@ class IndexUnitActor extends Actor with ActorLogging with MongoUtil {
             sourceKeywordCNField.setStringValue(DBService.tag.tag(x.cn.trim))
             pNameCnField.setStringValue(DBService.tag.tag(x.titlecn.trim))
           }
-          
           doc.add(sourceKeywordCNField)
           doc.add(pNameCnField)
-
         }
 
         list = x.as[MongoDBList]("ec_productlanguage")

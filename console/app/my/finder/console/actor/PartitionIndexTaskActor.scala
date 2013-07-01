@@ -61,7 +61,7 @@ class PartitionIndexTaskActor extends Actor with ActorLogging {
       }
     }
   }
-  private def sendMsg(name: String, runId: Date, seq: Long,ids:ListBuffer[Int], total: Long) {
+  private def sendMsg(name: String, runId: Date, seq: Long,minId:Int, maxId:Int, total: Long) {
     indexRootActor ! IndexTaskMessage(Constants.DD_PRODUCT, runId, seq,ids)
     indexRootManager ! CreateSubTask(name, runId, total)
   }
@@ -87,7 +87,7 @@ class PartitionIndexTaskActor extends Actor with ActorLogging {
     val total: Long = totalCount / ddProductIndexSize + 1
     log.info("minId=========={}",minId)
     log.info("maxId=========={}",maxId)
-    for (y <- minId to maxId) {
+    /*for (y <- minId to maxId) {
       set += y
       i += 1
       if (i == ddProductIndexSize) {
@@ -96,7 +96,7 @@ class PartitionIndexTaskActor extends Actor with ActorLogging {
         sendMsg(Constants.DD_PRODUCT, now, j, set, total)
         set.remove(0, set.length)
       }
-    }
+    }*/
     if (i > 0) {
       j += 1
       sendMsg(Constants.DD_PRODUCT, now, j, set, total)
