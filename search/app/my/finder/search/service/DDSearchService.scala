@@ -12,6 +12,7 @@ import java.util
 import java.util.{Calendar, Date}
 import java.text.SimpleDateFormat
 import org.apache.lucene.util.BytesRef
+import java.lang.Double
 
 
 /**
@@ -78,7 +79,7 @@ object DDSearchService{
 
   /**
    * 品牌搜索接口
-   * 必须传入brandId参数
+   * 必须传入brandid参数
    * @param queryParams
    */
   def brand(queryParams: Map[String, String]):PageResult = {
@@ -87,7 +88,7 @@ object DDSearchService{
     val page = Util.getPage(queryParams, 1)
     val countrycode = Util.getParamString(queryParams, "country", "")
     val indexCode = Util.getParamString(queryParams, "indexcode", "")
-    val brandId = Util.getParamString(queryParams, "brandId", "")
+    val brandId = Util.getParamString(queryParams, "brandid", "")
     val keyword = Util.getParamString(queryParams, "keyword", "")
     def searchBrand:IdsPageResult = {
       val bq = new BooleanQuery
@@ -102,7 +103,7 @@ object DDSearchService{
       }
 
       if(StringUtils.isNotBlank(indexCode)){
-        val tIndexCode = new Term("pIdCategorys",indexCode)
+        val tIndexCode = new Term("indexCode",indexCode)
         val tqIndexCode = new TermQuery(tIndexCode)
         bq.add(tqIndexCode,Occur.MUST)
       }
@@ -143,7 +144,7 @@ object DDSearchService{
     val price = Util.getParamString(queryParams, "price", "")
     val keyword = Util.getParamString(queryParams, "keyword", "")
 
-    val s = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss")
+    val s = new SimpleDateFormat("yyyyMMddHHmm")
     val idsPageResult = {
       val bq = new BooleanQuery
 
@@ -163,12 +164,11 @@ object DDSearchService{
       }
 
       if(StringUtils.isNotBlank(price)){
-        val nrq = NumericRangeQuery.newDoubleRange("price", 0, price.toDouble, true, true);
-        bq.add(nrq,Occur.MUST)
+        ranges(price,bq)
       }
 
       if(StringUtils.isNotBlank(indexCode)){
-        val tIndexCode = new Term("pIdCategorys",indexCode)
+        val tIndexCode = new Term("indexCode",indexCode)
         val tqIndexCode = new TermQuery(tIndexCode)
         bq.add(tqIndexCode,Occur.MUST)
       }
@@ -213,7 +213,7 @@ object DDSearchService{
       }
 
       if(StringUtils.isNotBlank(indexCode)){
-        val tIndexCode = new Term("pIdCategorys",indexCode)
+        val tIndexCode = new Term("indexCode",indexCode)
         val tqIndexCode = new TermQuery(tIndexCode)
         bq.add(tqIndexCode,Occur.MUST)
       }
@@ -260,12 +260,11 @@ object DDSearchService{
       }
 
       if(StringUtils.isNotBlank(price)){
-        val nrq = NumericRangeQuery.newDoubleRange("price", 0, price.toDouble, true, true);
-        bq.add(nrq,Occur.MUST)
+        ranges(price,bq)
       }
 
       if(StringUtils.isNotBlank(indexCode)){
-        val tIndexCode = new Term("pIdCategorys",indexCode)
+        val tIndexCode = new Term("indexCode",indexCode)
         val tqIndexCode = new TermQuery(tIndexCode)
         bq.add(tqIndexCode,Occur.MUST)
       }
@@ -326,14 +325,14 @@ object DDSearchService{
   }
 
   /**
-   * 传入国家id的排序
+   * 传入国家代码排序
    * @param sort
    * @return
    */
   def sorts(sort: String,country: String): Sort = {
     val sot = sort match {
-      case "price-" => new Sort(new SortField("unitPrice", SortField.Type.DOUBLE, true))
-      case "price+" => new Sort(new SortField("unitPrice", SortField.Type.DOUBLE, false))
+      case "price-" => new Sort(new SortField("price", SortField.Type.DOUBLE, true))
+      case "price+" => new Sort(new SortField("price", SortField.Type.DOUBLE, false))
       case "releasedate-" => new Sort(new SortField("createTime", SortField.Type.DOUBLE, true))
       case "releasedate+" => new Sort(new SortField("createTime", SortField.Type.DOUBLE, false))
       case "reviews-" => new Sort(new SortField("reviews", SortField.Type.INT, true))
@@ -343,12 +342,11 @@ object DDSearchService{
       case "videos-" => new Sort(new SortField("videos", SortField.Type.INT, true))
       case "videos+" => new Sort(new SortField("videos", SortField.Type.INT, false))
       case _ => {
-        val sort = if(country != "")
+        if(country != "")
         //默认排序,先排相关度,在排国家分数
           new Sort(SortField.FIELD_SCORE,new SortField(country, SortField.Type.STRING, true));
         else
           new Sort(SortField.FIELD_SCORE);
-        sort
       }
     }
     sot
@@ -421,6 +419,22 @@ object DDSearchService{
     } else {
       null
     }
+  }
+
+
+  def ranges(range: String, bq: BooleanQuery) {
+    //范围查询
+    val parts = range.split(":");
+    if (parts.length == 3) {
+      if (parts(0).equals("price")) {
+        val nrq = NumericRangeQuery.newDoubleRange("price", Double.valueOf(parts(1)), Double.valueOf(parts(2)), true, true);
+        bq.add(nrq, BooleanClause.Occur.MUST);
+      }
+      if (parts(0).equals("createtime")) {
+        val query: TermRangeQuery = new TermRangeQuery("createTime", new BytesRef(parts(1)), new BytesRef(parts(2)), true, true);
+        bq.add(query, BooleanClause.Occur.MUST);
+      }
+    } else throw new RuntimeException("输入范围的格式不对！")
   }
 }
 

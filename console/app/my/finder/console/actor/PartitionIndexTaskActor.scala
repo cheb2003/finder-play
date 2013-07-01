@@ -77,29 +77,26 @@ class PartitionIndexTaskActor extends Actor with ActorLogging {
     var stmt: Statement = null
     var rs: ResultSet = null
 
-    var minId = 0
+    var maxId = 0
     var count = 0
     try {
       conn = DBMssql.ds.getConnection
-      var sql = "SELECT min(SeqID_int) as min,count(SeqID_int) as count from EC_IndexLifeProduct with(nolock)"
+      var sql = "SELECT max(SeqID_int) as max,count(SeqID_int) as count from EC_IndexLifeProduct with(nolock) where IsEnabled_int = 1"
       stmt = conn.createStatement()
       rs = stmt.executeQuery(sql)
       while(rs.next()){
-        minId = rs.getInt("min")
+        maxId = rs.getInt("max")
         count = rs.getInt("count")
       }
-      if(current.configuration.getBoolean("debugIndex").get && current.configuration.getInt("debugIndex").get > minId) {
-        minId = current.configuration.getInt("debugItemCount").get
-      }
 
-      sql = s"select SeqID_int from EC_IndexLifeProduct with(nolock) where SeqID_int >= $minId and IsEnabled_int = 1"
+      sql = s"select SeqID_int from EC_IndexLifeProduct with(nolock) where SeqID_int <= $maxId"
       rs.setFetchSize(1000)
       rs = stmt.executeQuery(sql)
       val total: Long = count / ddProductIndexSize + 1
 
       val ids:ListBuffer[Int] = new ListBuffer[Int]
       var j = 0
-      while(rs.next()){
+      while(rs.next() && rs.getRow <= count){
         ids += rs.getInt(1)
         if(ids.length % ddProductIndexSize == 0){
           //记录批次
@@ -129,26 +126,23 @@ class PartitionIndexTaskActor extends Actor with ActorLogging {
     var rs: ResultSet = null
     try { 
       conn = DBMssql.ds.getConnection
-      var sql = "SELECT min(keyid_int) as min,count(keyid_int) as count from QDW_AttributeAndValueDictionary with(nolock)"
+      var sql = "SELECT max(keyid_int) as max,count(keyid_int) as count from QDW_AttributeAndValueDictionary with(nolock)"
       stmt = conn.createStatement()
       rs = stmt.executeQuery(sql)
-      var minId:Int = 0
+      var maxId:Int = 0
       var count:Int = 0
       while(rs.next){
-        minId = rs.getInt("min")
+        maxId = rs.getInt("max")
         count = rs.getInt("count")
       }
-      if(current.configuration.getBoolean("debugIndex").get && current.configuration.getInt("debugIndex").get > minId) {
-        minId = current.configuration.getInt("debugItemCount").get
-      }
 
-      sql = s"SELECT keyid_int from QDW_AttributeAndValueDictionary with(nolock) where keyid_int >= $minId"
+      sql = s"SELECT keyid_int from QDW_AttributeAndValueDictionary with(nolock) where keyid_int <= $maxId"
       rs.setFetchSize(1000)
       val total: Long = count / ddProductIndexSize + 1
 
       val ids:ListBuffer[Int] = new ListBuffer[Int]
       var j = 0
-      while(rs.next()){
+      while(rs.next() && rs.getRow <= count) {
         ids += rs.getInt(1)
         if(ids.length % ddProductIndexSize == 0){
           //记录批次
@@ -233,54 +227,49 @@ class PartitionIndexTaskActor extends Actor with ActorLogging {
     var conn: Connection = null
     var stmt: Statement = null
     var rs: ResultSet = null
-    var minId: Int = 0
+    var maxId: Int = 0
     var totalCount:Int = 0
     try {
       conn = DDService.dataSource.getConnection()
       stmt = conn.createStatement()
-      var sql = "select min(productid_int),count(productid_int) from EC_Product ec with(nolock) where " +
+      var sql = "select max(productid_int),count(productid_int) from EC_Product ec with(nolock) where " +
                 "ec.VentureStatus_tinyint <> 3 and ec.ProductPrice_money > 0 and isnull(ec.VentureLevelNew_tinyint,0) = 0 " +
                 "and ec.QDWProductStatus_int = 0 and ec.VentureStatus_tinyint <> 4 "
       rs = stmt.executeQuery(sql)
       if (rs.next()) {
-        minId = rs.getInt(1)
+        maxId = rs.getInt(1)
         totalCount = rs.getInt(2)
       }
 
-      if(current.configuration.getBoolean("debugIndex").get && current.configuration.getInt("debugItemCount").get > minId) {
-        minId = current.configuration.getInt("debugItemCount").get
-      }
-
+      /*if(current.configuration.getBoolean("debugIndex").get && maxId > current.configuration.getInt("debugItemCount").get) {
+        maxId = current.configuration.getInt("debugItemCount").get
+      }*/
+      //with(nolock)会引起脏读，productid_int <= $maxId条件避免由其他ddl引起的脏读
       sql = s"""select productid_int from EC_Product ec with(nolock) where
                 ec.VentureStatus_tinyint <> 3 and ec.ProductPrice_money > 0
                 and isnull(ec.VentureLevelNew_tinyint,0) = 0
-                and ec.QDWProductStatus_int = 0 and ec.VentureStatus_tinyint <> 4 and productid_int >= $minId"""
+                and ec.QDWProductStatus_int = 0 and ec.VentureStatus_tinyint <> 4 and productid_int <= $maxId"""
       rs.setFetchSize(1000)
       rs = stmt.executeQuery(sql)
-      /*if(current.configuration.getBoolean("debugIndex").get) {
-        minId = maxId - current.configuration.getInt("debugItemCount").get
-      }*/
 
-
-      
       var total: Long = totalCount / ddProductIndexSize + 1
-
+      //debug模式任务分发
       if(current.configuration.getBoolean("debugIndex").get && total > current.configuration.getInt("debugTaskCount").get){
         total = current.configuration.getInt("debugTaskCount").get
       }
 
-      log.info("minId=========={}",minId)
+      log.info("maxId=========={}",maxId)
       log.info("totalCount====={}",totalCount)
 
       val ids:ListBuffer[Int] = new ListBuffer[Int]
       var j = 0
-      while(rs.next()){
+      while(rs.next() && rs.getRow <= totalCount){
         ids += rs.getInt(1)
         if(ids.length % ddProductIndexSize == 0){
           //记录批次
           j += 1
           sendMsgDD(Constants.DD_PRODUCT_FORDB, now, j, ids, total, ddProductIndexSize)
-          ids.clear()
+          //ids.clear()
           log.info("send dd index msg {}",j)
         }
       }
