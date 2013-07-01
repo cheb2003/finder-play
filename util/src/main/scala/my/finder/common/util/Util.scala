@@ -30,4 +30,13 @@ object Util {
     }
     d
   }
+  def getParamString(v:Map[String,Any],key:String,default:String):String = {
+    if(v.contains(key)) v(key).asInstanceOf[String] else default
+  }
+   
+  def getParamInt(v:Map[String,Any],key:String,default:Int):Int = {
+      if(v.contains(key)) v(key).asInstanceOf[Int] else default
+  }
+
+
 }

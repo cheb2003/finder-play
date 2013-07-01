@@ -1,15 +1,21 @@
 package controllers
-
+import java.io.File
 import play.api.mvc._
 import play.api.libs.json.{Json, JsValue}
 import my.finder.common.message.{OldIndexIncremetionalTaskMessage, IndexIncremetionalTaskMessage, CommandParseMessage}
 import my.finder.common.util.{Constants}
 import my.finder.console.actor.MessageFacade.rootActor
-
+import org.apache.lucene.store.{FSDirectory, Directory}
+import org.apache.lucene.index.DirectoryReader
+import play.api.data._
+import play.api.data.Forms._
+import play.api.Play._
+import scala.concurrent.ExecutionContext.Implicits.global
 
 
 
 object Application extends Controller {
+  val wordDir = current.configuration.getString("workDir")
   val json: JsValue = Json.parse("""
 {
   "user": {
@@ -43,5 +49,16 @@ object Application extends Controller {
     rootActor ! OldIndexIncremetionalTaskMessage(Constants.OLD_DD_PRODUCT,null)
     Ok("incDD")
   }
-  
+
+  def indexInfo = Action { implicit request =>
+    val form = Form(
+      tuple(
+        "i" -> text,
+        "i1" -> text
+      )
+    )
+    val dir:Directory = FSDirectory.open(new File(wordDir.get));
+    val reader = DirectoryReader.open(dir);
+    Ok("" + Integer.valueOf(reader.numDocs()))
+  }
 }

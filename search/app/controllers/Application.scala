@@ -443,14 +443,6 @@ object Application extends Controller {
     Ok("Got: ")
   }
  
-  def getParamString(v:Map[String,Any],key:String,default:T):String = {
-    if(v.contains(key)) v(key).asInstanceOf[T]  else default
-  }
- 
-  def getParamInt(v:Map[String,Any],key:String,default:Int):Int = {
-      if(v.contains(key)) Integer.valueOf(v(key).toString)  else default
-  }
-
   def searchOldDDInctest = Action {
     implicit request =>
       val form = Form(
