@@ -3,7 +3,7 @@ import java.io.File
 import play.api.mvc._
 import play.api.libs.json.{Json, JsValue}
 import my.finder.common.message.{OldIndexIncremetionalTaskMessage, IndexIncremetionalTaskMessage, CommandParseMessage}
-import my.finder.common.util.{Constants}
+import my.finder.common.util.{Constants, Util}
 import my.finder.console.actor.MessageFacade.rootActor
 import org.apache.lucene.store.{FSDirectory, Directory}
 import org.apache.lucene.index.DirectoryReader
@@ -57,7 +57,9 @@ object Application extends Controller {
         "i1" -> text
       )
     )
-    val dir:Directory = FSDirectory.open(new File(wordDir.get));
+    val queryParams = form.bindFromRequest.data
+    val path = Util.getParamString(queryParams,"i","")
+    val dir:Directory = FSDirectory.open(new File(wordDir.get + path));
     val reader = DirectoryReader.open(dir);
     Ok("" + Integer.valueOf(reader.numDocs()))
   }
