@@ -10,6 +10,7 @@ libraryDependencies in ThisBuild ++= Seq(
     "com.typesafe.akka" % "akka-kernel_2.10" % "2.1.4",
     "org.apache.lucene" % "lucene-analyzers-common" % "4.3.0",
     "org.apache.lucene" % "lucene-core" % "4.3.0",
-    "play" %% "play" % "2.1.1"
+    "play" %% "play" % "2.1.1",
+    "dom4j" % "dom4j" % "1.6.1"
 )
 

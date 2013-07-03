@@ -38,5 +38,8 @@ object Util {
       if(v.contains(key)) v(key).asInstanceOf[Int] else default
   }
 
+  def getProfile():String = {
+    current.configuration.getString("profile").get
+  }
 
 }

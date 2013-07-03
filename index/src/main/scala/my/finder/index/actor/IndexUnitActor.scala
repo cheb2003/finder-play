@@ -84,7 +84,7 @@ class IndexUnitActor extends Actor with ActorLogging with MongoUtil {
   private val isTaobaoField = new IntField("isTaobao", 0, Field.Store.YES)
 
   private val productBrandIdField = new IntField("pBrandId", 0, Field.Store.YES)
-  private val businessBrandField = new IntField("businessBrand", 0, Field.Store.YES)
+  private val businessBrandField = new StringField("businessBrand", "", Field.Store.YES)
 
 
 
@@ -474,8 +474,8 @@ class IndexUnitActor extends Actor with ActorLogging with MongoUtil {
         conn = DBService.dataSource.getConnection()
         stmt = conn.createStatement()
         val sb = new StringBuffer()
-        //sb.append("select ProductTitleCN_nvarchar as titlecn, ProductKeyID_nvarchar as sku,SearchKeyWordCN_nvarchar as wordcn,SegmentWord_nvarchar as word,LanguageCode_nvarchar as lang from QDW_TB_ProductTitleSegmentWord WITH (NOLOCK) where ProductKeyID_nvarchar in (")
-        sb.append("select ProductTitleCN_nvarchar as titlecn, ProductKeyID_nvarchar as sku,SearchKeyWordCN_nvarchar as wordcn,SegmentWord_nvarchar as word,LanguageCode_nvarchar as lang from QDW_TB_ProductTitleSegmentWord where ProductKeyID_nvarchar in (")
+        sb.append("select ProductTitleCN_nvarchar as titlecn, ProductKeyID_nvarchar as sku,SearchKeyWordCN_nvarchar as wordcn,SegmentWord_nvarchar as word,LanguageCode_nvarchar as lang from QDW_TB_ProductTitleSegmentWord WITH (NOLOCK) where ProductKeyID_nvarchar in (")
+        //sb.append("select ProductTitleCN_nvarchar as titlecn, ProductKeyID_nvarchar as sku,SearchKeyWordCN_nvarchar as wordcn,SegmentWord_nvarchar as word,LanguageCode_nvarchar as lang from QDW_TB_ProductTitleSegmentWord where ProductKeyID_nvarchar in (")
         for (x <- items) {
           sb.append('\'').append(mv[String](x, "productkeyid_nvarchar")).append("',")
         }
