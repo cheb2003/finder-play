@@ -9,6 +9,8 @@ import java.lang.Double
 import java.lang.Long
 import org.apache.lucene.search._
 import my.finder.search.service.{Helper, SearcherManager, MongoManager}
+import my.finder.common.util.{Util}
+
 
 import org.apache.lucene.index.Term
 import play.api.Play._
@@ -37,21 +39,17 @@ object Application extends Controller {
     val page:Int = if(request.getQueryString("page") == Some("") || request.getQueryString("page") == None) 1 else Integer.valueOf(request.getQueryString("page").get)
     val keyword = request.getQueryString("keyword").getOrElse("")
     val parse = new QueryParser(Version.LUCENE_43,"pName",new MyAnalyzer())
+    
+    val bq:BooleanQuery  = new BooleanQuery()
+
+
+
+    val r = NumericRangeQuery.newIntRange("ventureLevelNew",0,0,true,true)
+    
     val q = parse.parse("\"" +keyword.toLowerCase() + "\"")
-    //val q = parse.parse(keyword.toLowerCase())
-    /*val term:Term = new Term("pName", "\"" +keyword + "\"")
-    val pq:TermQuery = new TermQuery(term)*/
-    /*val skuTerm:Term = new Term("sku", "A")
-    val skupq:PrefixQuery = new PrefixQuery(skuTerm)
-    val nrq = NumericRangeQuery.newIntRange("qdwproductstatus_int",0,1,true,true);*/
 
-    /*val bq = new BooleanQuery()
-    
-    
-    bq.add(pq,BooleanClause.Occur.MUST)*/
-    /*bq.add(nrq, BooleanClause.Occur.MUST);
-
-    bq.add(skupq,BooleanClause.Occur.MUST)*/
+    bq.add(r,BooleanClause.Occur.MUST)
+    bq.add(q,BooleanClause.Occur.MUST)
     val searcher:IndexSearcher = SearcherManager.searcher
     val size = 1000
     val start = (page - 1) * size + 1;
@@ -61,31 +59,36 @@ object Application extends Controller {
 
     //分页
     val tsdc:TopFieldCollector = TopFieldCollector.create(sot, start + size, false, false, false, false);
-    println(q)
-    searcher.search(q, tsdc);
+    println(bq)
+    searcher.search(bq, tsdc);
 
-    val ids = ListBuffer[Long]()
     //从0开始计算
     val topDocs:TopDocs = tsdc.topDocs(start - 1, size);
     val scoreDocs = topDocs.scoreDocs;
+    val sb = new StringBuffer()
     //val total = tsdc.getTotalHits()
     for (i <- 0 until scoreDocs.length) {
       val indexDoc = searcher.getIndexReader().document(scoreDocs(i).doc);
-      ids += Long.valueOf(indexDoc.get("pId"))
-    }
-    val sb = new StringBuffer()
-    if (ids.length > 0) {
-      val mongo = MongoManager()
-      val productColl = mongo(dinobuydb.get)("ec_productinformation")
-      val items = productColl.find("productid_int" $in ids, fields, 0, size)
-
-      for (x <- items) {
-        println("---------" + x.as[DBObject]("ec_product").as[Int]("venturelevelnew_tinyint"))
-        if(x.as[DBObject]("ec_product").as[Int]("venturelevelnew_tinyint") == 0 ){
-
-          sb.append(x.as[String]("productkeyid_nvarchar")).append(',').append(x.as[DBObject]("ec_product").as[Int]("venturestatus_tinyint")).append("\r\n")
-        }
+      sb.append(indexDoc.get("sku")).append(',')
+      if(Integer.valueOf(indexDoc.get("ventureStatus")) == 0){
+        sb.append("绿")
       }
+      if(Integer.valueOf(indexDoc.get("ventureStatus")) == 1){
+        sb.append("黄")
+      }
+      if(Integer.valueOf(indexDoc.get("ventureStatus")) == 2){
+        sb.append("红")
+      }
+      if(Integer.valueOf(indexDoc.get("ventureStatus")) == 3){
+        sb.append("黑")
+      }
+      if(Integer.valueOf(indexDoc.get("ventureStatus")) == 4){
+        sb.append("灰")
+      }
+      if(Integer.valueOf(indexDoc.get("ventureStatus")) == 5){
+        sb.append("橙")
+      }
+      sb.append("\r\n")
     }
     Ok(sb.toString())
   }
@@ -126,18 +129,18 @@ object Application extends Controller {
 
       val queryParams = form.bindFromRequest.data
       //Ok("Got: " + id + name)
-      val indexCode = getParamString(queryParams,"indexcode","")
-      val productTypeId = getParamString(queryParams,"producttypeid","")
-      val productKeyId = getParamString(queryParams,"productkeyid","")
-      val range = getParamString(queryParams,"ranges","")
-      val page = getParamInt(queryParams,"page",1)
-      var size = getParamInt(queryParams,"size",20)
-      val sort = getParamString(queryParams,"sort","")
-      val productAliasName = getParamString(queryParams,"productaliasname","").trim
-      val businessBrand = getParamString(queryParams,"businessbrand","")
-      val isTaobaoStr = getParamString(queryParams,"istaobao","")
-      val isQualityStr = getParamString(queryParams,"isquality","")
-      val productBrandId = getParamString(queryParams,"productbrandid","")
+      val indexCode = Util.getParamString(queryParams,"indexcode","")
+      val productTypeId = Util.getParamString(queryParams,"producttypeid","")
+      val productKeyId = Util.getParamString(queryParams,"productkeyid","")
+      val range = Util.getParamString(queryParams,"ranges","")
+      val page = Util.getParamInt(queryParams,"page",1)
+      var size = Util.getParamInt(queryParams,"size",20)
+      val sort = Util.getParamString(queryParams,"sort","")
+      val productAliasName = Util.getParamString(queryParams,"productaliasname","").trim
+      val businessBrand = Util.getParamString(queryParams,"businessbrand","")
+      val isTaobaoStr = Util.getParamString(queryParams,"istaobao","")
+      val isQualityStr = Util.getParamString(queryParams,"isquality","")
+      val productBrandId = Util.getParamString(queryParams,"productbrandid","")
 
 
 
@@ -269,9 +272,9 @@ object Application extends Controller {
 
 
       val queryParams = form.bindFromRequest.data
-      val page = getParamInt(queryParams,"page",1)
-      var size = getParamInt(queryParams,"size",20)
-      val keyword = getParamString(queryParams,"keyword","").trim
+      val page = Util.getParamInt(queryParams,"page",1)
+      var size = Util.getParamInt(queryParams,"size",20)
+      val keyword = Util.getParamString(queryParams,"keyword","").trim
 
 
 
@@ -422,13 +425,13 @@ object Application extends Controller {
     val (id, name) = form.bind(anyData).get*/
     val queryParams = form.bindFromRequest.data
     //Ok("Got: " + id + name)
-    var keyword = getParamString(queryParams,"keyword","")
-    val country = getParamString(queryParams,"country","")
-    val indexCode = getParamString(queryParams,"indexCode","")
-    val range = getParamString(queryParams,"range","")
-    var currentPage = getParam[Int](queryParams,"currentPage",1)
-    var size = getParam[Int](queryParams,"size",100)
-    val sort = getParamString(queryParams,"sort","")
+    var keyword = Util.getParamString(queryParams,"keyword","")
+    val country = Util.getParamString(queryParams,"country","")
+    val indexCode = Util.getParamString(queryParams,"indexCode","")
+    val range = Util.getParamString(queryParams,"range","")
+    var currentPage = Util.getParamInt(queryParams,"currentPage",1)
+    var size = Util.getParamInt(queryParams,"size",100)
+    val sort = Util.getParamString(queryParams,"sort","")
     if(currentPage < 1){
       currentPage = 1
     }
@@ -455,9 +458,9 @@ object Application extends Controller {
 
 
       val queryParams = form.bindFromRequest.data
-      val page = getParamInt(queryParams,"page",1)
-      var size = getParamInt(queryParams,"size",20)
-      val keyword = getParamString(queryParams,"keyword","").trim
+      val page = Util.getParamInt(queryParams,"page",1)
+      var size = Util.getParamInt(queryParams,"size",20)
+      val keyword = Util.getParamString(queryParams,"keyword","").trim
 
 
 

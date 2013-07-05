@@ -4,6 +4,7 @@ import akka.actor.{Props, ActorLogging, Actor}
 import my.finder.common.message.{CloseIndexWriterMessage, CreateSubTask, MergeIndexMessage, CompleteSubTask}
 import my.finder.common.util.Util
 
+import play.api.Play.current
 /**
  *
  */
@@ -26,7 +27,7 @@ class IndexManagerActor extends Actor with ActorLogging{
       }*/
       log.info("completed sub task {},{},{},current {}/{}", Array(msg.name,msg.date,msg.seq,i,subTaskMap(key)("total")))
       if(subTaskMap(key)("completed") >= subTaskMap(key)("total")){
-        val indexRoot = context.actorFor("akka://index@127.0.0.1:2554/user/root")
+        val indexRoot = context.actorFor(Util.getIndexRootAkkaURL)
         indexRoot ! CloseIndexWriterMessage(msg.name,msg.date)
 
        // mergeIndex ! MergeIndexMessage(msg.name,msg.runId,subTaskMap(key)("total"))

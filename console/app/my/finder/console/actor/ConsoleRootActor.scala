@@ -2,12 +2,13 @@ package my.finder.console.actor
 
 import akka.actor.{ActorLogging, Props, Actor}
 import my.finder.common.message._
-import my.finder.common.util.{Constants}
+import my.finder.common.util.{Constants, Util}
 
 import my.finder.console.service.{Index, IndexManage}
 import scala.concurrent.duration._
 import scala.concurrent.ExecutionContext.Implicits.global
 
+import play.api.Play.current
 
 /**
  *

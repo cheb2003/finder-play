@@ -9,6 +9,7 @@ import org.apache.lucene.document._
 
 import my.finder.index.service.{MongoManager, IndexWriteManager}
 import my.finder.common.message._
+import my.finder.common.util._
 import org.apache.commons.lang.StringUtils
 import java.util.Date
 import org.apache.lucene.index.IndexWriter
@@ -16,12 +17,9 @@ import scala.concurrent.duration._
 import scala.concurrent.ExecutionContext.Implicits.global
 import java.io.{FileWriter, File}
 import my.finder.index.service.DBService
-import scala.slick.session.Database
 import scala.slick.jdbc.{GetResult, StaticQuery => Q}
 import scala.collection.mutable.ListBuffer
 import java.sql.{PreparedStatement, ResultSet, Statement, Connection}
-import scala.io.Source
-import scalax.io.support.FileUtils
 import java.text.SimpleDateFormat
 
 /**
@@ -62,14 +60,14 @@ class IndexUnitActor extends Actor with ActorLogging with MongoUtil {
   private val isOneSaleField = new IntField("isOneSale", 0, Field.Store.YES)
   private val isAliExpressField = new IntField("isAliExpress", 0, Field.Store.YES)
   private val skuField = new StringField("sku", "", Field.Store.YES)
-  private val businessNameField = new StringField("businessName", "", Field.Store.YES)
+  private val businessNameField = new TextField("businessName", "", Field.Store.YES)
   private val pNameRuField = new TextField("pNameRU", "", Field.Store.YES)
 
   private val segmentWordRuField = new TextField("segmentWordRu", "", Field.Store.YES)
   private val segmentWordBrField = new TextField("segmentWordBr", "", Field.Store.YES)
   private val segmentWordEnField = new TextField("segmentWordEn", "", Field.Store.YES)
   private val sourceKeywordField = new TextField("sourceKeyword", "", Field.Store.YES)
-  private val sourceKeywordCNField = new StringField("sourceKeywordCN", "", Field.Store.YES)
+  private val sourceKeywordCNField = new TextField("sourceKeywordCN", "", Field.Store.YES)
   private val skuOrderField = new IntField("skuOrder", 50, Field.Store.YES)
 
   private val pNameBrField = new TextField("pNameBR", "", Field.Store.YES)
@@ -84,7 +82,7 @@ class IndexUnitActor extends Actor with ActorLogging with MongoUtil {
   private val isTaobaoField = new IntField("isTaobao", 0, Field.Store.YES)
 
   private val productBrandIdField = new IntField("pBrandId", 0, Field.Store.YES)
-  private val businessBrandField = new StringField("businessBrand", "", Field.Store.YES)
+  private val businessBrandField = new TextField("businessBrand", "", Field.Store.YES)
 
 
 
@@ -106,6 +104,37 @@ class IndexUnitActor extends Actor with ActorLogging with MongoUtil {
       if (mvp[Int](x, "qdwproductstatus_int") < 2 && mvp[Boolean](x, "isstopsale_bit") == false
          && x.as[MongoDBList]("ec_productprice").length > 0 && x.as[MongoDBList]("ec_productprice").as[DBObject](0).as[Double]("unitprice_money") > 0) {
       
+        
+        
+        
+        indexCodeField.setStringValue("-1")
+        isOneSaleField.setIntValue(-1)
+        isAliExpressField.setIntValue(-1)
+        
+        businessNameField.setStringValue("")
+        pNameRuField.setStringValue("")
+
+        segmentWordRuField.setStringValue("")
+        segmentWordBrField.setStringValue("")
+        segmentWordEnField.setStringValue("")
+        sourceKeywordField.setStringValue("")
+        sourceKeywordCNField.setStringValue("")
+        skuOrderField.setIntValue(-1)
+
+        pNameBrField.setStringValue("")
+        pNameCnField.setStringValue("")
+        createTimeField.setStringValue("")
+        //osell
+        productTypeIdField.setIntValue(-1)
+        isQualityProductField.setIntValue(-1)
+        ventureStatusField.setIntValue(-1)
+        ventureLevelNewField.setIntValue(-1)
+
+        isTaobaoField.setIntValue(-1)
+
+        productBrandIdField.setIntValue(-1)
+        businessBrandField.setStringValue("")
+
         list = x.as[MongoDBList]("ec_productprice")
         doc = new Document()
         pIdField.setIntValue(x.as[Int]("productid_int"));
@@ -191,7 +220,7 @@ class IndexUnitActor extends Actor with ActorLogging with MongoUtil {
           case e: Exception =>
         }
         try {
-          businessBrandField.setStringValue(mvp[String](x, "businessbrand_nvarchar"))
+          businessBrandField.setStringValue(mvp[String](x, "businessbrand_nvarchar").trim)
           doc.add(businessBrandField)
         } catch {
           case e: Exception =>
@@ -211,23 +240,24 @@ class IndexUnitActor extends Actor with ActorLogging with MongoUtil {
         skuField.setStringValue(sku)
         if(words.length > 0){
           for(x <- words) {
+            //log.info("{} == {}",x.sku,sku)
             if (x.sku == sku) {
+              //log.info("----------enter words")
               if(x.lang.toLowerCase() =="ru"){
-                segmentWordRuField.setStringValue(x.word.replace("|"," "))
+                segmentWordRuField.setStringValue(x.word.replace("|"," ").trim)
                 doc.add(segmentWordRuField)
               }
               if(x.lang.toLowerCase() == "en"){
-                segmentWordEnField.setStringValue(x.word.replace("|"," "))
+                segmentWordEnField.setStringValue(x.word.replace("|"," ").trim)
                 doc.add(segmentWordEnField)
               }
               if(x.lang.toLowerCase() == "pt"){
-                segmentWordBrField.setStringValue(x.word.replace("|"," "))
+                segmentWordBrField.setStringValue(x.word.replace("|"," ").trim)
                 doc.add(segmentWordBrField)
               }
+              sourceKeywordCNField.setStringValue(DBService.tag.tag(x.cn.trim))
+              pNameCnField.setStringValue(DBService.tag.tag(x.titlecn.trim))
             }
-
-            sourceKeywordCNField.setStringValue(DBService.tag.tag(x.cn.trim))
-            pNameCnField.setStringValue(DBService.tag.tag(x.titlecn.trim))
           }
           doc.add(sourceKeywordCNField)
           doc.add(pNameCnField)
@@ -236,11 +266,11 @@ class IndexUnitActor extends Actor with ActorLogging with MongoUtil {
         list = x.as[MongoDBList]("ec_productlanguage")
         for (y <- 0 until list.length) {
           if (list.as[DBObject](y).as[String]("language_nvarchar").toLowerCase() == "ru") {
-            pNameRuField.setStringValue(list.as[DBObject](y).as[String]("producttitle_nvarchar"))
+            pNameRuField.setStringValue(list.as[DBObject](y).as[String]("producttitle_nvarchar").trim)
             doc.add(pNameRuField)
           }
           if (list.as[DBObject](y).as[String]("language_nvarchar").toLowerCase() == "br") {
-            pNameBrField.setStringValue(list.as[DBObject](y).as[String]("producttitle_nvarchar"))
+            pNameBrField.setStringValue(list.as[DBObject](y).as[String]("producttitle_nvarchar").trim)
             doc.add(pNameBrField)
           }
         }
@@ -400,7 +430,7 @@ class IndexUnitActor extends Actor with ActorLogging with MongoUtil {
       wf.close()*/
       val time2 = System.currentTimeMillis();
       log.info("index incremental spent {}",time2 - time1)
-      val consoleRoot = context.actorFor("akka://console@127.0.0.1:2552/user/root")
+      val consoleRoot = context.actorFor(Util.getConsoleRootAkkaURL)
       log.info("index incremental {}/{}",successCount,items.size)
       consoleRoot ! CompleteIncIndexTask(msg.name, msg.date,successCount,failCount,skipCount)
     }
@@ -446,8 +476,9 @@ class IndexUnitActor extends Actor with ActorLogging with MongoUtil {
         /*for (x <- 1 to 100) {
           writeDoc(null, writer)
         }*/
-        val indexManager = context.actorFor("akka://console@127.0.0.1:2552/user/root")
-        indexManager ! CompleteSubTask(msg.name, msg.date, msg.seq, successCount, failCount, skipCount)
+
+        val consoleRoot = context.actorFor(Util.getConsoleRootAkkaURLFromMyConfig)
+        consoleRoot ! CompleteSubTask(msg.name, msg.date, msg.seq, successCount, failCount, skipCount)
         val time2 = System.currentTimeMillis()
         items.close()
         val arr = new Array[Int](5)
@@ -458,7 +489,8 @@ class IndexUnitActor extends Actor with ActorLogging with MongoUtil {
         arr(4) = items.size
         log.info("index time {} success {} fail {} skip {} total {}",arr);
       } catch {
-        case e:Exception => log.error("{}",e)
+
+        case e:Exception => log.error("{}",e);e.printStackTrace()
       }
     }
   }
@@ -483,6 +515,7 @@ class IndexUnitActor extends Actor with ActorLogging with MongoUtil {
         rs = stmt.executeQuery(sql)
         while (rs.next()) {
           list += SegmentWord(rs.getString("sku"), rs.getString("word"), rs.getString("lang"), rs.getString("wordcn"), rs.getString("titlecn"))
+          //println(SegmentWord(rs.getString("sku"), rs.getString("word"), rs.getString("lang"), rs.getString("wordcn"), rs.getString("titlecn")))
         }
       } catch {
         case e: Exception => {

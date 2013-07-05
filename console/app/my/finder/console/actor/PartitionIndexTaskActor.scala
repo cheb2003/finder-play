@@ -5,7 +5,7 @@ import my.finder.common.message._
 
 
 import com.mongodb.casbah.Imports._
-import my.finder.common.util.{Constants}
+import my.finder.common.util.{Constants, Util}
 
 import java.util.Date
 
@@ -35,8 +35,8 @@ class PartitionIndexTaskActor extends Actor with ActorLogging {
   //TODO 改回来 var q:DBObject = ("ec_productprice.unitprice_money" $gt 0) ++ ("ec_product.isstopsale_bit" -> false)
   val fields = MongoDBObject("productid_int" -> 1)
   //val indexActor = context.system.actorOf(Props[IndexDDProductActor].withRouter(FromConfig()),"node")
-  val indexRootActor = context.actorFor("akka://index@127.0.0.1:2554/user/root")
-  val indexRootManager = context.actorFor("akka://console@127.0.0.1:2552/user/root/indexManager")
+  val indexRootActor = context.actorFor(Util.getIndexRootAkkaURL)
+  val indexRootManager = context.actorFor(Util.getIndexManagerAkkaURL)
 
   override def preStart() {
     mongoClient = MongoManager()

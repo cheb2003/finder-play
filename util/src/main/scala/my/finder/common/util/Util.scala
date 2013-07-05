@@ -2,7 +2,7 @@ package my.finder.common.util
 
 import java.text.SimpleDateFormat
 import java.util.Date
-
+import play.api.Play.current
 /**
  *
  */
@@ -35,11 +35,52 @@ object Util {
   }
    
   def getParamInt(v:Map[String,Any],key:String,default:Int):Int = {
-      if(v.contains(key)) v(key).asInstanceOf[Int] else default
+      if(v.contains(key)) Integer.valueOf(v(key).toString) else default
   }
 
-  def getProfile():String = {
+  def getProfile:String = {
     current.configuration.getString("profile").get
+  }
+
+  def getProfileFromMyConfig:String = {
+    Config.get("profile")
+  }
+
+  def getConsoleRootAkkaURLFromMyConfig:String = {
+    if(getProfileFromMyConfig == Constants.PROFILE_PRODUCTION)
+      "akka://console@127.0.0.1:2552/user/root"
+    else if(getProfileFromMyConfig == Constants.PROFILE_TEST)
+      "akka://console@127.0.0.1:3552/user/root"
+    else
+      null
+  }
+
+
+  def getIndexRootAkkaURL:String = {
+    if(getProfile == Constants.PROFILE_PRODUCTION) 
+      "akka://index@127.0.0.1:2554/user/root"
+    else if(getProfile == Constants.PROFILE_TEST)
+      "akka://index@127.0.0.1:3554/user/root"
+    else 
+      null
+  }
+
+  def getIndexManagerAkkaURL:String = {
+    if(getProfile == Constants.PROFILE_PRODUCTION) 
+      "akka://console@127.0.0.1:2552/user/root/indexManager"
+    else if(getProfile == Constants.PROFILE_TEST)
+      "akka://console@127.0.0.1:3552/user/root/indexManager"
+    else 
+      null
+  }
+  
+  def getConsoleRootAkkaURL:String = {
+    if(getProfile == Constants.PROFILE_PRODUCTION) 
+      "akka://console@127.0.0.1:2552/user/root"
+    else if(getProfile == Constants.PROFILE_TEST)
+      "akka://console@127.0.0.1:3552/user/root"
+    else
+      null
   }
 
 }
