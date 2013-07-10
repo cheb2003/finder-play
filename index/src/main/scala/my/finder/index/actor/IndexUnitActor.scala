@@ -2,12 +2,12 @@ package my.finder.index.actor
 
 import edu.fudan.ml.types.Dictionary;
 import edu.fudan.nlp.cn.tag.CWSTagger;
-import akka.actor.{ActorLogging, Actor}
-import my.finder.common.util.{Util, MongoUtil, Config}
+import akka.actor.{ ActorLogging, Actor }
+import my.finder.common.util.{ Util, MongoUtil, Config }
 import com.mongodb.casbah.Imports._
 import org.apache.lucene.document._
 
-import my.finder.index.service.{MongoManager, IndexWriteManager}
+import my.finder.index.service.{ MongoManager, IndexWriteManager }
 import my.finder.common.message._
 import my.finder.common.util._
 import org.apache.commons.lang.StringUtils
@@ -15,42 +15,29 @@ import java.util.Date
 import org.apache.lucene.index.IndexWriter
 import scala.concurrent.duration._
 import scala.concurrent.ExecutionContext.Implicits.global
-import java.io.{FileWriter, File}
+import java.io.{ FileWriter, File }
 import my.finder.index.service.DBService
-import scala.slick.jdbc.{GetResult, StaticQuery => Q}
+//import scala.slick.jdbc.{GetResult, StaticQuery => Q}
 import scala.collection.mutable.ListBuffer
-import java.sql.{PreparedStatement, ResultSet, Statement, Connection}
+import java.sql.{ PreparedStatement, ResultSet, Statement, Connection }
 import java.text.SimpleDateFormat
 
 /**
  *
  */
-case class SegmentWord(sku:String,word:String,lang:String,cn:String,titlecn:String)
+case class SegmentWord(sku: String, word: String, lang: String, cn: String, titlecn: String)
 
 class IndexUnitActor extends Actor with ActorLogging with MongoUtil {
-  implicit val getSegmentWordResult = GetResult(r => SegmentWord(r.<<, r.<<,r.<<,r.<<,r.<<))
+  //implicit val getSegmentWordResult = GetResult(r => SegmentWord(r.<<, r.<<,r.<<,r.<<,r.<<))
   val workDir = Config.get("workDir")
   val oldDir = Config.get("oldDir")
   val dinobuydb = Config.get("dinobuydb")
 
   val indexBatchSize = Integer.valueOf(Config.get("indexBatchSize"))
-  var productColl:MongoCollection = null
-  
+  var productColl: MongoCollection = null
 
-
-  val fields = MongoDBObject("productid_int" -> 1, "ec_product.productaliasname_nvarchar" -> 1
-    , "ec_productprice.unitprice_money" -> 1, "ec_product.productbrand_nvarchar" -> 1
-    , "ec_product.businessbrand_nvarchar" -> 1, "ec_product.indexcode_nvarchar" -> 1
-    , "ec_product.productbrandid_int" -> 1, "ec_product.isonesale_tinyint" -> 1
-    , "ec_product.isaliexpress_tinyint" -> 1, "productkeyid_nvarchar" -> 1
-    , "ec_productlanguage" -> 1, "ec_product.createtime_datetime" -> 1
-    , "ec_product.businessname_nvarchar" -> 1, "ec_product.isstopsale_bit" -> 1
-    , "ec_product.qdwproductstatus_int" -> 1,"ec_product.excavatekeywords_nvarchar" -> 1
-    //osell需要的属性
-    , "ec_product.producttypeid_int" -> 1,"ec_product.isqualityproduct_tinyint" -> 1
-    , "ec_product.venturestatus_tinyint" -> 1,"ec_product.istaobao_tinyint" -> 1
-    , "ec_product.venturelevelnew_tinyint" -> 1
-  )
+  val fields = MongoDBObject("productid_int" -> 1, "ec_product.productaliasname_nvarchar" -> 1, "ec_productprice.unitprice_money" -> 1, "ec_product.productbrand_nvarchar" -> 1, "ec_product.businessbrand_nvarchar" -> 1, "ec_product.indexcode_nvarchar" -> 1, "ec_product.productbrandid_int" -> 1, "ec_product.isonesale_tinyint" -> 1, "ec_product.isaliexpress_tinyint" -> 1, "productkeyid_nvarchar" -> 1, "ec_productlanguage" -> 1, "ec_product.createtime_datetime" -> 1, "ec_product.businessname_nvarchar" -> 1, "ec_product.isstopsale_bit" -> 1, "ec_product.qdwproductstatus_int" -> 1, "ec_product.excavatekeywords_nvarchar" -> 1 //osell需要的属性
+  , "ec_product.producttypeid_int" -> 1, "ec_product.isqualityproduct_tinyint" -> 1, "ec_product.venturestatus_tinyint" -> 1, "ec_product.istaobao_tinyint" -> 1, "ec_product.venturelevelnew_tinyint" -> 1)
   //val sort = MongoDBObject("productid_int" -> 1)
 
   private val pIdField = new IntField("pId", 0, Field.Store.YES);
@@ -82,9 +69,8 @@ class IndexUnitActor extends Actor with ActorLogging with MongoUtil {
   private val isTaobaoField = new IntField("isTaobao", 0, Field.Store.YES)
 
   private val productBrandIdField = new IntField("pBrandId", 0, Field.Store.YES)
+  private val productBrandNameField = new TextField("pBrandName", "", Field.Store.YES)
   private val businessBrandField = new TextField("businessBrand", "", Field.Store.YES)
-
-
 
   private var doc: Document = null
 
@@ -93,24 +79,20 @@ class IndexUnitActor extends Actor with ActorLogging with MongoUtil {
   private val oldcreateTimeField = new StringField("createTime", "", Field.Store.YES)
   private val oldsourceKeywordField = new TextField("sourceKeyword", "", Field.Store.YES)
 
-
   override def preStart() {
     val mongo = MongoManager()
     productColl = mongo(dinobuydb)("ec_productinformation")
   }
-  def writeDoc(x: DBObject,words:List[SegmentWord], writer: IndexWriter):Boolean = {
+  def writeDoc(x: DBObject, words: List[SegmentWord], writer: IndexWriter): Boolean = {
     var list: MongoDBList = null
     try {
       if (mvp[Int](x, "qdwproductstatus_int") < 2 && mvp[Boolean](x, "isstopsale_bit") == false
-         && x.as[MongoDBList]("ec_productprice").length > 0 && x.as[MongoDBList]("ec_productprice").as[DBObject](0).as[Double]("unitprice_money") > 0) {
-      
-        
-        
-        
+        && x.as[MongoDBList]("ec_productprice").length > 0 && x.as[MongoDBList]("ec_productprice").as[DBObject](0).as[Double]("unitprice_money") > 0) {
+
         indexCodeField.setStringValue("-1")
         isOneSaleField.setIntValue(-1)
         isAliExpressField.setIntValue(-1)
-        
+
         businessNameField.setStringValue("")
         pNameRuField.setStringValue("")
 
@@ -119,6 +101,7 @@ class IndexUnitActor extends Actor with ActorLogging with MongoUtil {
         segmentWordEnField.setStringValue("")
         sourceKeywordField.setStringValue("")
         sourceKeywordCNField.setStringValue("")
+        productBrandNameField.setStringValue("")
         skuOrderField.setIntValue(-1)
 
         pNameBrField.setStringValue("")
@@ -138,7 +121,7 @@ class IndexUnitActor extends Actor with ActorLogging with MongoUtil {
         list = x.as[MongoDBList]("ec_productprice")
         doc = new Document()
         pIdField.setIntValue(x.as[Int]("productid_int"));
-        pNameField.setStringValue(StringUtils.defaultIfBlank(mvp[String](x, "productaliasname_nvarchar"), StringUtils.defaultIfBlank(mvp[String](x, "businessbrand_nvarchar"), "")) + ' ' + mvp[String](x, "productaliasname_nvarchar"))
+        pNameField.setStringValue(StringUtils.defaultIfBlank(mvp[String](x, "productbrand_nvarchar"), StringUtils.defaultIfBlank(mvp[String](x, "businessbrand_nvarchar"), "")) + ' ' + mvp[String](x, "productaliasname_nvarchar"))
         indexCodeField.setStringValue(mvp[String](x, "indexcode_nvarchar"))
 
         try {
@@ -154,7 +137,7 @@ class IndexUnitActor extends Actor with ActorLogging with MongoUtil {
 
         try {
           val strs = mvp[String](x, "excavatekeywords_nvarchar").split(",")
-          if(strs.length > 1){
+          if (strs.length > 1) {
             sourceKeywordField.setStringValue(strs(strs.length - 1).trim)
             doc.add(sourceKeywordField)
           }
@@ -219,6 +202,14 @@ class IndexUnitActor extends Actor with ActorLogging with MongoUtil {
         } catch {
           case e: Exception =>
         }
+
+        try {
+          productBrandNameField.setStringValue(mvp[Int](x, "productbrand_nvarchar"))
+          doc.add(productBrandNameField)
+        } catch {
+          case e: Exception =>
+        }
+
         try {
           businessBrandField.setStringValue(mvp[String](x, "businessbrand_nvarchar").trim)
           doc.add(businessBrandField)
@@ -227,32 +218,32 @@ class IndexUnitActor extends Actor with ActorLogging with MongoUtil {
         }
 
         val sku = mv[String](x, "productkeyid_nvarchar")
-        if(sku.charAt(0) == 'A') {
+        if (sku.charAt(0) == 'A') {
           skuOrderField.setIntValue(0)
-        } else if(sku.charAt(0) == 'X') {
+        } else if (sku.charAt(0) == 'X') {
           skuOrderField.setIntValue(1)
-        } else if(sku.charAt(0) == 'T') {
+        } else if (sku.charAt(0) == 'T') {
           skuOrderField.setIntValue(2)
         } else {
           skuOrderField.setIntValue(50)
         }
         doc.add(skuOrderField)
         skuField.setStringValue(sku)
-        if(words.length > 0){
-          for(x <- words) {
+        if (words.length > 0) {
+          for (x <- words) {
             //log.info("{} == {}",x.sku,sku)
             if (x.sku == sku) {
               //log.info("----------enter words")
-              if(x.lang.toLowerCase() =="ru"){
-                segmentWordRuField.setStringValue(x.word.replace("|"," ").trim)
+              if (x.lang.toLowerCase() == "ru") {
+                segmentWordRuField.setStringValue(x.word.replace("|", " ").trim)
                 doc.add(segmentWordRuField)
               }
-              if(x.lang.toLowerCase() == "en"){
-                segmentWordEnField.setStringValue(x.word.replace("|"," ").trim)
+              if (x.lang.toLowerCase() == "en") {
+                segmentWordEnField.setStringValue(x.word.replace("|", " ").trim)
                 doc.add(segmentWordEnField)
               }
-              if(x.lang.toLowerCase() == "pt"){
-                segmentWordBrField.setStringValue(x.word.replace("|"," ").trim)
+              if (x.lang.toLowerCase() == "pt") {
+                segmentWordBrField.setStringValue(x.word.replace("|", " ").trim)
                 doc.add(segmentWordBrField)
               }
               sourceKeywordCNField.setStringValue(DBService.tag.tag(x.cn.trim))
@@ -287,7 +278,7 @@ class IndexUnitActor extends Actor with ActorLogging with MongoUtil {
         false
       }
     } catch {
-      case e: Exception => log.error("index item fail,productId {};{}", x.as[Int]("productid_int"));e.printStackTrace(); throw e//failCount += 1
+      case e: Exception => log.error("index item fail,productId {};{}", x.as[Int]("productid_int")); e.printStackTrace(); throw e //failCount += 1
     }
 
     /*doc = new Document
@@ -298,60 +289,59 @@ class IndexUnitActor extends Actor with ActorLogging with MongoUtil {
       writer.addDocument(doc)*/
   }
   def receive = {
-    case msg:OldIndexIncremetionalTaskMessage => {
+    case msg: OldIndexIncremetionalTaskMessage => {
       val timeFile = new File(oldDir + "/time")
       val from = new Date(timeFile.lastModified())
-      var successCount:Int = 0
+      var successCount: Int = 0
 
-      var conn:Connection = null
-      var stmt:PreparedStatement = null
-      var rs:ResultSet = null
-      val writer = IndexWriteManager.getOldIncIndexWriter(null,null)
-      var maxDate:Date = from
-      try{
+      var conn: Connection = null
+      var stmt: PreparedStatement = null
+      var rs: ResultSet = null
+      val writer = IndexWriteManager.getOldIncIndexWriter(null, null)
+      var maxDate: Date = from
+      try {
         val sdf: SimpleDateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss")
 
         val sql = "select top 100 productid_int as pId,ProductAliasName_nvarchar as alias,ExcavateKeyWords_nvarchar as keyword,CreateTime_datetime as date from ec_product with(nolock) where CreateTime_datetime > '" + sdf.format(from) + ".999'"
-        log.info("old inc sql:{} ",sql)
+        log.info("old inc sql:{} ", sql)
         conn = DBService.dataSource.getConnection()
         stmt = conn.prepareStatement(sql)
         rs = stmt.executeQuery()
 
-        while(rs.next()){
+        while (rs.next()) {
           val doc = new Document
-          try{
+          try {
             oldcreateTimeField.setStringValue(DateTools.dateToString(rs.getTimestamp("date"), DateTools.Resolution.MINUTE))
             doc.add(oldcreateTimeField)
           } catch {
-            case e:Exception =>
+            case e: Exception =>
           }
 
-          try{
+          try {
             oldpIdField.setIntValue(rs.getInt("pId"));
             doc.add(oldpIdField)
           } catch {
-            case e:Exception =>
+            case e: Exception =>
           }
 
-          try{
+          try {
             oldpNameField.setStringValue(rs.getString("alias"));
             doc.add(oldpNameField)
           } catch {
-            case e:Exception =>
+            case e: Exception =>
           }
 
-
-          try{
+          try {
             val strs = rs.getString("keyword").split(",")
-            if(strs.length > 1){
+            if (strs.length > 1) {
               oldsourceKeywordField.setStringValue(strs(strs.length - 1))
               doc.add(oldsourceKeywordField)
             }
           } catch {
-            case e:Exception =>
+            case e: Exception =>
           }
           //log.info("item date {},maxDate {}",sdf.format(rs.getTimestamp("date")),sdf.format(maxDate))
-          if(rs.getTimestamp("date").after(maxDate)){
+          if (rs.getTimestamp("date").after(maxDate)) {
             //log.info("set maxDate")
             maxDate = rs.getTimestamp("date")
           }
@@ -359,32 +349,32 @@ class IndexUnitActor extends Actor with ActorLogging with MongoUtil {
           successCount += 1
         }
       } catch {
-        case e:Exception => {
+        case e: Exception => {
           e.printStackTrace()
           /*if(rs != null) rs.close()
           if(stmt != null) stmt.close()
           if(conn != null) conn.close()*/
         }
       } finally {
-        if(rs != null) rs.close()
-        if(stmt != null) stmt.close()
-        if(conn != null) conn.close()
+        if (rs != null) rs.close()
+        if (stmt != null) stmt.close()
+        if (conn != null) conn.close()
       }
 
       timeFile.delete()
       timeFile.createNewFile()
       timeFile.setLastModified(maxDate.getTime)
       writer.commit()
-      log.info("index old incremental {}",successCount)
-      context.system.scheduler.scheduleOnce(10 seconds){
-        self ! OldIndexIncremetionalTaskMessage("",null)
+      log.info("index old incremental {}", successCount)
+      context.system.scheduler.scheduleOnce(10 seconds) {
+        self ! OldIndexIncremetionalTaskMessage("", null)
       }
     }
-    case msg:IndexIncremetionalTaskMessage => {
+    case msg: IndexIncremetionalTaskMessage => {
       log.info("receive incrementional index message")
       val time1 = System.currentTimeMillis();
 
-      val incPath = Util.getIncrementalPath(msg.name,msg.date)
+      val incPath = Util.getIncrementalPath(msg.name, msg.date)
       val timeFile = new File(workDir + "/" + incPath + "/time")
       //val lastId:Int = Integer.valueOf(Source.fromFile(timeFile).getLines().next())
       val from = new Date(timeFile.lastModified())
@@ -403,16 +393,16 @@ class IndexUnitActor extends Actor with ActorLogging with MongoUtil {
       log.info("readed data")
       //val words = getSegmentWords(lst)
       //log.info("readed data1")
-      log.info("index inc item {}",items.size)
-      var maxDate:Date = from
+      log.info("index inc item {}", items.size)
+      var maxDate: Date = from
       for (x <- lst) {
-        try{
-          if(writeDoc(x,List(), writer)) successCount += 1 else skipCount += 1
-          if(mvp[Date](x, "createtime_datetime").after(maxDate)){
+        try {
+          if (writeDoc(x, List(), writer)) successCount += 1 else skipCount += 1
+          if (mvp[Date](x, "createtime_datetime").after(maxDate)) {
             maxDate = mvp[Date](x, "createtime_datetime")
           }
         } catch {
-          case e:Exception => failCount += 1
+          case e: Exception => failCount += 1
         }
 
       }
@@ -429,47 +419,46 @@ class IndexUnitActor extends Actor with ActorLogging with MongoUtil {
       wf.write(maxId.toString)
       wf.close()*/
       val time2 = System.currentTimeMillis();
-      log.info("index incremental spent {}",time2 - time1)
+      log.info("index incremental spent {}", time2 - time1)
       val consoleRoot = context.actorFor(Util.getConsoleRootAkkaURL)
-      log.info("index incremental {}/{}",successCount,items.size)
-      consoleRoot ! CompleteIncIndexTask(msg.name, msg.date,successCount,failCount,skipCount)
+      log.info("index incremental {}/{}", successCount, items.size)
+      consoleRoot ! CompleteIncIndexTask(msg.name, msg.date, successCount, failCount, skipCount)
     }
     case msg: IndexTaskMessage => {
-      try{
+      try {
         //log.info("recevie indextaskmessage {}",msg.date)
         val time1 = System.currentTimeMillis()
         val writer = IndexWriteManager.getIndexWriter(msg.name, msg.date)
         //val now:Date = msg.date
-        var successCount:Int = 0
-        var failCount:Int = 0
-        var skipCount:Int = 0
+        var successCount: Int = 0
+        var failCount: Int = 0
+        var skipCount: Int = 0
         //read mongo data
         var time3 = System.currentTimeMillis()
         //val items: MongoCursor = productColl.find("ec_product.createtime_datetime" $lt now, fields).skip(Integer.valueOf((msg.seq * 2).toString())).limit(2000)
-        var q:DBObject = ("productid_int" $gte msg.minId $lte msg.maxId) ++ ("ec_product.qdwproductstatus_int" $lt 2) ++ ("ec_product.isstopsale_bit" -> false) ++ ("ec_productprice.unitprice_money" $gt 0) 
+        var q: DBObject = ("productid_int" $gte msg.minId $lte msg.maxId) ++ ("ec_product.qdwproductstatus_int" $lt 2) ++ ("ec_product.isstopsale_bit" -> false) ++ ("ec_productprice.unitprice_money" $gt 0)
         val items: MongoCursor = productColl.find(q, fields, 0, msg.batchSize)
         val lst = items.toList
         var time4 = System.currentTimeMillis()
-        log.info("load items {}",time4 - time3)
+        log.info("load items {}", time4 - time3)
 
         //read segmentWord
         time3 = System.currentTimeMillis()
         val words = getSegmentWords(lst)
         time4 = System.currentTimeMillis()
-        log.info("load words {}",time4 - time3)
+        log.info("load words {}", time4 - time3)
 
         //log.info("find items {}",time4 - time3)
-
 
         //log.info("spent {} millisecond in finding items {}",time2 - time1,items.size)
         for (x <- lst) {
           /*if(!b) b = true else log.info("load item {}",time3 -time4)
           time3 = System.currentTimeMillis()*/
-          try{
-            if(writeDoc(x, words, writer)) successCount += 1 else skipCount += 1
+          try {
+            if (writeDoc(x, words, writer)) successCount += 1 else skipCount += 1
             //if(writeDoc(x,List(), writer)) successCount += 1 else skipCount += 1
           } catch {
-            case e:Exception => failCount + 1
+            case e: Exception => failCount + 1
           }
           //time4 = System.currentTimeMillis()
         }
@@ -487,15 +476,15 @@ class IndexUnitActor extends Actor with ActorLogging with MongoUtil {
         arr(2) = failCount
         arr(3) = skipCount
         arr(4) = items.size
-        log.info("index time {} success {} fail {} skip {} total {}",arr);
+        log.info("index time {} success {} fail {} skip {} total {}", arr);
       } catch {
 
-        case e:Exception => log.error("{}",e);e.printStackTrace()
+        case e: Exception => log.error("{}", e); e.printStackTrace()
       }
     }
   }
-  def getSegmentWords(items:List[DBObject]):List[SegmentWord] = {
-    
+  def getSegmentWords(items: List[DBObject]): List[SegmentWord] = {
+
     val list = ListBuffer[SegmentWord]()
     if (items.length > 0) {
 
@@ -529,6 +518,6 @@ class IndexUnitActor extends Actor with ActorLogging with MongoUtil {
       }
 
     }
-    list.toList 
+    list.toList
   }
 }

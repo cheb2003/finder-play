@@ -11,11 +11,15 @@ GET     /searchOldDDInc             controllers.Application.searchOldDDInc
 POST    /searchOldDDInc             controllers.Application.searchOldDDInc
 GET     /test                       controllers.Application.test
 POST    /test                       controllers.Application.test
-GET     /searchOldDDIncTest             controllers.Application.searchOldDDInctest
-POST    /searchOldDDIncTest             controllers.Application.searchOldDDInctest
+GET     /searchOldDDIncTest         controllers.Application.searchOldDDInctest
+POST    /searchOldDDIncTest         controllers.Application.searchOldDDInctest
+
+GET		/searchKeywordGroupByCategory     controllers.Application.searchKeywordGroupByCategory
+POST	/searchKeywordGroupByCategory     controllers.Application.searchKeywordGroupByCategory
+
 
 #POST    /search/product/json		controllers.Dino.productJSON
-#POST    /search/product/xml			controllers.Dino.productXML
+#POST    /search/product/xml		controllers.Dino.productXML
 
 # Map static resources from the /public folder to the /assets URL path
 GET     /assets/*file               controllers.Assets.at(path="/public", file)

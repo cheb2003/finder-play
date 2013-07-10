@@ -1,91 +1,94 @@
 package controllers
 
-import org.apache.lucene.util.BytesRef
+import play.api.Play._
 import play.api.mvc._
 import play.api.libs.json.Json
+import play.api.libs.json.JsValue
 import play.api.libs.json.Json._
-import scala.collection.mutable.ListBuffer
-import java.lang.Double
-import java.lang.Long
-import org.apache.lucene.search._
-import my.finder.search.service.{Helper, SearcherManager, MongoManager}
-import my.finder.common.util.{Util}
-
-
-import org.apache.lucene.index.Term
-import play.api.Play._
-
-import com.mongodb.casbah.Imports._
-import scala.Some
-
 import play.api.data._
 import play.api.data.Forms._
-import org.apache.lucene.queryparser.classic.{QueryParserBase, QueryParser}
+
+import scala.collection.mutable.ListBuffer
+import scala.Some
+
+import java.lang.Double
+import java.lang.Long
+
+import org.apache.lucene.search._
+import org.apache.lucene.search.grouping._
+import org.apache.lucene.util.BytesRef
+import org.apache.lucene.index.Term
+
+import my.finder.search.service.{ Helper, SearcherManager, MongoManager }
+import my.finder.common.util.{ Util }
+import my.finder.common.util.MyAnalyzer
+
+//import com.mongodb.casbah.Imports._
+
+import org.apache.lucene.queryparser.classic.{ QueryParserBase, QueryParser }
 import org.apache.lucene.document.FieldType
 import java.util
 import org.apache.commons.lang.ArrayUtils
 import org.apache.http.params.HttpProtocolParams
 import org.apache.lucene.util.Version
-import my.finder.common.util.MyAnalyzer
+
 object Application extends Controller {
 
-  val dinobuydb = current.configuration.getString("dinobuydb")
-  val fields = MongoDBObject("productkeyid_nvarchar" -> 1 , "ec_product.venturestatus_tinyint" -> 1,"ec_product.venturelevelnew_tinyint" -> 1)
+  //val dinobuydb = current.configuration.getString("dinobuydb")
+  //val fields = MongoDBObject("productkeyid_nvarchar" -> 1, "ec_product.venturestatus_tinyint" -> 1, "ec_product.venturelevelnew_tinyint" -> 1)
   def index = Action {
     Ok(views.html.index("Your new application is ready."))
   }
 
   def export = Action { request =>
-    val page:Int = if(request.getQueryString("page") == Some("") || request.getQueryString("page") == None) 1 else Integer.valueOf(request.getQueryString("page").get)
+    val page: Int = if (request.getQueryString("page") == Some("") || request.getQueryString("page") == None) 1 else Integer.valueOf(request.getQueryString("page").get)
     val keyword = request.getQueryString("keyword").getOrElse("")
-    val parse = new QueryParser(Version.LUCENE_43,"pName",new MyAnalyzer())
-    
-    val bq:BooleanQuery  = new BooleanQuery()
+    val parse = new QueryParser(Version.LUCENE_43, "pName", new MyAnalyzer())
 
+    val bq: BooleanQuery = new BooleanQuery()
 
+    val r = NumericRangeQuery.newIntRange("ventureLevelNew", 0, 0, true, true)
 
-    val r = NumericRangeQuery.newIntRange("ventureLevelNew",0,0,true,true)
-    
-    val q = parse.parse("\"" +keyword.toLowerCase() + "\"")
+    val q = parse.parse("\"" + keyword.toLowerCase() + "\"")
 
-    bq.add(r,BooleanClause.Occur.MUST)
-    bq.add(q,BooleanClause.Occur.MUST)
-    val searcher:IndexSearcher = SearcherManager.searcher
+    bq.add(r, BooleanClause.Occur.MUST)
+    bq.add(q, BooleanClause.Occur.MUST)
+    val searcher: IndexSearcher = SearcherManager.searcher
     val size = 1000
     val start = (page - 1) * size + 1;
 
-    val sortField:SortField  = SortField.FIELD_SCORE
-    val sot:Sort = new Sort(sortField);
+    val sortField: SortField = SortField.FIELD_SCORE
+    val sot: Sort = new Sort(sortField);
 
     //分页
-    val tsdc:TopFieldCollector = TopFieldCollector.create(sot, start + size, false, false, false, false);
+    val tsdc: TopFieldCollector = TopFieldCollector.create(sot, start + size, false, false, false, false);
     println(bq)
     searcher.search(bq, tsdc);
 
     //从0开始计算
-    val topDocs:TopDocs = tsdc.topDocs(start - 1, size);
+    val topDocs: TopDocs = tsdc.topDocs(start - 1, size);
     val scoreDocs = topDocs.scoreDocs;
     val sb = new StringBuffer()
     //val total = tsdc.getTotalHits()
     for (i <- 0 until scoreDocs.length) {
       val indexDoc = searcher.getIndexReader().document(scoreDocs(i).doc);
       sb.append(indexDoc.get("sku")).append(',')
-      if(Integer.valueOf(indexDoc.get("ventureStatus")) == 0){
+      if (Integer.valueOf(indexDoc.get("ventureStatus")) == 0) {
         sb.append("绿")
       }
-      if(Integer.valueOf(indexDoc.get("ventureStatus")) == 1){
+      if (Integer.valueOf(indexDoc.get("ventureStatus")) == 1) {
         sb.append("黄")
       }
-      if(Integer.valueOf(indexDoc.get("ventureStatus")) == 2){
+      if (Integer.valueOf(indexDoc.get("ventureStatus")) == 2) {
         sb.append("红")
       }
-      if(Integer.valueOf(indexDoc.get("ventureStatus")) == 3){
+      if (Integer.valueOf(indexDoc.get("ventureStatus")) == 3) {
         sb.append("黑")
       }
-      if(Integer.valueOf(indexDoc.get("ventureStatus")) == 4){
+      if (Integer.valueOf(indexDoc.get("ventureStatus")) == 4) {
         sb.append("灰")
       }
-      if(Integer.valueOf(indexDoc.get("ventureStatus")) == 5){
+      if (Integer.valueOf(indexDoc.get("ventureStatus")) == 5) {
         sb.append("橙")
       }
       sb.append("\r\n")
@@ -108,9 +111,7 @@ object Application extends Controller {
           "businessbrand" -> text,
           "page" -> number,
           "istaobao" -> text,
-          "isquality" -> text
-        )
-      )
+          "isquality" -> text))
       /*val indexCode = request.getQueryString("indexcode").getOrElse("")
       val productTypeId = request.getQueryString("producttypeid").getOrElse("")
       val productKeyId = request.getQueryString("productkeyid").getOrElse("")
@@ -129,43 +130,40 @@ object Application extends Controller {
 
       val queryParams = form.bindFromRequest.data
       //Ok("Got: " + id + name)
-      val indexCode = Util.getParamString(queryParams,"indexcode","")
-      val productTypeId = Util.getParamString(queryParams,"producttypeid","")
-      val productKeyId = Util.getParamString(queryParams,"productkeyid","")
-      val range = Util.getParamString(queryParams,"ranges","")
-      val page = Util.getParamInt(queryParams,"page",1)
-      var size = Util.getParamInt(queryParams,"size",20)
-      val sort = Util.getParamString(queryParams,"sort","")
-      val productAliasName = Util.getParamString(queryParams,"productaliasname","").trim
-      val businessBrand = Util.getParamString(queryParams,"businessbrand","")
-      val isTaobaoStr = Util.getParamString(queryParams,"istaobao","")
-      val isQualityStr = Util.getParamString(queryParams,"isquality","")
-      val productBrandId = Util.getParamString(queryParams,"productbrandid","")
-
-
-
+      val indexCode = Util.getParamString(queryParams, "indexcode", "")
+      val productTypeId = Util.getParamString(queryParams, "producttypeid", "")
+      val productKeyId = Util.getParamString(queryParams, "productkeyid", "")
+      val range = Util.getParamString(queryParams, "ranges", "")
+      val page = Util.getParamInt(queryParams, "page", 1)
+      var size = Util.getParamInt(queryParams, "size", 20)
+      val sort = Util.getParamString(queryParams, "sort", "")
+      val productAliasName = Util.getParamString(queryParams, "productaliasname", "").trim
+      val businessBrand = Util.getParamString(queryParams, "businessbrand", "")
+      val isTaobaoStr = Util.getParamString(queryParams, "istaobao", "")
+      val isQualityStr = Util.getParamString(queryParams, "isquality", "")
+      val productBrandId = Util.getParamString(queryParams, "productbrandid", "")
 
       if (size < 1 || size > 1000) {
         size = 100;
       }
 
-      val bq:BooleanQuery  = new BooleanQuery()
-      if(productAliasName != ""){
+      val bq: BooleanQuery = new BooleanQuery()
+      if (productAliasName != "") {
         val keywords = productAliasName.toLowerCase().split(" ")
-        val bqKeyEn:BooleanQuery  = new BooleanQuery()
+        val bqKeyEn: BooleanQuery = new BooleanQuery()
         //search title
         for (k <- keywords) {
-          val term:Term = new Term("pName", k)
-          val pq:PrefixQuery = new PrefixQuery(term)
+          val term: Term = new Term("pName", k)
+          val pq: PrefixQuery = new PrefixQuery(term)
           bqKeyEn.add(pq, BooleanClause.Occur.MUST)
         }
         bq.add(bqKeyEn, BooleanClause.Occur.MUST)
       }
 
       //search indexCode
-      if(indexCode != ""){
-        val indexCodeTerm:Term = new Term("indexCode", indexCode);
-        val indexCodePQ:PrefixQuery = new PrefixQuery(indexCodeTerm);
+      if (indexCode != "") {
+        val indexCodeTerm: Term = new Term("indexCode", indexCode);
+        val indexCodePQ: PrefixQuery = new PrefixQuery(indexCodeTerm);
         bq.add(indexCodePQ, BooleanClause.Occur.MUST)
       }
       //search producttypeid
@@ -176,21 +174,21 @@ object Application extends Controller {
           //val term:Term = new Term("pTypeId", typeId);
 
           //val q:TermQuery = new TermQuery(term)
-          val q = NumericRangeQuery.newIntRange("pTypeId",Integer.valueOf(typeId),Integer.valueOf(typeId),true,true)
-          bqTypeIds.add(q,BooleanClause.Occur.SHOULD)
+          val q = NumericRangeQuery.newIntRange("pTypeId", Integer.valueOf(typeId), Integer.valueOf(typeId), true, true)
+          bqTypeIds.add(q, BooleanClause.Occur.SHOULD)
         }
-        bq.add(bqTypeIds,BooleanClause.Occur.MUST)
+        bq.add(bqTypeIds, BooleanClause.Occur.MUST)
       }
       //sku
       if (productKeyId != "") {
         val skus = productKeyId.split(",")
         val bqSkus = new BooleanQuery()
         for (sku <- skus) {
-          val term:Term = new Term("sku", sku);
-          val q:TermQuery = new TermQuery(term)
-          bqSkus.add(q,BooleanClause.Occur.SHOULD)
+          val term: Term = new Term("sku", sku);
+          val q: TermQuery = new TermQuery(term)
+          bqSkus.add(q, BooleanClause.Occur.SHOULD)
         }
-        bq.add(bqSkus,BooleanClause.Occur.MUST)
+        bq.add(bqSkus, BooleanClause.Occur.MUST)
       }
       //productBrandId
       if (productBrandId != "") {
@@ -199,47 +197,43 @@ object Application extends Controller {
         for (brand <- brandIds) {
           //val term:Term = new Term("pBrandId", brand);
           //val q:TermQuery = new TermQuery(term)
-          val q = NumericRangeQuery.newIntRange("pBrandId",Integer.valueOf(brand),Integer.valueOf(brand),true,true)
-          bqBrandId.add(q,BooleanClause.Occur.SHOULD)
+          val q = NumericRangeQuery.newIntRange("pBrandId", Integer.valueOf(brand), Integer.valueOf(brand), true, true)
+          bqBrandId.add(q, BooleanClause.Occur.SHOULD)
         }
-        bq.add(bqBrandId,BooleanClause.Occur.MUST)
+        bq.add(bqBrandId, BooleanClause.Occur.MUST)
       }
       if (isTaobaoStr != "") {
         /*val term:Term = new Term("isTaobao", isTaobaoStr);
         val q:TermQuery = new TermQuery(term)*/
-        val q = NumericRangeQuery.newIntRange("isTaobao",Integer.valueOf(isTaobaoStr),Integer.valueOf(isTaobaoStr),true,true)
-        bq.add(q,BooleanClause.Occur.MUST)
+        val q = NumericRangeQuery.newIntRange("isTaobao", Integer.valueOf(isTaobaoStr), Integer.valueOf(isTaobaoStr), true, true)
+        bq.add(q, BooleanClause.Occur.MUST)
       }
       if (isQualityStr != "") {
         /*val term:Term = new Term("isQuality", isQualityStr);
         val q:TermQuery = new TermQuery(term)*/
-        val q = NumericRangeQuery.newIntRange("isQuality",Integer.valueOf(isQualityStr),Integer.valueOf(isQualityStr),true,true)
-        bq.add(q,BooleanClause.Occur.MUST)
+        val q = NumericRangeQuery.newIntRange("isQuality", Integer.valueOf(isQualityStr), Integer.valueOf(isQualityStr), true, true)
+        bq.add(q, BooleanClause.Occur.MUST)
       }
 
-
-
-      if(businessBrand != ""){
-        val businessBrandTerm:Term = new Term("businessBrand", businessBrand.toLowerCase());
-        val businessBrandPQ:PrefixQuery = new PrefixQuery(businessBrandTerm);
+      if (businessBrand != "") {
+        val businessBrandTerm: Term = new Term("businessBrand", businessBrand.toLowerCase());
+        val businessBrandPQ: PrefixQuery = new PrefixQuery(businessBrandTerm);
         bq.add(businessBrandPQ, BooleanClause.Occur.MUST)
       }
-      ranges(range.split(","),bq)
-      val sot:Sort  = sorts(sort);
+      ranges(range.split(","), bq)
+      val sot: Sort = sorts(sort);
       val ids = ListBuffer[Long]()
 
-
-      val searcher:IndexSearcher = SearcherManager.searcher
+      val searcher: IndexSearcher = SearcherManager.searcher
 
       val start = (page - 1) * size + 1;
       //分页
-      val tsdc:TopFieldCollector = TopFieldCollector.create(sot, start + size, false, false, false, false);
+      val tsdc: TopFieldCollector = TopFieldCollector.create(sot, start + size, false, false, false, false);
       println(bq)
       searcher.search(bq, tsdc);
 
-
       //从0开始计算
-      val topDocs:TopDocs = tsdc.topDocs(start - 1, size);
+      val topDocs: TopDocs = tsdc.topDocs(start - 1, size);
       val scoreDocs = topDocs.scoreDocs;
       val total = tsdc.getTotalHits()
       for (i <- 0 until scoreDocs.length) {
@@ -248,13 +242,13 @@ object Application extends Controller {
       }
 
       val sb = new StringBuffer()
-      for (x <- ids){
+      for (x <- ids) {
         sb.append(x).append(',')
       }
 
       //Ok(Json.toJson(jsonObject).toString())
       if (sb.length() > 0) {
-        Ok(Json.obj("productIds" -> sb.substring(0,sb.length() - 1), "totalHits" -> total))
+        Ok(Json.obj("productIds" -> sb.substring(0, sb.length() - 1), "totalHits" -> total))
       } else {
         Ok(Json.obj("productIds" -> "", "totalHits" -> total))
       }
@@ -266,64 +260,54 @@ object Application extends Controller {
         tuple(
           "keyword" -> text,
           "page" -> text,
-          "size" -> text
-        )
-      )
-
+          "size" -> text))
 
       val queryParams = form.bindFromRequest.data
-      val page = Util.getParamInt(queryParams,"page",1)
-      var size = Util.getParamInt(queryParams,"size",20)
-      val keyword = Util.getParamString(queryParams,"keyword","").trim
-
-
-
-
+      val page = Util.getParamInt(queryParams, "page", 1)
+      var size = Util.getParamInt(queryParams, "size", 20)
+      val keyword = Util.getParamString(queryParams, "keyword", "").trim
 
       if (size < 1 || size > 1000) {
         size = 100;
       }
 
-      val bq:BooleanQuery  = new BooleanQuery()
-      if(keyword != ""){
+      val bq: BooleanQuery = new BooleanQuery()
+      if (keyword != "") {
         val keywords = keyword.toLowerCase().split(" ")
-        val bqKeyEn:BooleanQuery  = new BooleanQuery()
+        val bqKeyEn: BooleanQuery = new BooleanQuery()
         //search title
         for (k <- keywords) {
-          val term:Term = new Term("pName", k)
-          val pq:PrefixQuery = new PrefixQuery(term)
+          val term: Term = new Term("pName", k)
+          val pq: PrefixQuery = new PrefixQuery(term)
           bqKeyEn.add(pq, BooleanClause.Occur.MUST)
         }
         bq.add(bqKeyEn, BooleanClause.Occur.SHOULD)
       }
 
-      if(keyword != ""){
+      if (keyword != "") {
         val keywords = keyword.toLowerCase().split(" ")
-        val bqKeyEn:BooleanQuery  = new BooleanQuery()
+        val bqKeyEn: BooleanQuery = new BooleanQuery()
         for (k <- keywords) {
-          val term:Term = new Term("sourceKeyword", k)
-          val pq:TermQuery = new TermQuery(term)
+          val term: Term = new Term("sourceKeyword", k)
+          val pq: TermQuery = new TermQuery(term)
           bqKeyEn.add(pq, BooleanClause.Occur.MUST)
         }
         bq.add(bqKeyEn, BooleanClause.Occur.SHOULD)
       }
 
-
-      val sot:Sort  = sorts(null);
+      val sot: Sort = sorts(null);
       val ids = ListBuffer[Long]()
 
-
-      val searcher:IndexSearcher = SearcherManager.oldIncSearcher
+      val searcher: IndexSearcher = SearcherManager.oldIncSearcher
 
       val start = (page - 1) * size + 1;
       //分页
-      val tsdc:TopFieldCollector = TopFieldCollector.create(sot, start + size, false, false, false, false);
+      val tsdc: TopFieldCollector = TopFieldCollector.create(sot, start + size, false, false, false, false);
       println(bq)
       searcher.search(bq, tsdc);
 
-
       //从0开始计算
-      val topDocs:TopDocs = tsdc.topDocs(start - 1, size);
+      val topDocs: TopDocs = tsdc.topDocs(start - 1, size);
       val scoreDocs = topDocs.scoreDocs;
       val total = tsdc.getTotalHits()
       for (i <- 0 until scoreDocs.length) {
@@ -332,24 +316,24 @@ object Application extends Controller {
       }
 
       val sb = new StringBuffer()
-      for (x <- ids){
+      for (x <- ids) {
         sb.append(x).append(',')
       }
 
       //Ok(Json.toJson(jsonObject).toString())
       if (sb.length() > 0) {
-        Ok(Json.obj("productIds" -> sb.substring(0,sb.length() - 1), "totalHits" -> total))
+        Ok(Json.obj("productIds" -> sb.substring(0, sb.length() - 1), "totalHits" -> total))
       } else {
         Ok(Json.obj("productIds" -> "", "totalHits" -> total))
       }
   }
 
-  def sorts(sort:String):Sort = {
+  def sorts(sort: String): Sort = {
     //排序
-    val sortStrs:Array[String] = sort.split(",")
+    val sortStrs: Array[String] = sort.split(",")
     val lst = ListBuffer[SortField]()
-    for(s <- sortStrs){
-      var sortField:SortField  = null
+    for (s <- sortStrs) {
+      var sortField: SortField = null
       if ("price-".equals(s)) {
         sortField = new SortField("unitPrice", SortField.Type.DOUBLE, true);
       } else if ("price+".equals(s)) {
@@ -358,9 +342,9 @@ object Application extends Controller {
         sortField = new SortField("createTime", SortField.Type.DOUBLE, true);
       } else if ("date+".equals(s)) {
         sortField = new SortField("createTime", SortField.Type.DOUBLE, false);
-      } else if ("isqualityproduct-".equals(s)){
+      } else if ("isqualityproduct-".equals(s)) {
         sortField = new SortField("isQuality", SortField.Type.INT, true);
-      } else if ("isqualityproduct+".equals(s)){
+      } else if ("isqualityproduct+".equals(s)) {
         sortField = new SortField("isQuality", SortField.Type.INT, false);
       }
       if (sortField != null) {
@@ -368,32 +352,32 @@ object Application extends Controller {
       }
     }
 
-    var sot:Sort = null;
+    var sot: Sort = null;
     if (lst.length == 0) {
       //默认按相关度排序
       //sortField = ;
       sot = new Sort(SortField.FIELD_SCORE);
     } else {
       val list = new util.ArrayList[SortField]();
-      for (x <- lst){
+      for (x <- lst) {
         list.add(x)
       }
       sot = Helper.addSortField(list)
     }
     sot;
   }
-  def ranges(ranges:Array[String], bq:BooleanQuery) {
+  def ranges(ranges: Array[String], bq: BooleanQuery) {
     //范围查询
 
     for (range <- ranges) {
       val parts = range.split(":");
       if (parts.length == 3) {
         if (parts(0).equals("unitprice")) {
-          val nrq = NumericRangeQuery.newDoubleRange("unitPrice",Double.valueOf(parts(1)),Double.valueOf(parts(2)),true,true);
+          val nrq = NumericRangeQuery.newDoubleRange("unitPrice", Double.valueOf(parts(1)), Double.valueOf(parts(2)), true, true);
           bq.add(nrq, BooleanClause.Occur.MUST);
         }
         if (parts(0).equals("createtime")) {
-          val query:TermRangeQuery = new TermRangeQuery("createTime", new BytesRef(parts(1)), new BytesRef(parts(2)), true, true);
+          val query: TermRangeQuery = new TermRangeQuery("createTime", new BytesRef(parts(1)), new BytesRef(parts(2)), true, true);
           bq.add(query, BooleanClause.Occur.MUST);
         }
         if (parts(0).equals("isqualityproduct")) {
@@ -418,24 +402,22 @@ object Application extends Controller {
         "range" -> text,
         "currentPage" -> number,
         "size" -> number,
-        "sort" -> text
-      )
-    )
+        "sort" -> text))
     /*val anyData = Map("id" -> "111", "name" -> "secret")
     val (id, name) = form.bind(anyData).get*/
     val queryParams = form.bindFromRequest.data
     //Ok("Got: " + id + name)
-    var keyword = Util.getParamString(queryParams,"keyword","")
-    val country = Util.getParamString(queryParams,"country","")
-    val indexCode = Util.getParamString(queryParams,"indexCode","")
-    val range = Util.getParamString(queryParams,"range","")
-    var currentPage = Util.getParamInt(queryParams,"currentPage",1)
-    var size = Util.getParamInt(queryParams,"size",100)
-    val sort = Util.getParamString(queryParams,"sort","")
-    if(currentPage < 1){
+    var keyword = Util.getParamString(queryParams, "keyword", "")
+    val country = Util.getParamString(queryParams, "country", "")
+    val indexCode = Util.getParamString(queryParams, "indexCode", "")
+    val range = Util.getParamString(queryParams, "range", "")
+    var currentPage = Util.getParamInt(queryParams, "currentPage", 1)
+    var size = Util.getParamInt(queryParams, "size", 100)
+    val sort = Util.getParamString(queryParams, "sort", "")
+    if (currentPage < 1) {
       currentPage = 1
     }
-    if(size < 1 || size > 100){
+    if (size < 1 || size > 100) {
       size = 20
     }
 
@@ -445,73 +427,61 @@ object Application extends Controller {
     //Ok("Got: " + id + name)
     Ok("Got: ")
   }
- 
+
   def searchOldDDInctest = Action {
     implicit request =>
       val form = Form(
         tuple(
           "keyword" -> text,
           "page" -> text,
-          "size" -> text
-        )
-      )
-
+          "size" -> text))
 
       val queryParams = form.bindFromRequest.data
-      val page = Util.getParamInt(queryParams,"page",1)
-      var size = Util.getParamInt(queryParams,"size",20)
-      val keyword = Util.getParamString(queryParams,"keyword","").trim
-
-
-
-
+      val page = Util.getParamInt(queryParams, "page", 1)
+      var size = Util.getParamInt(queryParams, "size", 20)
+      val keyword = Util.getParamString(queryParams, "keyword", "").trim
 
       if (size < 1 || size > 1000) {
         size = 100;
       }
 
-      val bq:BooleanQuery  = new BooleanQuery()
-      if(keyword != ""){
+      val bq: BooleanQuery = new BooleanQuery()
+      if (keyword != "") {
         val keywords = keyword.toLowerCase().split(" ")
-        val bqKeyEn:BooleanQuery  = new BooleanQuery()
+        val bqKeyEn: BooleanQuery = new BooleanQuery()
         //search title
         for (k <- keywords) {
-          val term:Term = new Term("pName", k)
-          val pq:PrefixQuery = new PrefixQuery(term)
+          val term: Term = new Term("pName", k)
+          val pq: PrefixQuery = new PrefixQuery(term)
           bqKeyEn.add(pq, BooleanClause.Occur.MUST)
         }
         bq.add(bqKeyEn, BooleanClause.Occur.SHOULD)
       }
 
-      if(keyword != ""){
+      if (keyword != "") {
         val keywords = keyword.toLowerCase().split(" ")
-        val bqKeyEn:BooleanQuery  = new BooleanQuery()
+        val bqKeyEn: BooleanQuery = new BooleanQuery()
         for (k <- keywords) {
-          val term:Term = new Term("sourceKeyword", k)
-          val pq:TermQuery = new TermQuery(term)
+          val term: Term = new Term("sourceKeyword", k)
+          val pq: TermQuery = new TermQuery(term)
           bqKeyEn.add(pq, BooleanClause.Occur.MUST)
         }
         bq.add(bqKeyEn, BooleanClause.Occur.SHOULD)
       }
 
-
-      val sot:Sort  = sorts(null);
+      val sot: Sort = sorts(null);
       val ids = ListBuffer[String]()
 
-
-      val searcher:IndexSearcher = SearcherManager.oldIncSearcher
-
-
+      val searcher: IndexSearcher = SearcherManager.oldIncSearcher
 
       val start = (page - 1) * size + 1;
       //分页
-      val tsdc:TopFieldCollector = TopFieldCollector.create(sot, start + size, false, false, false, false);
+      val tsdc: TopFieldCollector = TopFieldCollector.create(sot, start + size, false, false, false, false);
       println(bq)
       searcher.search(bq, tsdc);
 
-
       //从0开始计算
-      val topDocs:TopDocs = tsdc.topDocs(start - 1, size);
+      val topDocs: TopDocs = tsdc.topDocs(start - 1, size);
       val scoreDocs = topDocs.scoreDocs;
       val total = tsdc.getTotalHits()
       for (i <- 0 until scoreDocs.length) {
@@ -520,16 +490,96 @@ object Application extends Controller {
       }
 
       val sb = new StringBuffer()
-      for (x <- ids){
+      for (x <- ids) {
         sb.append(x).append(',')
       }
 
       //Ok(Json.toJson(jsonObject).toString())
       if (sb.length() > 0) {
-        Ok(Json.obj("productIds" -> sb.substring(0,sb.length() - 1), "totalHits" -> total))
+        Ok(Json.obj("productIds" -> sb.substring(0, sb.length() - 1), "totalHits" -> total))
       } else {
         Ok(Json.obj("productIds" -> "", "totalHits" -> total))
       }
+  }
+
+  def searchKeywordGroupByCategory = Action { implicit request =>
+    val form = Form(
+      tuple(
+        "keyword" -> text,
+        "sort" -> text,
+        "size" -> number,
+        "page" -> number))
+
+    val queryParams = form.bindFromRequest.data
+    var page = Util.getParamInt(queryParams, "page", 1)
+    var size = Util.getParamInt(queryParams, "size", 20)
+    val keyword = Util.getParamString(queryParams, "keyword", "").trim.toLowerCase
+    val sort = Util.getParamString(queryParams, "sort", "").trim
+
+    if (page < 0) {
+      page = 1
+    }
+
+    if (size < 1 || size > 100) {
+      size = 20;
+    }
+
+    val bq: BooleanQuery = new BooleanQuery()
+    val bqKeyword: BooleanQuery = new BooleanQuery()
+    val bqBrand: BooleanQuery = new BooleanQuery()
+    bqBrand.setBoost(5.0f)
+    if (keyword != "") {
+      val keywordSplit = keyword.toLowerCase().split(" ")
+      for (k <- keywordSplit) {
+        val term: Term = new Term("pName", k)
+        val pq: PrefixQuery = new PrefixQuery(term)
+        val tq: TermQuery = new TermQuery(term)
+        bqKeyword.add(pq, BooleanClause.Occur.MUST)
+        bqBrand.add(tq, BooleanClause.Occur.MUST)
+      }
+    }
+    bq.add(bqKeyword, BooleanClause.Occur.SHOULD)
+    bq.add(bqBrand, BooleanClause.Occur.SHOULD)
+    val searcher: IndexSearcher = SearcherManager.searcher
+    val start = (page - 1) * size + 1;
+    val sot: Sort = sorts(sort);
+    val tsdc: TopFieldCollector = TopFieldCollector.create(sot, start + size, false, false, false, false);
+
+    println(bq)
+    searcher.search(bq, tsdc);
+
+    val topDocs: TopDocs = tsdc.topDocs(start - 1, size);
+    val scoreDocs = topDocs.scoreDocs;
+    val total = tsdc.getTotalHits()
+    val ids = ListBuffer[Int]()
+    for (i <- 0 until scoreDocs.length) {
+      val indexDoc = searcher.getIndexReader().document(scoreDocs(i).doc);
+      ids += Integer.valueOf(indexDoc.get("pId"))
+    }
+
+    val sb = new StringBuffer()
+    for (x <- ids) {
+      sb.append(x).append(',')
+    }
+
+    val groupingSearch = new GroupingSearch("indexCode");
+    /*groupingSearch.setGroupSort(groupSort);
+    groupingSearch.setFillSortFields(fillFields);*/
+    groupingSearch.setAllGroups(true);
+    val lst: ListBuffer[JsValue] = ListBuffer[JsValue]()
+    val result: TopGroups[BytesRef] = groupingSearch.search(searcher, bq, 0, 10000);
+    for (x <- result.groups) {
+      lst += toJson(
+        Map(
+          "indexCode" -> toJson(x.groupValue.utf8ToString()),
+          "count" -> toJson(x.totalHits)))
+    }
+    Ok(
+      toJson(
+        Map(
+          "total" -> toJson(total),
+          "productIds" -> toJson(ids.toArray),
+          "category" -> toJson(lst.toArray))))
   }
 
 }
