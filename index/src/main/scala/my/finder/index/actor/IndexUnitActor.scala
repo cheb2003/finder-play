@@ -22,6 +22,11 @@ import scala.collection.mutable.ListBuffer
 import java.sql.{ PreparedStatement, ResultSet, Statement, Connection }
 import java.text.SimpleDateFormat
 
+
+import org.apache.lucene.analysis.en.EnglishAnalyzer
+import java.io.StringReader
+import org.apache.lucene.analysis.TokenStream
+import org.apache.lucene.util.Version
 /**
  *
  */
@@ -32,7 +37,7 @@ class IndexUnitActor extends Actor with ActorLogging with MongoUtil {
   val workDir = Config.get("workDir")
   val oldDir = Config.get("oldDir")
   val dinobuydb = Config.get("dinobuydb")
-
+  val englishAnalyzer = new EnglishAnalyzer(Version.LUCENE_43)
   val indexBatchSize = Integer.valueOf(Config.get("indexBatchSize"))
   var productColl: MongoCollection = null
 
@@ -121,7 +126,10 @@ class IndexUnitActor extends Actor with ActorLogging with MongoUtil {
         list = x.as[MongoDBList]("ec_productprice")
         doc = new Document()
         pIdField.setIntValue(x.as[Int]("productid_int"));
-        pNameField.setStringValue(StringUtils.defaultIfBlank(mvp[String](x, "productbrand_nvarchar"), StringUtils.defaultIfBlank(mvp[String](x, "businessbrand_nvarchar"), "")) + ' ' + mvp[String](x, "productaliasname_nvarchar"))
+        val sr = new StringReader(StringUtils.defaultIfBlank(mvp[String](x, "productbrand_nvarchar"), StringUtils.defaultIfBlank(mvp[String](x, "businessbrand_nvarchar"), "")) + ' ' + mvp[String](x, "productaliasname_nvarchar"))
+        val ts = englishAnalyzer.tokenStream("", sr)
+        ts.reset()
+        pNameField.setTokenStream(ts)
         indexCodeField.setStringValue(mvp[String](x, "indexcode_nvarchar"))
 
         try {
@@ -204,7 +212,7 @@ class IndexUnitActor extends Actor with ActorLogging with MongoUtil {
         }
 
         try {
-          productBrandNameField.setStringValue(mvp[Int](x, "productbrand_nvarchar"))
+          productBrandNameField.setStringValue(mvp[String](x, "productbrand_nvarchar"))
           doc.add(productBrandNameField)
         } catch {
           case e: Exception =>
@@ -495,8 +503,8 @@ class IndexUnitActor extends Actor with ActorLogging with MongoUtil {
         conn = DBService.dataSource.getConnection()
         stmt = conn.createStatement()
         val sb = new StringBuffer()
-        sb.append("select ProductTitleCN_nvarchar as titlecn, ProductKeyID_nvarchar as sku,SearchKeyWordCN_nvarchar as wordcn,SegmentWord_nvarchar as word,LanguageCode_nvarchar as lang from QDW_TB_ProductTitleSegmentWord WITH (NOLOCK) where ProductKeyID_nvarchar in (")
-        //sb.append("select ProductTitleCN_nvarchar as titlecn, ProductKeyID_nvarchar as sku,SearchKeyWordCN_nvarchar as wordcn,SegmentWord_nvarchar as word,LanguageCode_nvarchar as lang from QDW_TB_ProductTitleSegmentWord where ProductKeyID_nvarchar in (")
+        //sb.append("select ProductTitleCN_nvarchar as titlecn, ProductKeyID_nvarchar as sku,SearchKeyWordCN_nvarchar as wordcn,SegmentWord_nvarchar as word,LanguageCode_nvarchar as lang from QDW_TB_ProductTitleSegmentWord WITH (NOLOCK) where ProductKeyID_nvarchar in (")
+        sb.append("select ProductTitleCN_nvarchar as titlecn, ProductKeyID_nvarchar as sku,SearchKeyWordCN_nvarchar as wordcn,SegmentWord_nvarchar as word,LanguageCode_nvarchar as lang from QDW_TB_ProductTitleSegmentWord where ProductKeyID_nvarchar in (")
         for (x <- items) {
           sb.append('\'').append(mv[String](x, "productkeyid_nvarchar")).append("',")
         }
