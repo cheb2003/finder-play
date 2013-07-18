@@ -46,13 +46,17 @@ object Application extends Controller {
     val parse = new QueryParser(Version.LUCENE_43, "pName", new MyAnalyzer())
 
     val bq: BooleanQuery = new BooleanQuery()
+    val bqWord: BooleanQuery = new BooleanQuery()
 
     val r = NumericRangeQuery.newIntRange("ventureLevelNew", 0, 0, true, true)
 
     val q = parse.parse("\"" + keyword.toLowerCase() + "\"")
+    val qBrandName = parse.parse("pBrandName:\"" + keyword.toLowerCase() + "\"")
 
     bq.add(r, BooleanClause.Occur.MUST)
-    bq.add(q, BooleanClause.Occur.MUST)
+    bqWord.add(q, BooleanClause.Occur.SHOULD)
+    bqWord.add(qBrandName, BooleanClause.Occur.SHOULD)
+    bq.add(bqWord, BooleanClause.Occur.MUST)
     val searcher: IndexSearcher = SearcherManager.searcher
     val size = 1000
     val start = (page - 1) * size + 1;
@@ -67,10 +71,14 @@ object Application extends Controller {
 
     //从0开始计算
     val topDocs: TopDocs = tsdc.topDocs(start - 1, size);
+    println(topDocs.totalHits)
     val scoreDocs = topDocs.scoreDocs;
     val sb = new StringBuffer()
     //val total = tsdc.getTotalHits()
+    var t1 = System.currentTimeMillis()
+    var t2 = System.currentTimeMillis()
     for (i <- 0 until scoreDocs.length) {
+      t1 = System.currentTimeMillis()
       val indexDoc = searcher.getIndexReader().document(scoreDocs(i).doc);
       sb.append(indexDoc.get("sku")).append(',')
       if (Integer.valueOf(indexDoc.get("ventureStatus")) == 0) {
@@ -89,9 +97,11 @@ object Application extends Controller {
         sb.append("灰")
       }
       if (Integer.valueOf(indexDoc.get("ventureStatus")) == 5) {
-        sb.append("橙")
+        sb.append("棕")
       }
       sb.append("\r\n")
+      t2 = System.currentTimeMillis()
+      println("load data " + (t2 - t1))
     }
     Ok(sb.toString())
   }

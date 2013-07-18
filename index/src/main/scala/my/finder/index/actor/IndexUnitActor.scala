@@ -75,6 +75,7 @@ class IndexUnitActor extends Actor with ActorLogging with MongoUtil {
 
   private val productBrandIdField = new IntField("pBrandId", 0, Field.Store.YES)
   private val productBrandNameField = new TextField("pBrandName", "", Field.Store.YES)
+  private val productTypeNameField = new TextField("pTypeName", "", Field.Store.YES)
   private val businessBrandField = new TextField("businessBrand", "", Field.Store.YES)
 
   private var doc: Document = null
@@ -107,6 +108,7 @@ class IndexUnitActor extends Actor with ActorLogging with MongoUtil {
         sourceKeywordField.setStringValue("")
         sourceKeywordCNField.setStringValue("")
         productBrandNameField.setStringValue("")
+        productTypeNameField.setStringValue("")
         skuOrderField.setIntValue(-1)
 
         pNameBrField.setStringValue("")
@@ -131,7 +133,7 @@ class IndexUnitActor extends Actor with ActorLogging with MongoUtil {
         ts.reset()
         pNameField.setTokenStream(ts)
         indexCodeField.setStringValue(mvp[String](x, "indexcode_nvarchar"))
-
+        productTypeNameField.setStringValue(DBService.productTypes.getOrElse(mvp[String](x, "indexcode_nvarchar"),""))
         try {
           createTimeField.setStringValue(DateTools.dateToString(mvp[Date](x, "createtime_datetime"), DateTools.Resolution.MINUTE))
           doc.add(createTimeField)
@@ -276,6 +278,7 @@ class IndexUnitActor extends Actor with ActorLogging with MongoUtil {
         doc.add(pIdField)
         doc.add(pNameField)
         doc.add(indexCodeField)
+        doc.add(productTypeNameField)
         doc.add(skuField)
 
         writer.addDocument(doc)

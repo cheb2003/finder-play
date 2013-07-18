@@ -30,6 +30,8 @@ object ApplicationBuild extends Build {
   
   //val index = play.Project("index", "1.0", appDependencies,path = file("index")).settings(
   val index = Project(id="index", base=file("index")).dependsOn(util)
+
+  val testscala = Project(id="testscala", base=file("testscala"))
   
   
   val console = play.Project("console", "1.0", appDependencies,path = file("console")).settings(
