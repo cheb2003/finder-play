@@ -21,8 +21,8 @@ object ApplicationBuild extends Build {
     "org.apache.lucene" % "lucene-core" % "4.3.0",
     "org.apache.lucene" % "lucene-queryparser" % "4.3.0",
     "org.specs2" %% "specs2" % "2.0" % "test",
-    "org.apache.lucene" % "lucene-grouping" % "4.3.1"
-    
+    "org.apache.lucene" % "lucene-grouping" % "4.3.1",
+    "org.apache.lucene" % "lucene-suggest" % "4.3.1"
   )
   
   override def settings = super.settings ++ org.sbtidea.SbtIdeaPlugin.settings

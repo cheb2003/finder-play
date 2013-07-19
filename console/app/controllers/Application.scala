@@ -17,6 +17,10 @@ import org.apache.lucene.queryparser.classic.QueryParser
 import org.apache.lucene.util.Version
 import org.apache.lucene.analysis.core._
 import org.apache.lucene.index.Term
+import org.apache.lucene.search.spell.SpellChecker
+import org.apache.lucene.search.spell.PlainTextDictionary
+import org.apache.lucene.index.IndexWriterConfig
+
 
 import play.api.mvc._
 import play.api.libs.json.{ Json, JsValue }
@@ -271,6 +275,17 @@ object Application extends Controller {
     }
     reader.close()
     Ok(<root>{ nodes }</root>)
+  }
+
+  def generateSpellCheck = Action { implicit request =>
+    val spellCheckDirStr = new File(current.configuration.getString("spellCheckDir").get)
+    val dir = FSDirectory.open(spellCheckDirStr)
+    val sc = new SpellChecker(dir)
+    val analyzer = new KeywordAnalyzer()
+    val config = new IndexWriterConfig(Version.LUCENE_43,analyzer)
+    sc.indexDictionary(new PlainTextDictionary(new File(spellCheckDirStr + "/spellcheck.txt")),config,false)
+    dir.close()
+    Ok("success")
   }
 
   private def docToXML(nodes: Queue[Node], document: org.apache.lucene.document.Document) = {

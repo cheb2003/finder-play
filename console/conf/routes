@@ -11,6 +11,7 @@ GET		/indexInfo					controllers.Application.indexInfo
 GET		/query 						controllers.Application.query
 GET     /queryKeyword				controllers.Application.queryKeyword
 POST    /queryKeyword				controllers.Application.queryKeyword
+GET    	/generateSpellCheck			controllers.Application.generateSpellCheck
 
 # Map static resources from the /public folder to the /assets URL path
 GET     /assets/*file               controllers.Assets.at(path="/public", file)
