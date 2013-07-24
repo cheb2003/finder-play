@@ -48,5 +48,9 @@ object IndexManage {
       }
     }
     println(ddIndex)
+
+    println(ddIndex)
+
+    println(ddIndex)
   }
 }
