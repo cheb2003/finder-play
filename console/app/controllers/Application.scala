@@ -31,7 +31,11 @@ import play.api.Play._
 import scala.collection.mutable.Queue
 import scala.xml._
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 object Application extends Controller {
+  val logger = LoggerFactory.getLogger("my")
   val wordDir = current.configuration.getString("workDir")
   val json: JsValue = Json.parse("""
 {
@@ -235,6 +239,7 @@ object Application extends Controller {
     val reader = DirectoryReader.open(dir);
     val searcher = new IndexSearcher(reader);
     println(bq)
+    logger.info("{}",bq)
     val topDocs = searcher.search(bq, 1)
     val scoreDocs = topDocs.scoreDocs
     var nodes = new Queue[Node]()
@@ -261,7 +266,7 @@ object Application extends Controller {
     val reader = DirectoryReader.open(dir);
 
     val searcher = new IndexSearcher(reader);
-    //val parse = new QueryParser(Version.LUCENE_43,"pName",new MyAnalyzer())
+    //val parse = new QuedryParser(Version.LUCENE_43,"pName",new MyAnalyzer())
     val parse = new QueryParser(Version.LUCENE_43, "pName", new KeywordAnalyzer())
     val q = parse.parse(qStr)
     println(q)
