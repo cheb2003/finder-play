@@ -59,10 +59,20 @@ object DBService {
         brTypes += (rs.getInt("ProductTypeID_int") -> rs.getString("AliasName_nvarchar"))
       }
 
+      rs = stmt.executeQuery(sql)
       while (rs.next()) {
         productTypesEn += (rs.getString("indexcode_nvarchar") -> rs.getString("producttypealiasname_nvarchar"))
-        productTypesRu += (rs.getString("indexcode_nvarchar") -> ruTypes(rs.getInt("producttypeid_int")))
-        productTypesBr += (rs.getString("indexcode_nvarchar") -> brTypes(rs.getInt("producttypeid_int")))
+        try{
+          productTypesRu += (rs.getString("indexcode_nvarchar") -> ruTypes(rs.getInt("producttypeid_int")))
+        } catch {
+          case e:Exception =>
+        }
+        try{
+          productTypesBr += (rs.getString("indexcode_nvarchar") -> brTypes(rs.getInt("producttypeid_int")))
+        } catch {
+          case e:Exception =>
+        }
+        
       }
     } catch {
       case e: Exception => {
