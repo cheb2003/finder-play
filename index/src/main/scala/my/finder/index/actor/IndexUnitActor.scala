@@ -22,7 +22,6 @@ import scala.collection.mutable.ListBuffer
 import java.sql.{ PreparedStatement, ResultSet, Statement, Connection }
 import java.text.SimpleDateFormat
 
-
 import org.apache.lucene.analysis.en.EnglishAnalyzer
 import java.io.StringReader
 import org.apache.lucene.analysis.TokenStream
@@ -42,9 +41,9 @@ class IndexUnitActor extends Actor with ActorLogging with MongoUtil {
   var productColl: MongoCollection = null
   var productInactiveColl: MongoCollection = null
 
-  val fields = MongoDBObject("_id" -> 0,"productid_int" -> 1, "ec_product.productaliasname_nvarchar" -> 1, "ec_productprice.unitprice_money" -> 1, "ec_product.productbrand_nvarchar" -> 1, "ec_product.businessbrand_nvarchar" -> 1, "ec_product.indexcode_nvarchar" -> 1, "ec_product.productbrandid_int" -> 1, "ec_product.isonesale_tinyint" -> 1, "ec_product.isaliexpress_tinyint" -> 1, "productkeyid_nvarchar" -> 1, "ec_productlanguage" -> 1, "ec_product.createtime_datetime" -> 1, "ec_product.businessname_nvarchar" -> 1, "ec_product.isstopsale_bit" -> 1, "ec_product.qdwproductstatus_int" -> 1, "ec_product.excavatekeywords_nvarchar" -> 1 //osell需要的属性
+  val fields = MongoDBObject("_id" -> 0, "productid_int" -> 1, "ec_product.productaliasname_nvarchar" -> 1, "ec_productprice.unitprice_money" -> 1, "ec_product.productbrand_nvarchar" -> 1, "ec_product.businessbrand_nvarchar" -> 1, "ec_product.indexcode_nvarchar" -> 1, "ec_product.productbrandid_int" -> 1, "ec_product.isonesale_tinyint" -> 1, "ec_product.isaliexpress_tinyint" -> 1, "productkeyid_nvarchar" -> 1, "ec_productlanguage" -> 1, "ec_product.createtime_datetime" -> 1, "ec_product.businessname_nvarchar" -> 1, "ec_product.isstopsale_bit" -> 1, "ec_product.qdwproductstatus_int" -> 1, "ec_product.excavatekeywords_nvarchar" -> 1 //osell需要的属性
   , "ec_product.producttypeid_int" -> 1, "ec_product.isqualityproduct_tinyint" -> 1, "ec_product.venturestatus_tinyint" -> 1, "ec_product.istaobao_tinyint" -> 1, "ec_product.venturelevelnew_tinyint" -> 1)
-  val fields1 = MongoDBObject("ec_productextendgroup" -> 1,"_id" -> 0)
+  val fields1 = MongoDBObject("ec_productextendgroup" -> 1, "_id" -> 0)
   //val sort = MongoDBObject("productid_int" -> 1)
 
   private val pIdField = new IntField("pId", 0, Field.Store.YES);
@@ -77,7 +76,9 @@ class IndexUnitActor extends Actor with ActorLogging with MongoUtil {
 
   private val productBrandIdField = new IntField("pBrandId", 0, Field.Store.YES)
   private val productBrandNameField = new TextField("pBrandName", "", Field.Store.YES)
-  private val productTypeNameField = new TextField("pTypeName", "", Field.Store.YES)
+  private val productTypeNameEnField = new TextField("pTypeNameEN", "", Field.Store.YES)
+  private val productTypeNameRuField = new TextField("pTypeNameRU", "", Field.Store.YES)
+  private val productTypeNameBrField = new TextField("pTypeNameBR", "", Field.Store.YES)
   private val businessBrandField = new TextField("businessBrand", "", Field.Store.YES)
 
   private val pExtendItemBRField = new TextField("pExtendItemBR", "", Field.Store.YES)
@@ -115,7 +116,9 @@ class IndexUnitActor extends Actor with ActorLogging with MongoUtil {
         sourceKeywordField.setStringValue("")
         sourceKeywordCNField.setStringValue("")
         productBrandNameField.setStringValue("")
-        productTypeNameField.setStringValue("")
+        productTypeNameEnField.setStringValue("")
+        //        productTypeNameRuField.setStringValue("")
+        productTypeNameBrField.setStringValue("")
         skuOrderField.setIntValue(-1)
 
         pNameBrField.setStringValue("")
@@ -131,11 +134,10 @@ class IndexUnitActor extends Actor with ActorLogging with MongoUtil {
 
         productBrandIdField.setIntValue(-1)
         businessBrandField.setStringValue("")
-        
+
         pExtendItemENField.setStringValue("")
         pExtendItemRUField.setStringValue("")
         pExtendItemBRField.setStringValue("")
-
 
         list = x.as[MongoDBList]("ec_productprice")
         doc = new Document()
@@ -145,7 +147,33 @@ class IndexUnitActor extends Actor with ActorLogging with MongoUtil {
         ts.reset()
         pNameField.setTokenStream(ts)
         indexCodeField.setStringValue(mvp[String](x, "indexcode_nvarchar"))
-        productTypeNameField.setStringValue(DBService.productTypes.getOrElse(mvp[String](x, "indexcode_nvarchar"),""))
+        try {
+          if (DBService.productTypesEn.getOrElse(mvp[String](x, "indexcode_nvarchar"), "").length > 0) {
+            productTypeNameEnField.setStringValue(DBService.productTypesEn.getOrElse(mvp[String](x, "indexcode_nvarchar"), ""))
+            doc.add(productTypeNameEnField)
+          }
+        } catch {
+          case e: Exception =>
+        }
+        try {
+          if (DBService.productTypesRu.getOrElse(mvp[String](x, "indexcode_nvarchar"), "").length > 0) {
+            productTypeNameRuField.setStringValue(DBService.productTypesRu.getOrElse(mvp[String](x, "indexcode_nvarchar"), ""))
+            doc.add(productTypeNameRuField)
+          }
+
+        } catch {
+          case e: Exception =>
+        }
+        try {
+          if (DBService.productTypesEn.getOrElse(mvp[String](x, "indexcode_nvarchar"), "").length > 0) {
+            productTypeNameEnField.setStringValue(DBService.productTypesEn.getOrElse(mvp[String](x, "indexcode_nvarchar"), " "))
+            doc.add(productTypeNameBrField)
+          }
+
+        } catch {
+          case e: Exception =>
+        }
+
         try {
           createTimeField.setStringValue(DateTools.dateToString(mvp[Date](x, "createtime_datetime"), DateTools.Resolution.MINUTE))
           doc.add(createTimeField)
@@ -294,37 +322,41 @@ class IndexUnitActor extends Actor with ActorLogging with MongoUtil {
           val sbBr = new StringBuffer()
           val items = productInactiveColl.findOne(MongoDBObject("productid_int" -> x.as[Int]("productid_int")), fields1)
           val lst = items.toList
-          val ei = lst(0)
-          list = ei.as[MongoDBList]("ec_productextendgroup")
-          for (y <- 0 until list.length) {
-            val exItems = list.as[DBObject](y).as[MongoDBList]("ec_productextenditem")
-            for (ii <- 0 until exItems.length){
-              sbEn.append(exItems.as[DBObject](ii).as[String]("itemvalueeng_nvarchar")).append(' ')
-              val otherValue = exItems.as[DBObject](ii).as[MongoDBList]("itemvaluelanguage")
-              for(iii <- 0 until otherValue.length){
-                if(otherValue.as[MongoDBObject](iii).as[String]("language_nvarchar").toLowerCase == "ru"){
-                  sbRu.append(otherValue.as[MongoDBObject](iii).as[String]("itemvalue_nvarchar"))
-                }
-                if(otherValue.as[MongoDBObject](iii).as[String]("language_nvarchar").toLowerCase == "br"){
-                  sbBr.append(otherValue.as[MongoDBObject](iii).as[String]("itemvalue_nvarchar"))
+          if (lst.length > 0) {
+
+            val ei = lst(0)
+            list = ei.as[MongoDBList]("ec_productextendgroup")
+            for (y <- 0 until list.length) {
+              val exItems = list.as[DBObject](y).as[MongoDBList]("ec_productextenditem")
+              for (ii <- 0 until exItems.length) {
+                sbEn.append(exItems.as[DBObject](ii).as[String]("itemvalueeng_nvarchar")).append(' ')
+                val otherValue = exItems.as[DBObject](ii).as[MongoDBList]("itemvaluelanguage")
+                for (iii <- 0 until otherValue.length) {
+                  if (otherValue.as[DBObject](iii).as[String]("language_nvarchar").toLowerCase == "ru") {
+                    sbRu.append(otherValue.as[DBObject](iii).as[String]("itemvalue_nvarchar")).append(' ')
+                  }
+                  if (otherValue.as[DBObject](iii).as[String]("language_nvarchar").toLowerCase == "br") {
+                    sbBr.append(otherValue.as[DBObject](iii).as[String]("itemvalue_nvarchar")).append(' ')
+                  }
                 }
               }
             }
+            pExtendItemENField.setStringValue(sbEn.toString())
+            pExtendItemRUField.setStringValue(sbRu.toString())
+            pExtendItemBRField.setStringValue(sbBr.toString())
+            doc.add(pExtendItemBRField)
+            doc.add(pExtendItemENField)
+            doc.add(pExtendItemRUField)
           }
-          pExtendItemENField.setStringValue(sbEn.toString())
-          pExtendItemRUField.setStringValue(sbRu.toString())
-          pExtendItemBRField.setStringValue(sbBr.toString())
-          doc.add(pExtendItemBRField)
-          doc.add(pExtendItemENField)
-          doc.add(pExtendItemRUField)
+
         } catch {
-          case e: Exception => log.error("{}",e)
+          case e: Exception => throw e
         }
-        
+
         doc.add(pIdField)
         doc.add(pNameField)
         doc.add(indexCodeField)
-        doc.add(productTypeNameField)
+
         doc.add(skuField)
 
         writer.addDocument(doc)
@@ -335,15 +367,10 @@ class IndexUnitActor extends Actor with ActorLogging with MongoUtil {
         false
       }
     } catch {
-      case e: Exception => log.error("index item fail,productId {};{}", x.as[Int]("productid_int")); e.printStackTrace(); throw e //failCount += 1
-    }
+      case e: Exception => log.error("index item fail,productId {};{}", x.as[Int]("productid_int"), e); e.printStackTrace(); throw e
 
-    /*doc = new Document
-    doc.add(pIdField)
-    doc.add(pNameField)
-    doc.add(indexCodeField)
-    doc.add(skuField)
-      writer.addDocument(doc)*/
+      //failCount += 1
+    }
   }
   def receive = {
     case msg: OldIndexIncremetionalTaskMessage => {
@@ -491,19 +518,19 @@ class IndexUnitActor extends Actor with ActorLogging with MongoUtil {
         var failCount: Int = 0
         var skipCount: Int = 0
         //read mongo data
-        var time3 = System.currentTimeMillis()
+        //var time3 = System.currentTimeMillis()
         //val items: MongoCursor = productColl.find("ec_product.createtime_datetime" $lt now, fields).skip(Integer.valueOf((msg.seq * 2).toString())).limit(2000)
         var q: DBObject = ("productid_int" $gte msg.minId $lte msg.maxId) ++ ("ec_product.qdwproductstatus_int" $lt 2) ++ ("ec_product.isstopsale_bit" -> false) ++ ("ec_productprice.unitprice_money" $gt 0)
         val items: MongoCursor = productColl.find(q, fields, 0, msg.batchSize)
         val lst = items.toList
-        var time4 = System.currentTimeMillis()
-        log.info("load items {}", time4 - time3)
+        //var time4 = System.currentTimeMillis()
+        //log.info("load items {}", time4 - time3)
 
         //read segmentWord
-        time3 = System.currentTimeMillis()
+        //time3 = System.currentTimeMillis()
         val words = getSegmentWords(lst)
-        time4 = System.currentTimeMillis()
-        log.info("load words {}", time4 - time3)
+        //time4 = System.currentTimeMillis()
+        //log.info("load words {}", time4 - time3)
 
         //log.info("find items {}",time4 - time3)
 
@@ -533,7 +560,7 @@ class IndexUnitActor extends Actor with ActorLogging with MongoUtil {
         arr(2) = failCount
         arr(3) = skipCount
         arr(4) = items.size
-        log.info("index time {} success {} fail {} skip {} total {}", arr);
+        //log.info("index time {} success {} fail {} skip {} total {}", arr);
       } catch {
 
         case e: Exception => log.error("{}", e); e.printStackTrace()
@@ -571,7 +598,7 @@ class IndexUnitActor extends Actor with ActorLogging with MongoUtil {
         if (rs != null) rs.close()
         if (stmt != null) stmt.close()
         if (conn != null) conn.close()
-        println("close Connection")
+        //println("close Connection")
       }
 
     }
