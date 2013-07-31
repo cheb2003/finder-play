@@ -8,6 +8,7 @@ import org.slf4j.LoggerFactory
 import org.slf4j
 import scala.collection.mutable.{Queue, ListBuffer}
 import com.mongodb.casbah.commons.MongoDBObject
+import com.mongodb.casbah.Imports._
 
 
 object KPIService {
@@ -49,7 +50,6 @@ object KPIService {
         sb = sb.append(x).append(",")
       }
     }
-
     val sql2 = "select t.orderId_int,t.callbackTime_datetime,o.TrackingPC_nvarchar,o.discountSum_money" +
       " from ec_transaction t,ec_order o where t.PaymentStatus_char='Completed' and" +
       " t.callbackTime_datetime between '" + begin2 + "' and '" + end2 + "' and" +
@@ -71,5 +71,20 @@ object KPIService {
     }
     DBMysql.colseConn(conn, stem, rs)
     logger.info("{}的搜索订单中付款订单有：{}", begin2, count)
+  }
+
+  def deleteOrder(calend: Calendar){
+    val from = lang3.ObjectUtils.clone(calend)
+    from.set(Calendar.HOUR_OF_DAY,0)
+    from.set(Calendar.MINUTE,0)
+    from.set(Calendar.SECOND,0)
+    val to = lang3.ObjectUtils.clone(calend)
+    to.set(Calendar.HOUR_OF_DAY,23)
+    to.set(Calendar.MINUTE,59)
+    to.set(Calendar.SECOND,59)
+    val client = MyMongoManager()
+    val col:MongoCollection = client("ddsearch")("searchSale")
+    val query = "time" $gte from.getTime $lte to.getTime
+    col.remove(query)
   }
 }

@@ -1,7 +1,7 @@
 package controllers
 
 import play.api.mvc.{Action, Controller}
-import my.finder.console.service.MyMongoManager
+import my.finder.console.service.{KPIService, SummarizingService, MyMongoManager}
 
 import com.mongodb.casbah.Imports._
 import scala.collection.mutable.Queue
@@ -50,5 +50,25 @@ object Mkt extends Controller {
     n = n % Attribute(None, "webSiteId", Text("61"), Null)
     n = n % Attribute(None, "orderId", Text(i.as[Int]("orderId").toString), Null)
     nodes += n
+  }
+
+  def createOrder(year: String, month:String,day:String) = Action { implicit request =>
+    val calend:Calendar = Calendar.getInstance()
+    val year_int:Int = year.toInt
+    val month_int:Int =  month.toInt - 1
+    val day_int:Int =  day.toInt
+    calend.set(year_int,month_int,day_int)
+    KPIService.paymentOrder(calend)
+    Ok("success")
+  }
+
+  def deleteOrder(year: String, month:String,day:String) = Action { implicit request =>
+    val calend:Calendar = Calendar.getInstance()
+    val year_int:Int = year.toInt
+    val month_int:Int =  month.toInt - 1
+    val day_int:Int =  day.toInt
+    calend.set(year_int,month_int,day_int)
+    KPIService.deleteOrder(calend)
+    Ok("success")
   }
 }

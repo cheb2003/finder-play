@@ -7,39 +7,34 @@ import org.apache.commons.lang3
 import org.slf4j.LoggerFactory
 import org.slf4j
 import com.mongodb.casbah.commons.{MongoDBList, MongoDBObject}
+import com.mongodb.casbah.Imports._
 
 
 object SummarizingService {
   var logger: slf4j.Logger = LoggerFactory.getLogger("kpi")
-  //查询指定时间前3天的搜索关键字统计
- /* private def searcTopKey(daySrc: Calendar): ListBuffer[Int] = {
-    val day: Calendar = lang3.ObjectUtils.clone(daySrc)
-    val sdf: SimpleDateFormat = new SimpleDateFormat("yyyy-MM-dd")
-    val newday: Calendar = lang3.ObjectUtils.clone(day)
-    newday.add(Calendar.DATE, -2)
-    val begin = sdf.format(newday.getTime()) + " 00:00:00"
-    val end = sdf.format(newday.getTime()) + " 23:59:59"
-    val sql = "select k.TraceOrderNO_varchar from sea_keywordsTrace k where k.TraceOrderNO_varchar is not null and k.TraceOrderNO_varchar <> '' and" +
-      " k.ProjectName_varchar = 'www.dinodirect.com' and k.InsertTime_timestamp between '" + begin + "' and '" + end + "'"
-    val conn: Connection = DBMysql.ds.getConnection()
-    val stem: Statement = conn.createStatement()
-    val rs: ResultSet = stem.executeQuery(sql)
-    var orderNoList: ListBuffer[Int] = new ListBuffer[Int]
-    while (rs.next()) {
-      val orderNo: Int = rs.getInt("TraceOrderNO_varchar")
-      orderNoList += orderNo
-    }
-    DBMysql.colseConn(conn, stem, rs)
-    orderNoList
+  def deleteTopKey(calend: Calendar){
+    val from = lang3.ObjectUtils.clone(calend)
+    from.set(Calendar.HOUR_OF_DAY,0)
+    from.set(Calendar.MINUTE,0)
+    from.set(Calendar.SECOND,0)
+    val to = lang3.ObjectUtils.clone(calend)
+    to.set(Calendar.HOUR_OF_DAY,23)
+    to.set(Calendar.MINUTE,59)
+    to.set(Calendar.SECOND,59)
+    val client = MyMongoManager()
+    val col:MongoCollection = client("ddsearch")("topKeySearchPerDay")
+    val query = "time" $gte from.getTime $lte to.getTime
+    col.remove(query)
   }
-*/
+
   //查询某一天的搜索关键字统计并写入mongo数据库中
   def paymentTopKey(daySrc: Calendar) = {
     val day: Calendar = lang3.ObjectUtils.clone(daySrc)
     val sdf: SimpleDateFormat = new SimpleDateFormat("yyyy-MM-dd")
     val begin: String = sdf.format(day.getTime()) + " 00:00:00"
     val end: String = sdf.format(day.getTime()) + " 23:59:59"
-    val time: Date = sdf.parse(sdf.format(day.getTime()) + " 03:00:00")
+    val sdf2: SimpleDateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss")
+    val time: Date = sdf2.parse(sdf.format(day.getTime()) + " 03:00:00")
 
     val conn: Connection = DBMysql.ds.getConnection()
     val stem: Statement = conn.createStatement()
@@ -100,8 +95,9 @@ object SummarizingService {
       }
       //付款订单
       val sql3 = "select o.orderId_int,o.discountSum_money,o.TrackingPC_nvarchar,t.PaymentStatus_char from " +
-           "ec_order o left join ec_transaction t where  o.orderId_int = t.orderId_int " +
+           "ec_order o left join ec_transaction t on  o.orderId_int = t.orderId_int " +
            "and o.orderId_int in (" + sb.substring(0, sb.length() - 1) + ")"
+      logger.info(sql3)
       val rs3: ResultSet = conn.createStatement().executeQuery(sql3)
       var payOrder:Int = 0
       var unpaynum:Int = 0
@@ -116,11 +112,11 @@ object SummarizingService {
         val  mongoDB = MongoDBObject("orderId" ->orderIdInt,"discountSum" ->discountSum,"pcId" ->pcId )
         val  PaymentStatus_char:String = rs3.getString("PaymentStatus_char")
         if ( "Completed".equals(PaymentStatus_char) ) {
-          payOrders += MongoDBObject("'"+ payOrder +"'" -> mongoDB)
+          payOrders += mongoDB
           payMoney = payMoney + discountSum
           payOrder = payOrder + 1
         }else{
-          unpayOrder +=  MongoDBObject("'"+ unpaynum +"'"-> mongoDB)
+          unpayOrder +=  mongoDB
           unpaynum = unpaynum + 1
         }
         totalMoney = totalMoney + discountSum
@@ -129,6 +125,7 @@ object SummarizingService {
       val obj = MongoDBObject("keyword" -> keyword, "count" -> count, "time" -> time, "resultCount" -> resultCount,"resultClickCount" -> resultClickCount,
         "payOrder" ->payOrder, "clickProducts" ->clickProducts.toString, "totalOrder" ->totalOrder,"payMoney" ->payMoney, "totalMoney" ->totalMoney,
         "noResultCount" ->noResultCount, "unpayOrder" ->unpayOrder.result(), "payOrders" ->payOrders.result())
+      logger.info(obj.toString())
       col.save(obj)
      }
      DBMysql.colseConn(conn, stem, rs)
