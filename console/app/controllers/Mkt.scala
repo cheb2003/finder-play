@@ -11,13 +11,27 @@ import java.util.{Date, Calendar}
 import scala.xml._
 import org.apache.commons.lang3
 import java.text.SimpleDateFormat
+import play.api.data.Form
+import play.api.data.Forms._
+import my.finder.common.util.Util
 
 /**
  *
  */
 object Mkt extends Controller {
   //导出每日销售订单
-  def searchOrder(year: String, month:String,day:String) = Action { implicit request =>
+  def searchOrder() = Action { implicit request =>
+    val form = Form(
+      tuple(
+        "year" -> text,
+        "month" -> text,
+        "day" -> text )
+    )
+    val queryParams = form.bindFromRequest.data
+    val year = Util.getParamString(queryParams, "year", "")
+    val month = Util.getParamString(queryParams, "month", "")
+    val day = Util.getParamString(queryParams, "day", "")
+
     val calend:Calendar = Calendar.getInstance()
     val year_int:Int = year.toInt
     val month_int:Int =  month.toInt - 1
@@ -52,7 +66,18 @@ object Mkt extends Controller {
     nodes += n
   }
 
-  def createOrder(year: String, month:String,day:String) = Action { implicit request =>
+  def createOrder() = Action { implicit request =>
+    val form = Form(
+      tuple(
+        "year" -> text,
+        "month" -> text,
+        "day" -> text )
+    )
+    val queryParams = form.bindFromRequest.data
+    val year = Util.getParamString(queryParams, "year", "")
+    val month = Util.getParamString(queryParams, "month", "")
+    val day = Util.getParamString(queryParams, "day", "")
+
     val calend:Calendar = Calendar.getInstance()
     val year_int:Int = year.toInt
     val month_int:Int =  month.toInt - 1
@@ -62,7 +87,18 @@ object Mkt extends Controller {
     Ok("success")
   }
 
-  def deleteOrder(year: String, month:String,day:String) = Action { implicit request =>
+  def deleteOrder() = Action { implicit request =>
+    val form = Form(
+      tuple(
+        "year" -> text,
+        "month" -> text,
+        "day" -> text )
+    )
+    val queryParams = form.bindFromRequest.data
+    val year = Util.getParamString(queryParams, "year", "")
+    val month = Util.getParamString(queryParams, "month", "")
+    val day = Util.getParamString(queryParams, "day", "")
+
     val calend:Calendar = Calendar.getInstance()
     val year_int:Int = year.toInt
     val month_int:Int =  month.toInt - 1
