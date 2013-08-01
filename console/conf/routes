@@ -12,6 +12,7 @@ GET		/query 						controllers.Application.query
 GET     /queryKeyword				controllers.Application.queryKeyword
 POST    /queryKeyword				controllers.Application.queryKeyword
 GET    	/generateSpellCheck			controllers.Application.generateSpellCheck
-
+GET     /mkt/searchOrder/:year/:month/:day           controllers.Mkt.searchOrder(year:String,month:String,day:String)
+GET     /keyword/searchPerDay/:year/:month/:day      controllers.KeyWord.searchPerDay(year:String,month:String,day:String)
 # Map static resources from the /public folder to the /assets URL path
 GET     /assets/*file               controllers.Assets.at(path="/public", file)
