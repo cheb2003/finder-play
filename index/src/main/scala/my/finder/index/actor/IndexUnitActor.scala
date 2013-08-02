@@ -520,7 +520,7 @@ class IndexUnitActor extends Actor with ActorLogging with MongoUtil {
           //time4 = System.currentTimeMillis()
         }
         /*for (x <- 1 to 100) {
-          writeDoc(null, writer)
+          writeDoc(null, pNameField)
         }*/
 
         val consoleRoot = context.actorFor(Util.getConsoleRootAkkaURLFromMyConfig)
