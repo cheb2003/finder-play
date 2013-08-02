@@ -30,8 +30,15 @@ import play.api.Play._
 
 import scala.collection.mutable.Queue
 import scala.xml._
+import java.util.regex.Pattern
+import org.apache.lucene.analysis.Analyzer
+import org.apache.lucene.analysis.en.EnglishAnalyzer
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 object Application extends Controller {
+  val logger = LoggerFactory.getLogger("my")
   val wordDir = current.configuration.getString("workDir")
   val json: JsValue = Json.parse("""
 {
@@ -92,13 +99,16 @@ object Application extends Controller {
         "pNameBR" -> text,
         "pNameCN" -> text,
         "sku" -> text,
-        "segmentWordRu" -> text,
-        "segmentWordBr" -> text,
-        "segmentWordEn" -> text,
-        "sourceKeyword" -> text,
-        "sourceKeywordCN" -> text,
-        "businessBrand" -> text,
-        "i" -> text))
+        "i" -> text,
+        "pTypeNameEN" -> text,
+        "pTypeNameRU" -> text,
+        "pTypeNameBR" -> text,
+        "pExtendItemBR" -> text,
+        "pExtendItemRU" -> text,
+        "pExtendItemEN" -> text,
+        "match" -> text,
+        "errorWord" -> text)
+    )
     val queryParams = form.bindFromRequest.data
 
     val pNames = Util.getParamString(queryParams, "pName", "").toLowerCase.split(" ")
@@ -113,12 +123,48 @@ object Application extends Controller {
     val sourceKeywordCNs = Util.getParamString(queryParams, "sourceKeywordCN", "").toLowerCase.split(" ")
     val businessBrands = Util.getParamString(queryParams, "businessBrand", "").toLowerCase.split(" ")
     val i = Util.getParamString(queryParams, "i", "")
+    val pTypeNamesEN = Util.getParamString(queryParams, "pTypeNameEN", "").toLowerCase.split(" ")
+    val pTypeNamesBR = Util.getParamString(queryParams, "pTypeNameBR", "").toLowerCase.split(" ")
+    val pTypeNamesRU = Util.getParamString(queryParams, "pTypeNameRU", "").toLowerCase.split(" ")
+    val pExtendItemBRs = Util.getParamString(queryParams, "pExtendItemBR", "").toLowerCase.split(" ")
+    val pExtendItemRUs = Util.getParamString(queryParams, "pExtendItemRU", "").toLowerCase.split(" ")
+    val pExtendItemENs = Util.getParamString(queryParams, "pExtendItemEN", "").toLowerCase.split(" ")
+    val matchs = Util.getParamString(queryParams, "match", "")
+    val errorWords = Util.getParamString(queryParams, "errorWord", "")
 
     val bq: BooleanQuery = new BooleanQuery()
     val bqKeyEn: BooleanQuery = new BooleanQuery()
     val bqKeyRu: BooleanQuery = new BooleanQuery()
     val bqKeyBr: BooleanQuery = new BooleanQuery()
     val bqKeyCn: BooleanQuery = new BooleanQuery()
+    if(matchs.length > 0){
+      val regEx = "[`\\-~!@#$%^&*()+_=|{}':;',\\[\\].<>/?~！@#￥%……&*（）——+|{}【】‘；：”“’。，、？]"
+      val p: Pattern = Pattern.compile(regEx)
+      val m = p.matcher(matchs.toLowerCase())
+      val kwmatchs = m.replaceAll("").trim().replaceAll("~!@#$%^&*()_+","").replaceAll("\\s+", " ").split(" ")
+      logger.info("{}",kwmatchs)
+      if (kwmatchs.length > 0) {
+        val bqmatchs: BooleanQuery = new BooleanQuery()
+        for (k <- kwmatchs) {
+          if (k.trim != "") {
+            val term: Term = new Term("pName", k)
+            val pq: PrefixQuery = new PrefixQuery(term)
+            bqmatchs.add(pq, BooleanClause.Occur.MUST)
+          }
+        }
+        bq.add(bqmatchs, BooleanClause.Occur.SHOULD)
+      }  
+    }
+    
+
+    val analyzer: Analyzer  = new EnglishAnalyzer(Version.LUCENE_43)
+    val qp: QueryParser = new QueryParser(Version.LUCENE_43, "pName" , analyzer)
+    if(errorWords.length > 0){
+      val qerrorWord: Query = qp.parse(errorWords.replace(" ", " AND "))
+      bq.add(qerrorWord, BooleanClause.Occur.SHOULD)  
+    }
+    
+
     if (pNames.length > 0) {
       for (k <- pNames) {
         if (k.trim != "") {
@@ -236,10 +282,82 @@ object Application extends Controller {
       bq.add(bqBusinessBrands, BooleanClause.Occur.SHOULD)
     }
 
+    if (pTypeNamesEN.length > 0) {
+      val bqpTypeNames: BooleanQuery = new BooleanQuery()
+      for (k <- pTypeNamesEN) {
+        if (k.trim != "") {
+          val term: Term = new Term("pTypeNameEN", k)
+          val pq: TermQuery = new TermQuery(term)
+          bqpTypeNames.add(pq, BooleanClause.Occur.MUST)
+        }
+      }
+      bq.add(bqpTypeNames, BooleanClause.Occur.SHOULD)
+    }
+
+    if (pTypeNamesRU.length > 0) {
+      val bqpTypeNamesRU: BooleanQuery = new BooleanQuery()
+      for (k <- pTypeNamesRU) {
+        if (k.trim != "") {
+          val term: Term = new Term("pTypeNameRU", k)
+          val pq: TermQuery = new TermQuery(term)
+          bqpTypeNamesRU.add(pq, BooleanClause.Occur.MUST)
+        }
+      }
+      bq.add(bqpTypeNamesRU, BooleanClause.Occur.SHOULD)
+    }
+
+    if (pTypeNamesBR.length > 0) {
+      val bqpTypeNamesBR: BooleanQuery = new BooleanQuery()
+      for (k <- pTypeNamesBR) {
+        if (k.trim != "") {
+          val term: Term = new Term("pTypeNameBR", k)
+          val pq: TermQuery = new TermQuery(term)
+          bqpTypeNamesBR.add(pq, BooleanClause.Occur.MUST)
+        }
+      }
+      bq.add(bqpTypeNamesBR, BooleanClause.Occur.SHOULD)
+    }
+
+    if (pExtendItemBRs.length > 0) {
+      val bqpExtendItemBRs: BooleanQuery = new BooleanQuery()
+      for (k <- pExtendItemBRs) {
+        if (k.trim != "") {
+          val term: Term = new Term("pExtendItemBR", k)
+          val pq: TermQuery = new TermQuery(term)
+          bqpExtendItemBRs.add(pq, BooleanClause.Occur.MUST)
+        }
+      }
+      bq.add(bqpExtendItemBRs, BooleanClause.Occur.SHOULD)
+    }
+
+    if (pExtendItemRUs.length > 0) {
+      val bqpExtendItemRUs: BooleanQuery = new BooleanQuery()
+      for (k <- pExtendItemRUs) {
+        if (k.trim != "") {
+          val term: Term = new Term("pExtendItemRU", k)
+          val pq: TermQuery = new TermQuery(term)
+          bqpExtendItemRUs.add(pq, BooleanClause.Occur.MUST)
+        }
+      }
+      bq.add(bqpExtendItemRUs, BooleanClause.Occur.SHOULD)
+    }
+
+    if (pExtendItemENs.length > 0) {
+      val bqpExtendItemENs: BooleanQuery = new BooleanQuery()
+      for (k <- pExtendItemENs) {
+        if (k.trim != "") {
+          val term: Term = new Term("pExtendItemEN", k)
+          val pq: TermQuery = new TermQuery(term)
+          bqpExtendItemENs.add(pq, BooleanClause.Occur.MUST)
+        }
+      }
+      bq.add(bqpExtendItemENs, BooleanClause.Occur.SHOULD)
+    }
     val dir: Directory = FSDirectory.open(new File(wordDir.get + i));
     val reader = DirectoryReader.open(dir);
     val searcher = new IndexSearcher(reader);
     println(bq)
+    logger.info("{}",bq)
     val topDocs = searcher.search(bq, 1)
     val scoreDocs = topDocs.scoreDocs
     var nodes = new Queue[Node]()
@@ -266,7 +384,7 @@ object Application extends Controller {
     val reader = DirectoryReader.open(dir);
 
     val searcher = new IndexSearcher(reader);
-    //val parse = new QueryParser(Version.LUCENE_43,"pName",new MyAnalyzer())
+    //val parse = new QuedryParser(Version.LUCENE_43,"pName",new MyAnalyzer())
     val parse = new QueryParser(Version.LUCENE_43, "pName", new KeywordAnalyzer())
     val q = parse.parse(qStr)
     println(q)

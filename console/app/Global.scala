@@ -3,9 +3,11 @@ import akka.actor.{ ActorSystem, Props}
 import com.typesafe.config.ConfigFactory
 
 import my.finder.console.actor.{MessageFacade, ConsoleRootActor}
-import my.finder.console.service.IndexManage
+import my.finder.console.service.{DBMysql, InitJob, GenarateSearchOrderPerDay, IndexManage}
 import my.finder.common.util._
 
+import org.quartz.impl.StdSchedulerFactory
+import org.quartz.{Scheduler, JobBuilder}
 import play.api._
 import play.api.Play.current
 /**
@@ -15,10 +17,12 @@ object Global extends GlobalSettings {
 
   //private val system:ActorSystem = getActorSystem
   private var system:ActorSystem = null
+  private var scheduler:Scheduler = null
   override def onStart(app: Application) {
     synchronized{
       IndexManage.init
-      system = getActorSystem
+      DBMysql.init
+      /*system = getActorSystem
       val root = system.actorOf(Props[ConsoleRootActor], "root")
       if (root != null) {
         Logger.debug("console actor system has started")
@@ -26,12 +30,12 @@ object Global extends GlobalSettings {
       } else {
         Logger.debug("console actor system has not started")
         throw new RuntimeException("console actor system has not started")
-      }
-      /*if(system == null){
-        system = ActorSystem.create("console", ConfigFactory.load().getConfig("console.test"))
-        
       }*/
+
     }
+    scheduler = StdSchedulerFactory.getDefaultScheduler()
+    scheduler.start()
+    InitJob.init(scheduler)
   }
 
   override def onStop(app: Application) {
@@ -39,6 +43,9 @@ object Global extends GlobalSettings {
       if (system != null) {
         Logger.debug("console actor system has shutdown")
         system.shutdown()
+      }
+      if(scheduler != null){
+        scheduler.shutdown()
       }
     }
   }

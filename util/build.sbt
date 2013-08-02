@@ -11,6 +11,8 @@ libraryDependencies in ThisBuild ++= Seq(
     "org.apache.lucene" % "lucene-analyzers-common" % "4.3.0",
     "org.apache.lucene" % "lucene-core" % "4.3.0",
     "play" %% "play" % "2.1.1",
-    "dom4j" % "dom4j" % "1.6.1"
+    "dom4j" % "dom4j" % "1.6.1",
+    "net.sourceforge.jtds" % "jtds" % "1.2.4"
 )
+
 

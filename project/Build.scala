@@ -22,7 +22,10 @@ object ApplicationBuild extends Build {
     "org.apache.lucene" % "lucene-queryparser" % "4.3.0",
     "org.specs2" %% "specs2" % "2.0" % "test",
     "org.apache.lucene" % "lucene-grouping" % "4.3.1",
-    "org.apache.lucene" % "lucene-suggest" % "4.3.1"
+    "org.apache.lucene" % "lucene-suggest" % "4.3.1",
+    "org.quartz-scheduler" % "quartz" % "2.2.0",
+    "mysql" % "mysql-connector-java" % "5.1.20"
+	
   )
   
   override def settings = super.settings ++ org.sbtidea.SbtIdeaPlugin.settings
