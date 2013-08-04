@@ -45,6 +45,9 @@ class ConsoleRootActor extends Actor with ActorLogging {
       if (msg.command == Constants.DD_PRODUCT) {
         partitionActor ! PartitionIndexTaskMessage(Constants.DD_PRODUCT)
       }
+      if (msg.command == Constants.DD_PRODUCT_FORDB) {
+        partitionActor ! PartitionIndexTaskMessage(Constants.DD_PRODUCT_FORDB)
+      }
       if (msg.command == "changeIndex") {
         val i: Index = IndexManage.get(Constants.DD_PRODUCT)
         search ! ChangeIndexMessage(i.name, i.using)

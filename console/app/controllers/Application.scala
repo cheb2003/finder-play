@@ -60,8 +60,13 @@ object Application extends Controller {
     //Ok("hello world")
   }
   def hello(name: String) = Action { implicit request =>
-    rootActor ! CommandParseMessage(Constants.DD_PRODUCT)
-    Ok("hello")
+    if(name == Constants.DD_PRODUCT) {
+      rootActor ! CommandParseMessage(Constants.DD_PRODUCT)
+      Ok("hello dbsearch")
+    }else {
+      rootActor ! CommandParseMessage(Constants.DD_PRODUCT_FORDB)
+      Ok("hello ddsearch")
+    }
   }
 
   def inc = Action { implicit request =>
