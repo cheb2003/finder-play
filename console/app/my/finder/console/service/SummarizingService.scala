@@ -37,6 +37,7 @@ object SummarizingService {
     val time: Date = sdf2.parse(sdf.format(day.getTime()) + " 03:00:00")
 
     val conn: Connection = DBMysql.ds.getConnection()
+    val conn2: Connection = DBMssql.ds.getConnection()
     val stem: Statement = conn.createStatement()
 
     val client = MyMongoManager()
@@ -83,7 +84,7 @@ object SummarizingService {
       //搜索点击产品Id统计
       val sql2 = "select productkeyid_nvarchar,orderid_int from ec_orderdetail where orderid_int in (" +
         sb.substring(0, sb.length() - 1) + ")"
-      val rs2: ResultSet = conn.createStatement().executeQuery(sql2)
+      val rs2: ResultSet = conn2.createStatement().executeQuery(sql2)
       var clickProducts = new StringBuffer()
       while ( rs2.next() ){
         val productId:String = rs2.getString("productkeyid_nvarchar")
@@ -98,7 +99,7 @@ object SummarizingService {
            "ec_order o left join ec_transaction t on  o.orderId_int = t.orderId_int " +
            "and o.orderId_int in (" + sb.substring(0, sb.length() - 1) + ")"
       logger.info(sql3)
-      val rs3: ResultSet = conn.createStatement().executeQuery(sql3)
+      val rs3: ResultSet = conn2.createStatement().executeQuery(sql3)
       var payOrder:Int = 0
       var unpaynum:Int = 0
       var payMoney:Float = 0.0F
