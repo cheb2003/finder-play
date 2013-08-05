@@ -71,9 +71,9 @@ object KeyWord extends Controller {
       }
     }
     if ( unPayOrderId.toString.equals("") ){
-      n = n % Attribute(None, "unPayOrderIds", Text(""), Null)
+      n = n % Attribute(None, "unPayOrder", Text(""), Null)
     }else{
-      n = n % Attribute(None, "unPayOrderIds", Text( unPayOrderId.substring(0, unPayOrderId.length() - 1)), Null)
+      n = n % Attribute(None, "unPayOrder", Text( unPayOrderId.substring(0, unPayOrderId.length() - 1)), Null)
     }
     val Plist = i.getAsOrElse[MongoDBList]("payOrders",null)
     var payOrderIds = new StringBuffer()
@@ -81,7 +81,7 @@ object KeyWord extends Controller {
       if ( Plist.size > 0 ){
         for(y  <-  0 until Plist.length ){
           val pobj:Int = Plist.as[DBObject](y).as[Int]("orderId")
-          unPayOrderId.append(pobj).append(",")
+          payOrderIds.append(pobj).append(",")
         }
       }
     }
@@ -98,11 +98,11 @@ object KeyWord extends Controller {
     n = n % Attribute(None, "resultCount", Text(i.as[Int]("resultCount").toString), Null)
     n = n % Attribute(None, "clickProducts", Text(i.as[String]("clickProducts")), Null)
     n = n % Attribute(None, "resultClickCount", Text(i.as[Int]("resultClickCount").toString), Null)
-    n = n % Attribute(None, "payMoney", Text(i.as[Int]("payMoney").toString), Null)
+    n = n % Attribute(None, "payMoney", Text(i.as[Double]("payMoney").toString), Null)
     n = n % Attribute(None, "noResultCount", Text(i.as[Int]("noResultCount").toString), Null)
     n = n % Attribute(None, "count", Text(i.as[Int]("count").toString), Null)
     n = n % Attribute(None, "webSiteId", Text("61"), Null)
-    n = n % Attribute(None, "keyword", Text(i.as[Int]("keyword").toString), Null)
+    n = n % Attribute(None, "keyword", Text(i.as[String]("keyword")), Null)
     nodes += n
   }
 
