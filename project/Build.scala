@@ -24,7 +24,8 @@ object ApplicationBuild extends Build {
     "org.apache.lucene" % "lucene-grouping" % "4.3.1",
     "org.apache.lucene" % "lucene-suggest" % "4.3.1",
     "org.quartz-scheduler" % "quartz" % "2.2.0",
-    "mysql" % "mysql-connector-java" % "5.1.20"
+    "mysql" % "mysql-connector-java" % "5.1.20",
+    "org.springframework" % "spring-jdbc" % "3.2.1.RELEASE"
 	
   )
   
