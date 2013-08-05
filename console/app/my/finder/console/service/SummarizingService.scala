@@ -91,7 +91,7 @@ object SummarizingService {
       //rs1.close()
       //搜索点击产品Id统计
       var clickProducts = new StringBuffer()
-      if(sb.length > 0){
+      if(sb.length -1 > 0){
         val sql2 = "select productkeyid_nvarchar,orderid_int from ec_orderdetail where orderid_int in (" +
           sb.substring(0, sb.length() - 1) + ")"
         val rs2: SqlRowSet = jsMssql.queryForRowSet(sql2)
