@@ -54,7 +54,7 @@ object KPIService {
       " from ec_transaction t,ec_order o where t.PaymentStatus_char='Completed' and" +
       " t.callbackTime_datetime between '" + begin2 + "' and '" + end2 + "' and" +
       " o.orderId_int = t.orderId_int and o.orderId_int in (" + sb.substring(0, sb.length() - 1) + ")"
-    val conn: Connection = DBMysql.ds.getConnection()
+    val conn: Connection = DBMssql.ds.getConnection()
     val stem: Statement = conn.createStatement()
     val rs: ResultSet = stem.executeQuery(sql2)
     var count: Int = 0
