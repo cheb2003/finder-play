@@ -98,7 +98,9 @@ object SummarizingService {
 
         while ( rs2.next() ){
           val productId:String = rs2.getString("productkeyid_nvarchar")
-          clickProducts = clickProducts.append(productId).append(",")
+          if ( productId != ""){
+            clickProducts = clickProducts.append(productId).append(",")
+          }
         }
         //rs2.close()
         if ( clickProducts.length() - 1 > 0 ){
@@ -108,12 +110,11 @@ object SummarizingService {
 
       //付款订单
       var payOrder:Int = 0
-      var unpaynum:Int = 0
-      var payMoney:Float = 0.0F
-      var totalMoney:Float = 0.0F
+      var payMoney:BigDecimal = 0
+      var totalMoney:BigDecimal = 0
       var payOrders = MongoDBList.newBuilder
       var unpayOrder = MongoDBList.newBuilder
-      if(sb.length > 0){
+      if(sb.length -1 > 0){
         val sql3 = "select o.orderId_int,o.discountSum_money,o.TrackingPC_nvarchar,t.PaymentStatus_char from " +
           "ec_order o left join ec_transaction t on  o.orderId_int = t.orderId_int " +
           "and o.orderId_int in (" + sb.substring(0, sb.length() - 1) + ")"
@@ -121,8 +122,8 @@ object SummarizingService {
         val rs3: SqlRowSet = jsMssql.queryForRowSet(sql3)
 
         while ( rs3.next() ){
-          val  orderIdInt =  rs3.getInt("orderId_int")
-          val  discountSum:Float =  rs3.getBigDecimal("discountSum_money") .floatValue()
+          val  orderIdInt:Int =  rs3.getInt("orderId_int")
+          val  discountSum:BigDecimal =  rs3.getBigDecimal("discountSum_money")
           val  pcId:String = rs3.getString("TrackingPC_nvarchar")
           val  mongoDB = MongoDBObject("orderId" ->orderIdInt,"discountSum" ->discountSum,"pcId" ->pcId )
           val  PaymentStatus_char:String = rs3.getString("PaymentStatus_char")
@@ -132,7 +133,6 @@ object SummarizingService {
             payOrder = payOrder + 1
           }else{
             unpayOrder +=  mongoDB
-            unpaynum = unpaynum + 1
           }
           totalMoney = totalMoney + discountSum
         }
