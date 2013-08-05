@@ -21,7 +21,7 @@ import my.finder.common.util.Util
  */
 object KeyWord extends Controller {
   //导出搜索统计数据
-  def searchPerDay = Action { implicit request =>
+  def searchPerDay() = Action { implicit request =>
     val form = Form(
       tuple(
         "year" -> text,
@@ -86,9 +86,9 @@ object KeyWord extends Controller {
       }
     }
     if ( payOrderIds.toString.equals("") ){
-       n = n % Attribute(None, "payOrderIds", Text(""), Null)
+       n = n % Attribute(None, "payOrders", Text(""), Null)
     }else{
-       n = n % Attribute(None, "payOrderIds", Text(payOrderIds.substring(0, payOrderIds.length() - 1)), Null)
+       n = n % Attribute(None, "payOrders", Text(payOrderIds.substring(0, payOrderIds.length() - 1)), Null)
     }
     val sdf: SimpleDateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss")
     n = n % Attribute(None, "time", Text(sdf.format(i.as[Date]("time"))), Null)
