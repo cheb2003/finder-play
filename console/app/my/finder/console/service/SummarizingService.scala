@@ -8,6 +8,10 @@ import org.slf4j.LoggerFactory
 import org.slf4j
 import com.mongodb.casbah.commons.{MongoDBList, MongoDBObject}
 import com.mongodb.casbah.Imports._
+import com.jolbox.bonecp.BoneCPDataSource
+import org.springframework.jdbc.core.JdbcTemplate
+import org.springframework.jdbc.support.rowset.SqlRowSet
+import play.api.Play._
 
 
 object SummarizingService {
@@ -36,19 +40,24 @@ object SummarizingService {
     val sdf2: SimpleDateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss")
     val time: Date = sdf2.parse(sdf.format(day.getTime()) + " 03:00:00")
 
-    val conn: Connection = DBMysql.ds.getConnection()
-    val stem: Statement = conn.createStatement()
+    //val conn: Connection = DBMysql.ds.getConnection()
+    //val stem: Statement = conn.createStatement()
+
+
+    val jsMysql:JdbcTemplate = new JdbcTemplate(DBMysql.ds)
+    val jsMssql:JdbcTemplate = new JdbcTemplate(DBMssql.ds)
 
     val client = MyMongoManager()
     val col = client.getDB("ddsearch").getCollection("topKeySearchPerDay")
-    val sql = "select min(k.sea_id),k.Keyword_varchar from sea_keywordsTrace k where k.InsertTime_timestamp between '" +
-      begin + "' and '" + end + "' group by k.Keyword_varchar"
-    val rs: ResultSet = stem.executeQuery(sql)
+    val sql = "select distinct k.Keyword_varchar from sea_keywordsTrace k where k.InsertTime_timestamp between '" +
+      begin + "' and '" + end + "'"
+    val rs: SqlRowSet = jsMysql.queryForRowSet(sql)
     while ( rs.next()){
       val keyword:String = rs.getString("Keyword_varchar")
-      val sql1 = "select * from sea_keywordsTrace k where k.Keyword_varchar ='"+ keyword + "' and " +
-      "k.InsertTime_timestamp between '" + begin + "' and '" + end + "'"
-      val rs1: ResultSet = conn.createStatement().executeQuery(sql1)
+      val sql1 = "select TraceStep_varchar,TraceOrderNO_varchar,SearchCount_int from sea_keywordsTrace k where k.Keyword_varchar ='"+ keyword + "' and " +
+        "k.InsertTime_timestamp between '" + begin + "' and '" + end + "'"
+      logger.info(sql1)
+      val rs1: SqlRowSet = jsMysql.queryForRowSet(sql1)
 
       var count:Int = 0
       var resultCount:Int = 0
@@ -62,9 +71,9 @@ object SummarizingService {
         if( "productdetail".equals(TraceStep_varchar)){
           resultClickCount = resultClickCount + 1
         }
-        var orderNo: Int =  0
-        orderNo = rs1.getInt("TraceOrderNO_varchar")
-        if ( orderNo != 0 ) {
+        var orderNo: String =  ""
+        orderNo = rs1.getString("TraceOrderNO_varchar")
+        if ( orderNo != "" ) {
           totalOrder = totalOrder + 1
           sb = sb.append(orderNo).append(",")
         }
@@ -79,55 +88,63 @@ object SummarizingService {
         //关键字点击次数
         count = count + 1
       }
-      rs1.close()
+      //rs1.close()
       //搜索点击产品Id统计
-      val sql2 = "select productkeyid_nvarchar,orderid_int from ec_orderdetail where orderid_int in (" +
-        sb.substring(0, sb.length() - 1) + ")"
-      val rs2: ResultSet = conn.createStatement().executeQuery(sql2)
       var clickProducts = new StringBuffer()
-      while ( rs2.next() ){
-        val productId:String = rs2.getString("productkeyid_nvarchar")
-        clickProducts = clickProducts.append(productId).append(",")
+      if(sb.length > 0){
+        val sql2 = "select productkeyid_nvarchar,orderid_int from ec_orderdetail where orderid_int in (" +
+          sb.substring(0, sb.length() - 1) + ")"
+        val rs2: SqlRowSet = jsMssql.queryForRowSet(sql2)
+
+        while ( rs2.next() ){
+          val productId:String = rs2.getString("productkeyid_nvarchar")
+          clickProducts = clickProducts.append(productId).append(",")
+        }
+        //rs2.close()
+        if ( clickProducts.length() - 1 > 0 ){
+          clickProducts.substring(0, clickProducts.length() - 1)
+        }
       }
-      rs2.close()
-      if ( clickProducts.length() - 1 > 0 ){
-        clickProducts.substring(0, clickProducts.length() - 1)
-      }
+
       //付款订单
-      val sql3 = "select o.orderId_int,o.discountSum_money,o.TrackingPC_nvarchar,t.PaymentStatus_char from " +
-           "ec_order o left join ec_transaction t on  o.orderId_int = t.orderId_int " +
-           "and o.orderId_int in (" + sb.substring(0, sb.length() - 1) + ")"
-      logger.info(sql3)
-      val rs3: ResultSet = conn.createStatement().executeQuery(sql3)
       var payOrder:Int = 0
       var unpaynum:Int = 0
       var payMoney:Float = 0.0F
       var totalMoney:Float = 0.0F
       var payOrders = MongoDBList.newBuilder
       var unpayOrder = MongoDBList.newBuilder
-      while ( rs3.next() ){
-        val  orderIdInt =  rs3.getInt("orderId_int")
-        val  discountSum:Float =  rs3.getBigDecimal("discountSum_money") .floatValue()
-        val  pcId:String = rs3.getString("TrackingPC_nvarchar")
-        val  mongoDB = MongoDBObject("orderId" ->orderIdInt,"discountSum" ->discountSum,"pcId" ->pcId )
-        val  PaymentStatus_char:String = rs3.getString("PaymentStatus_char")
-        if ( "Completed".equals(PaymentStatus_char) ) {
-          payOrders += mongoDB
-          payMoney = payMoney + discountSum
-          payOrder = payOrder + 1
-        }else{
-          unpayOrder +=  mongoDB
-          unpaynum = unpaynum + 1
+      if(sb.length > 0){
+        val sql3 = "select o.orderId_int,o.discountSum_money,o.TrackingPC_nvarchar,t.PaymentStatus_char from " +
+          "ec_order o left join ec_transaction t on  o.orderId_int = t.orderId_int " +
+          "and o.orderId_int in (" + sb.substring(0, sb.length() - 1) + ")"
+        logger.info(sql3)
+        val rs3: SqlRowSet = jsMssql.queryForRowSet(sql3)
+
+        while ( rs3.next() ){
+          val  orderIdInt =  rs3.getInt("orderId_int")
+          val  discountSum:Float =  rs3.getBigDecimal("discountSum_money") .floatValue()
+          val  pcId:String = rs3.getString("TrackingPC_nvarchar")
+          val  mongoDB = MongoDBObject("orderId" ->orderIdInt,"discountSum" ->discountSum,"pcId" ->pcId )
+          val  PaymentStatus_char:String = rs3.getString("PaymentStatus_char")
+          if ( "Completed".equals(PaymentStatus_char) ) {
+            payOrders += mongoDB
+            payMoney = payMoney + discountSum
+            payOrder = payOrder + 1
+          }else{
+            unpayOrder +=  mongoDB
+            unpaynum = unpaynum + 1
+          }
+          totalMoney = totalMoney + discountSum
         }
-        totalMoney = totalMoney + discountSum
       }
-      rs3.close()
+
+      //rs3.close()
       val obj = MongoDBObject("keyword" -> keyword, "count" -> count, "time" -> time, "resultCount" -> resultCount,"resultClickCount" -> resultClickCount,
         "payOrder" ->payOrder, "clickProducts" ->clickProducts.toString, "totalOrder" ->totalOrder,"payMoney" ->payMoney, "totalMoney" ->totalMoney,
         "noResultCount" ->noResultCount, "unpayOrder" ->unpayOrder.result(), "payOrders" ->payOrders.result())
-      logger.info(obj.toString())
+      //logger.info(obj.toString())
       col.save(obj)
-     }
-     DBMysql.colseConn(conn, stem, rs)
+    }
+    //DBMysql.colseConn(conn, stem, rs)
   }
 }
