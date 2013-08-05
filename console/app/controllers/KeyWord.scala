@@ -21,7 +21,7 @@ import my.finder.common.util.Util
  */
 object KeyWord extends Controller {
   //导出搜索统计数据
-  def searchPerDay(year: String, month:String,day:String) = Action { implicit request =>
+  def searchPerDay = Action { implicit request =>
     val form = Form(
       tuple(
         "year" -> text,
