@@ -2,16 +2,15 @@ package my.finder.console.service
 
 import java.util.{Date, Calendar}
 import java.text.SimpleDateFormat
-import java.sql.{Connection, ResultSet, Statement}
 import org.apache.commons.lang3
 import org.slf4j.LoggerFactory
 import org.slf4j
 import com.mongodb.casbah.commons.{MongoDBList, MongoDBObject}
 import com.mongodb.casbah.Imports._
-import com.jolbox.bonecp.BoneCPDataSource
 import org.springframework.jdbc.core.JdbcTemplate
 import org.springframework.jdbc.support.rowset.SqlRowSet
-import play.api.Play._
+
+
 
 
 object SummarizingService {
@@ -49,8 +48,8 @@ object SummarizingService {
 
     val client = MyMongoManager()
     val col = client.getDB("ddsearch").getCollection("topKeySearchPerDay")
-    val sql = "select distinct k.Keyword_varchar from sea_keywordsTrace k where k.InsertTime_timestamp between '" +
-      begin + "' and '" + end + "'"
+    val sql = "select min(k.sea_id),k.Keyword_varchar from sea_keywordsTrace k where k.InsertTime_timestamp between '" +
+      begin + "' and '" + end + "' group by k.Keyword_varchar"
     val rs: SqlRowSet = jsMysql.queryForRowSet(sql)
     while ( rs.next()){
       val keyword:String = rs.getString("Keyword_varchar")
@@ -71,6 +70,10 @@ object SummarizingService {
         if( "productdetail".equals(TraceStep_varchar)){
           resultClickCount = resultClickCount + 1
         }
+        if( "search".equals(TraceStep_varchar)){
+          //关键字点击次数
+          count = count + 1
+        }
         var orderNo: String =  ""
         orderNo = rs1.getString("TraceOrderNO_varchar")
         if ( orderNo != "" ) {
@@ -85,16 +88,15 @@ object SummarizingService {
         }else{
           resultCount = resultCount + num
         }
-        //关键字点击次数
-        count = count + 1
       }
       //rs1.close()
       //搜索点击产品Id统计
       var clickProducts = new StringBuffer()
+      var clickProductIds:String  = ""
       if(sb.length -1 > 0){
         val sql2 = "select productkeyid_nvarchar,orderid_int from ec_orderdetail where orderid_int in (" +
           sb.substring(0, sb.length() - 1) + ")"
-        val rs2: SqlRowSet = jsMssql.queryForRowSet(sql2)
+        val rs2: SqlRowSet = jsMysql.queryForRowSet(sql2)
 
         while ( rs2.next() ){
           val productId:String = rs2.getString("productkeyid_nvarchar")
@@ -102,28 +104,27 @@ object SummarizingService {
             clickProducts = clickProducts.append(productId).append(",")
           }
         }
-        //rs2.close()
         if ( clickProducts.length() - 1 > 0 ){
-          clickProducts.substring(0, clickProducts.length() - 1)
+          clickProductIds = clickProducts.substring(0, clickProducts.length() - 1)
         }
       }
 
       //付款订单
       var payOrder:Int = 0
-      var payMoney:BigDecimal = 0
-      var totalMoney:BigDecimal = 0
+      var payMoney:Float = 0F
+      var totalMoney:Float = 0F
       var payOrders = MongoDBList.newBuilder
       var unpayOrder = MongoDBList.newBuilder
       if(sb.length -1 > 0){
         val sql3 = "select o.orderId_int,o.discountSum_money,o.TrackingPC_nvarchar,t.PaymentStatus_char from " +
           "ec_order o left join ec_transaction t on  o.orderId_int = t.orderId_int " +
-          "and o.orderId_int in (" + sb.substring(0, sb.length() - 1) + ")"
+          "where o.orderId_int in (" + sb.substring(0, sb.length() - 1) + ")"
         logger.info(sql3)
-        val rs3: SqlRowSet = jsMssql.queryForRowSet(sql3)
+        val rs3: SqlRowSet = jsMysql.queryForRowSet(sql3)
 
         while ( rs3.next() ){
           val  orderIdInt:Int =  rs3.getInt("orderId_int")
-          val  discountSum:BigDecimal =  rs3.getBigDecimal("discountSum_money")
+          val  discountSum:Float =  rs3.getBigDecimal("discountSum_money").floatValue()
           val  pcId:String = rs3.getString("TrackingPC_nvarchar")
           val  mongoDB = MongoDBObject("orderId" ->orderIdInt,"discountSum" ->discountSum,"pcId" ->pcId )
           val  PaymentStatus_char:String = rs3.getString("PaymentStatus_char")
@@ -139,8 +140,8 @@ object SummarizingService {
       }
 
       //rs3.close()
-      val obj = MongoDBObject("keyword" -> keyword, "count" -> count, "time" -> time, "resultCount" -> resultCount,"resultClickCount" -> resultClickCount,
-        "payOrder" ->payOrder, "clickProducts" ->clickProducts.toString, "totalOrder" ->totalOrder,"payMoney" ->payMoney, "totalMoney" ->totalMoney,
+      val obj = MongoDBObject("keyword" -> KeywordUtil.normalizeKeyword(keyword), "count" -> count, "time" -> time, "resultCount" -> resultCount,"resultClickCount" -> resultClickCount,
+        "payOrder" ->payOrder, "clickProducts" ->clickProductIds, "totalOrder" ->totalOrder,"payMoney" ->payMoney, "totalMoney" ->totalMoney,
         "noResultCount" ->noResultCount, "unpayOrder" ->unpayOrder.result(), "payOrders" ->payOrders.result())
       //logger.info(obj.toString())
       col.save(obj)
