@@ -83,6 +83,17 @@ delete from rs_dd_prod_score_area
 insert into rs_dd_prod_score_area values(25,'s3',1003,1300,90)
 insert into rs_dd_prod_score_area values(7,'k3',1004,1301,99)
 
+CREATE TABLE RS_DD_PROD_SCORE(
+  ProductKeyID_nvarchar nvarchar(50) NOT NULL,
+  ProductID_int int NULL,
+  ProductTypeID_int int NULL,
+  Score_float float NULL,
+  Status_tinyint tinyint NOT NULL
+)	
+
+insert into RS_DD_PROD_SCORE values('s3',1003,1300,121,1);
+insert into RS_DD_PROD_SCORE values('k3',1003,1301,112,1);
+
 
 create table ec_indexproduct(
 productid_int int NOT NULL,

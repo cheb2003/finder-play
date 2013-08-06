@@ -15,7 +15,7 @@ import java.util.Date
 case class Product(id:Int,name:String,sku:String,  indexCode:String,isOneSale:Int,isAliExpress:Int,
                    businessName:String,var createTime:String,var typeId:Int,isQuality:Int,ventureStatus:Int,ventureLevelNew:Int,
                    isTaobao:Int,brandId:Int,brandName:String,var attribute:String,var iseventproduct:Int,var searchKeyword:String,
-                   var areaScore:String,var isLifeStyle:Int,var wwwScore:Float
+                   var areaScore:String,var isDailyDeal:Int,var isLifeStyle:Option[Int],var wwwScore:Float
                     )
 
 class IndexUnitActorDD extends Actor with ActorLogging {
@@ -43,13 +43,13 @@ class IndexUnitActorDD extends Actor with ActorLogging {
 
 
   private val pAttributeValueField =  new StringField("attribute", "", Field.Store.YES)
-  //private val pArea =  new StringField("areaId", "", Field.Store.YES)
-  //private val pScore =  new StringField("areaScore", "", Field.Store.YES)
   private val pIseventproductField =  new IntField("iseventproduct", 0, Field.Store.YES)
   private val pSearchKeywordField =  new StringField("searchKeyword", "", Field.Store.YES)
   //www score
   private val wwwScoreField = new DoubleField("wwwScore", 0d, Field.Store.YES)
 
+  private val pIsDailyDealField =  new IntField("isDailyDeal", 0, Field.Store.YES)
+  private val pIsLifeStyle =  new IntField("isLifeStyle", 0, Field.Store.YES)
 
   private var doc: Document = null
 
@@ -96,7 +96,7 @@ class IndexUnitActorDD extends Actor with ActorLogging {
             rs.getInt("ProductID_int"),rs.getString("productaliasname_nvarchar"),rs.getString("ProductKeyID_nvarchar"),rs.getString("IndexCode_nvarchar"),rs.getInt("IsOneSale_tinyint"),rs.getInt("IsAliExpress_tinyint"),
             rs.getString("BusinessName_nvarchar"),rs.getString("CreateTime_datetime"),rs.getInt("ProductTypeID_int"),rs.getInt("IsQualityProduct_tinyint"),rs.getInt("VentureStatus_tinyint"),rs.getInt("VentureLevelNew_tinyint"),
             rs.getInt("IsTaoBao_tinyint"),rs.getInt("ProductBrandID_int"),rs.getString("productbrand_nvarchar"),null,0,null,
-            null,null,Float.NaN
+            null,0,None,Float.NaN
           )
           lst += product
           buffer1.append(rs.getInt("ProductID_int")).append(',')
@@ -136,23 +136,23 @@ class IndexUnitActorDD extends Actor with ActorLogging {
         map.clear()
 
         //读取EC_SearchKeywordConfig
-        sql = String.format("select Productid_int,es.ProductTypeID_int,SearchKeyword_nvarchar from EC_SearchKeywordConfig es with(nolock),EC_Product ep with(nolock) where es.ProductTypeID_int = ep.ProductTypeID_int and es.ProductTypeID_int in(%s)",stypeid)
+        sql = String.format("select ProductTypeID_int,SearchKeyword_nvarchar from EC_SearchKeywordConfig with(nolock) where ProductTypeID_int in(%s)",stypeid)
         log.info("EC_SearchKeywordConfig:"+sql)
         rs = stmt.executeQuery(sql)
 
         while (rs.next()) {
-          var s = map.getOrElse(rs.getInt("productid_int"),"")
+          var s = map.getOrElse(rs.getInt("ProductTypeID_int"),"")
           var searchkey = rs.getString("SearchKeyword_nvarchar")
           var sb = new StringBuffer()
           sb.append(searchkey).append(' ')
           s = s + sb.toString
-          map.put(rs.getInt("productid_int"),s)
+          map.put(rs.getInt("ProductTypeID_int"),s)
         }
 
         var ite1 = map.iterator
         for (i1 <- ite1) {
           for (p1 <- lst) {
-            if(i1._1 == p1.id){
+            if(i1._1 == p1.typeId){
               val sr = i1._2.substring(0,i1._2.length-1)
               p1.searchKeyword = sr
             }
@@ -168,7 +168,7 @@ class IndexUnitActorDD extends Actor with ActorLogging {
         while (rs.next()) {
           val area = rs.getString("countryid_int")
           val skuid = rs.getString("ProductKeyID_nvarchar")
-          val score = rs.getString("score_float")
+          val score = rs.getDouble("score_float")
           val sb = new StringBuffer()
           var s = map2.getOrElse(skuid,"")
           sb.append(area).append(":").append(score).append("|")
@@ -223,7 +223,7 @@ class IndexUnitActorDD extends Actor with ActorLogging {
           if(rs.getString("starttime_datetime") != null && rs.getString("endtime_datetime") != null && (now.after(rs.getTimestamp("starttime_datetime"))) && (now.before(rs.getTimestamp("endtime_datetime"))) ) {
             for(p <- lst) {
               if(rs.getInt("productid_int").equals(p.id)) {
-                p.isLifeStyle = 1
+                p.isDailyDeal = 1
               }
             }
           }
@@ -237,7 +237,7 @@ class IndexUnitActorDD extends Actor with ActorLogging {
           if(rs.getInt("count") > 0) {
             for(p <- lst) {
               if(rs.getString("productid_int").equals(p.sku)) {
-                p.isLifeStyle = 1
+                p.isLifeStyle = Some(1)
               }
             }
           }
@@ -299,10 +299,13 @@ class IndexUnitActorDD extends Actor with ActorLogging {
       pAttributeValueField.setStringValue("")
       pIseventproductField.setIntValue(-1)
       pSearchKeywordField.setStringValue("")
+      pIsDailyDealField.setIntValue(-1)
+      pIsLifeStyle.setIntValue(-1)
 
 
       //设置本次结果集的值
       doc = new Document()
+
 
       if(p.wwwScore != Float.NaN){
         wwwScoreField.setDoubleValue(p.wwwScore)
@@ -325,12 +328,10 @@ class IndexUnitActorDD extends Actor with ActorLogging {
         pIndexCodeField.setStringValue(p.indexCode)
       log.info("{}",p.indexCode)
 
-      if(p.isOneSale != null)
-        pIsOneSaleField.setIntValue(p.isOneSale)
+      pIsOneSaleField.setIntValue(p.isOneSale)
       log.info("{}",p.isOneSale)
 
-      if(p.isAliExpress != null)
-        pIsAliExpressField.setIntValue(p.isAliExpress)
+      pIsAliExpressField.setIntValue(p.isAliExpress)
       log.info("{}",p.isAliExpress)
 
       if(p.businessName != null)
@@ -341,28 +342,22 @@ class IndexUnitActorDD extends Actor with ActorLogging {
         pCreateTimeField.setStringValue(p.createTime)
       log.info("{}",p.createTime)
 
-      if(p.typeId != null)
-        pProductTypeIdField.setIntValue(p.typeId)
+      pProductTypeIdField.setIntValue(p.typeId)
       log.info("{}",p.typeId)
 
-      if(p.isQuality != null)
-        pIsQualityProductField.setIntValue(p.isQuality)
+      pIsQualityProductField.setIntValue(p.isQuality)
       log.info("{}",p.isQuality)
 
-      if(p.ventureStatus != null)
-        pVentureStatusField.setIntValue(p.ventureStatus)
+      pVentureStatusField.setIntValue(p.ventureStatus)
       log.info("{}",p.ventureStatus)
 
-      if(p.ventureLevelNew != null)
-        pVentureLevelNewField.setIntValue(p.ventureLevelNew)
+      pVentureLevelNewField.setIntValue(p.ventureLevelNew)
       log.info("{}",p.ventureLevelNew)
 
-      if(p.isTaobao != null)
-        pIsTaobaoField.setIntValue(p.isTaobao)
+      pIsTaobaoField.setIntValue(p.isTaobao)
       log.info("{}",p.isTaobao)
 
-      if(p.brandId != null)
-        pProductBrandIdField.setIntValue(p.brandId)
+      pProductBrandIdField.setIntValue(p.brandId)
       log.info("{}",p.brandId)
 
       if(p.brandName != null)
@@ -376,11 +371,11 @@ class IndexUnitActorDD extends Actor with ActorLogging {
       if(p.areaScore != null) {
         log.info("p.areaScore=="+p.areaScore)
 
-        for(i <- 0 to p.areaScore.split("\\|").length-1) {
-          var areascores = p.areaScore.split("\\|")(i)
-          var areascore = areascores.split(":")
-          var countryid = areascore(0).toInt
-          var score = areascore(1)
+        for(i <- 0 until p.areaScore.split("\\|").length) {
+          val areascores = p.areaScore.split("\\|")(i)
+          val areascore = areascores.split(":")
+          val countryid = areascore(0).toInt
+          val score = areascore(1).toDouble
           var prefix = "country"
 
           if(countryid == 1)
@@ -407,25 +402,28 @@ class IndexUnitActorDD extends Actor with ActorLogging {
             prefix += "UA"
 
           if(prefix != "country") {
-            val pArea =  new StringField("areaId"+i, "", Field.Store.YES)
-            val pScore =  new StringField("areaScore"+i, "", Field.Store.YES)
-            pArea.setStringValue(prefix)
-            pScore.setStringValue(score)
-            log.info("prefix={}",prefix)
-            log.info("score={}",score)
-            doc.add(pArea)
-            doc.add(pScore)
+            val pAreaScore =  new DoubleField(prefix, score, Field.Store.YES)
+            log.info("{}",pAreaScore)
+            doc.add(pAreaScore)
           }
         }
       }
 
-      if(p.iseventproduct != null)
-        pIseventproductField.setIntValue(p.iseventproduct)
+      pIseventproductField.setIntValue(p.iseventproduct)
       log.info("{}",p.iseventproduct)
 
       if(p.searchKeyword != null)
         pSearchKeywordField.setStringValue(p.searchKeyword)
       log.info("{}",p.searchKeyword)
+
+      pIsDailyDealField.setIntValue(p.isDailyDeal)
+      log.info("{}",p.isDailyDeal)
+
+      if(p.isLifeStyle != None){
+        pIsLifeStyle.setIntValue(p.isLifeStyle.get)
+        log.info("{}",p.isLifeStyle)
+      }
+
 
       doc.add(pIdField)
       doc.add(pNameField)
@@ -446,12 +444,14 @@ class IndexUnitActorDD extends Actor with ActorLogging {
       doc.add(pAttributeValueField)
       doc.add(pIseventproductField)
       doc.add(pSearchKeywordField)
+      doc.add(pIsDailyDealField)
+      doc.add(pIsLifeStyle)
 
       writer.addDocument(doc)
       true
     } catch {
       case e: Exception => log.error("index item fail,productId"); e.printStackTrace(); throw e
-        false
+      false
     }
   }
 }
