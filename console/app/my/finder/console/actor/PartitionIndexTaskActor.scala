@@ -31,7 +31,7 @@ class PartitionIndexTaskActor extends Actor with ActorLogging {
   var mongoClient:MongoClient = MongoManager()
   val dinobuydb = current.configuration.getString("dinobuydb").get
   val ddProductIndexSize: Int = Integer.valueOf(current.configuration.getString("indexBatchSize").get)
-  val dbProductIndexSize: Int = Integer.valueOf(current.configuration.getString("dbindexBatchSize").get)
+  //val dbProductIndexSize: Int = Integer.valueOf(current.configuration.getString("indexBatchSize").get)
   var productColl:MongoCollection = null
   //TODO 改回来 var q:DBObject = ("ec_productprice.unitprice_money" $gt 0) ++ ("ec_product.isstopsale_bit" -> false)
   val fields = MongoDBObject("productid_int" -> 1)
@@ -97,7 +97,7 @@ class PartitionIndexTaskActor extends Actor with ActorLogging {
     breakable {
       while(true){
         if(id >= maxId){
-          break  
+          break
         }
         j += 1
         sendMsg(Constants.DD_PRODUCT, now, j, id, id + ddProductIndexSize - 1, total, ddProductIndexSize)
@@ -132,7 +132,7 @@ class PartitionIndexTaskActor extends Actor with ActorLogging {
       }
 
       val totalCount: Long = maxId - minId + 1
-      val total: Long = totalCount / dbProductIndexSize + 1
+      val total: Long = totalCount / ddProductIndexSize + 1
       log.info("minId=========={}",minId)
       log.info("maxId=========={}",maxId)
       var id = minId
@@ -143,8 +143,8 @@ class PartitionIndexTaskActor extends Actor with ActorLogging {
             break
           }
           j += 1
-          sendMsgDD(Constants.DD_PRODUCT_FORDB, now, j, id, id + dbProductIndexSize - 1, total, dbProductIndexSize)
-          id += dbProductIndexSize
+          sendMsgDD(Constants.DD_PRODUCT_FORDB, now, j, id, id + ddProductIndexSize - 1, total, ddProductIndexSize)
+          id += ddProductIndexSize
         }
       }
     } catch {
