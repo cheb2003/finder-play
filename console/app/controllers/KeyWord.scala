@@ -10,7 +10,6 @@ import java.util.{Date, Calendar}
 
 import scala.xml._
 import org.apache.commons.lang3
-import com.mongodb.casbah.commons
 import java.text.SimpleDateFormat
 import play.api.data.Form
 import play.api.data.Forms._
@@ -32,12 +31,8 @@ object KeyWord extends Controller {
     val year = Util.getParamString(queryParams, "year", "")
     val month = Util.getParamString(queryParams, "month", "")
     val day = Util.getParamString(queryParams, "day", "")
-
     val calend:Calendar = Calendar.getInstance()
-    val year_int:Int = year.toInt
-    val month_int:Int =  month.toInt - 1
-    val day_int:Int =  day.toInt
-    calend.set(year_int,month_int,day_int)
+    calend.set( year.toInt,month.toInt - 1,day.toInt)
     val from = lang3.ObjectUtils.clone(calend)
     from.set(Calendar.HOUR_OF_DAY,0)
     from.set(Calendar.MINUTE,0)
@@ -61,7 +56,7 @@ object KeyWord extends Controller {
   private def docToXML(nodes: Queue[Node], i:DBObject) = {
     var n = <item/>
     val uPlist:MongoDBList = i.getAsOrElse[MongoDBList]("unpayOrder",null)
-    var unPayOrderId = new StringBuffer()
+    val unPayOrderId = new StringBuffer()
     if(uPlist != null){
       if ( uPlist.size > 0 ){
         for(y  <-  0 until uPlist.length ){
@@ -76,7 +71,7 @@ object KeyWord extends Controller {
       n = n % Attribute(None, "unPayOrder", Text( unPayOrderId.substring(0, unPayOrderId.length() - 1)), Null)
     }
     val Plist = i.getAsOrElse[MongoDBList]("payOrders",null)
-    var payOrderIds = new StringBuffer()
+    val payOrderIds = new StringBuffer()
     if(Plist != null){
       if ( Plist.size > 0 ){
         for(y  <-  0 until Plist.length ){
@@ -117,12 +112,8 @@ object KeyWord extends Controller {
     val year = Util.getParamString(queryParams, "year", "")
     val month = Util.getParamString(queryParams, "month", "")
     val day = Util.getParamString(queryParams, "day", "")
-
     val calend:Calendar = Calendar.getInstance()
-    val year_int:Int = year.toInt
-    val month_int:Int =  month.toInt - 1
-    val day_int:Int =  day.toInt
-    calend.set(year_int,month_int,day_int)
+    calend.set( year.toInt,month.toInt - 1,day.toInt)
     SummarizingService.paymentTopKey(calend)
     Ok("success")
   }
@@ -138,12 +129,8 @@ object KeyWord extends Controller {
     val year = Util.getParamString(queryParams, "year", "")
     val month = Util.getParamString(queryParams, "month", "")
     val day = Util.getParamString(queryParams, "day", "")
-
     val calend:Calendar = Calendar.getInstance()
-    val year_int:Int = year.toInt
-    val month_int:Int =  month.toInt - 1
-    val day_int:Int =  day.toInt
-    calend.set(year_int,month_int,day_int)
+    calend.set( year.toInt,month.toInt - 1,day.toInt)
     SummarizingService.deleteTopKey(calend)
     Ok("success")
   }
