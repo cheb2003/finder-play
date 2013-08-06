@@ -1,7 +1,7 @@
 
 
 import my.finder.console.actor.MessageFacade
-import my.finder.console.service.{DBMysql, InitJob, IndexManage}
+import my.finder.console.service.{DBMssql, DBMysql, InitJob, IndexManage}
 
 import org.quartz.impl.StdSchedulerFactory
 import org.quartz.Scheduler
@@ -18,6 +18,7 @@ object Global extends GlobalSettings {
     synchronized {
       IndexManage.init
       DBMysql.init
+      DBMssql.init
     }
     scheduler = StdSchedulerFactory.getDefaultScheduler
     scheduler.start()
