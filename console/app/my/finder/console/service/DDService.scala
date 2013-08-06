@@ -14,11 +14,11 @@ object DDService {
   //val productTypes = new HashMap[String, String]()
 
   def init = {
-    Class.forName(current.configuration.getString("dbDriver").get)
+    Class.forName(current.configuration.getString("mssqlDBDriver").get)
     val ds = new BoneCPDataSource()
-    ds.setJdbcUrl(current.configuration.getString("dbUrl").get)
-    ds.setUsername(current.configuration.getString("dbUser").get)
-    ds.setPassword(current.configuration.getString("dbPassword").get)
+    ds.setJdbcUrl(current.configuration.getString("mssqlDBUrl").get)
+    ds.setUsername(current.configuration.getString("mssqlDBUser").get)
+    ds.setPassword(current.configuration.getString("mssqlDBPassword").get)
     _ds = ds
 
     //loadProductTypeDatas
