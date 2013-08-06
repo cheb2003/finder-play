@@ -9,20 +9,13 @@ import java.sql.{ResultSet, Statement, Connection}
 import org.apache.lucene.index.IndexWriter
 import scala.collection.mutable.{ListBuffer}
 import scala.collection.mutable.HashMap
+import scala.util.control.Breaks._
 import java.util.Date
-
-/**
- * Created with IntelliJ IDEA.
- * User: bchen
- * Date: 13-7-29
- * Time: 下午4:21
- * To change this template use File | Settings | File Templates.
- */
 
 case class Product(id:Int,name:String,sku:String,  indexCode:String,isOneSale:Int,isAliExpress:Int,
                    businessName:String,var createTime:String,var typeId:Int,isQuality:Int,ventureStatus:Int,ventureLevelNew:Int,
                    isTaobao:Int,brandId:Int,brandName:String,var attribute:String,var iseventproduct:Int,var searchKeyword:String,
-                   var areaScore:String,var isLifeStyle:Int
+                   var areaScore:String,var isLifeStyle:Int,var wwwScore:Float
                     )
 
 class IndexUnitActorDD extends Actor with ActorLogging {
@@ -54,6 +47,8 @@ class IndexUnitActorDD extends Actor with ActorLogging {
   //private val pScore =  new StringField("areaScore", "", Field.Store.YES)
   private val pIseventproductField =  new IntField("iseventproduct", 0, Field.Store.YES)
   private val pSearchKeywordField =  new StringField("searchKeyword", "", Field.Store.YES)
+  //www score
+  private val wwwScoreField = new DoubleField("wwwScore", 0d, Field.Store.YES)
 
 
   private var doc: Document = null
@@ -101,7 +96,7 @@ class IndexUnitActorDD extends Actor with ActorLogging {
             rs.getInt("ProductID_int"),rs.getString("productaliasname_nvarchar"),rs.getString("ProductKeyID_nvarchar"),rs.getString("IndexCode_nvarchar"),rs.getInt("IsOneSale_tinyint"),rs.getInt("IsAliExpress_tinyint"),
             rs.getString("BusinessName_nvarchar"),rs.getString("CreateTime_datetime"),rs.getInt("ProductTypeID_int"),rs.getInt("IsQualityProduct_tinyint"),rs.getInt("VentureStatus_tinyint"),rs.getInt("VentureLevelNew_tinyint"),
             rs.getInt("IsTaoBao_tinyint"),rs.getInt("ProductBrandID_int"),rs.getString("productbrand_nvarchar"),null,0,null,
-            null,0
+            null,null,Float.NaN
           )
           lst += product
           buffer1.append(rs.getInt("ProductID_int")).append(',')
@@ -190,7 +185,20 @@ class IndexUnitActorDD extends Actor with ActorLogging {
             }
           }
         }
-
+        //read www product score
+        sql = String.format("select ProductKeyID_nvarchar,score_float from RS_DD_PROD_SCORE with(nolock) where ProductKeyID_nvarchar in(%s) ",skus)
+        rs = stmt.executeQuery(sql)
+        
+        while(rs.next()){
+          breakable {
+            for (p <- lst) {
+              if(p.sku == rs.getString("ProductKeyID_nvarchar")){
+                p.wwwScore = rs.getFloat("score_float")
+                break
+              }
+            }
+          }
+        }
         //读取EC_eventProduct
         sql = String.format("select ProductKeyID_nvarchar,COUNT(ProductKeyID_nvarchar) as count from EC_eventProduct with(nolock) " +
           "where ProductKeyID_nvarchar in(%s) group by ProductKeyID_nvarchar ",skus)
@@ -286,7 +294,7 @@ class IndexUnitActorDD extends Actor with ActorLogging {
       pIsTaobaoField.setIntValue(-1)
       pProductBrandIdField.setIntValue(-1)
       pProductBrandNameField.setStringValue("")
-
+      wwwScoreField.setDoubleValue(0d)
 
       pAttributeValueField.setStringValue("")
       pIseventproductField.setIntValue(-1)
@@ -295,6 +303,11 @@ class IndexUnitActorDD extends Actor with ActorLogging {
 
       //设置本次结果集的值
       doc = new Document()
+
+      if(p.wwwScore != Float.NaN){
+        wwwScoreField.setDoubleValue(p.wwwScore)
+        doc.add(wwwScoreField)
+      }
 
       if(p.id != null)
         pIdField.setIntValue(p.id)
