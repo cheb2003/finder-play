@@ -5,11 +5,11 @@ import java.text.SimpleDateFormat
 import org.apache.commons.lang3
 import org.slf4j.LoggerFactory
 import org.slf4j
-import com.mongodb.casbah.commons.{MongoDBList, MongoDBObject}
+import com.mongodb.casbah.commons.{MongoDBObject, MongoDBList}
 import com.mongodb.casbah.Imports._
 import org.springframework.jdbc.core.JdbcTemplate
 import org.springframework.jdbc.support.rowset.SqlRowSet
-
+import scala.util.control.Breaks._
 
 
 
@@ -54,7 +54,7 @@ object SummarizingService {
     while ( rs.next()){
       val keyword:String = rs.getString("Keyword_varchar")
       val sql1 = "select TraceStep_varchar,TraceOrderNO_varchar,SearchCount_int from sea_keywordsTrace k where k.Keyword_varchar ='"+ keyword + "' and " +
-        "k.InsertTime_timestamp between '" + begin + "' and '" + end + "'"
+        "k.InsertTime_timestamp between '" + begin + "' and '" + end + "' and ProjectName_varchar = 'www.dinodirect.com'"
       logger.info(sql1)
       val rs1: SqlRowSet = jsMysql.queryForRowSet(sql1)
 
@@ -96,7 +96,7 @@ object SummarizingService {
       if(sb.length -1 > 0){
         val sql2 = "select productkeyid_nvarchar,orderid_int from ec_orderdetail where orderid_int in (" +
           sb.substring(0, sb.length() - 1) + ")"
-        val rs2: SqlRowSet = jsMysql.queryForRowSet(sql2)
+        val rs2: SqlRowSet = jsMssql.queryForRowSet(sql2)
 
         while ( rs2.next() ){
           val productId:String = rs2.getString("productkeyid_nvarchar")
@@ -112,16 +112,14 @@ object SummarizingService {
       //付款订单
       var payOrder:Int = 0
       var payMoney:Float = 0F
-      var totalMoney:Float = 0F
+      var Orders = MongoDBList.newBuilder
       var payOrders = MongoDBList.newBuilder
-      var unpayOrder = MongoDBList.newBuilder
       if(sb.length -1 > 0){
         val sql3 = "select o.orderId_int,o.discountSum_money,o.TrackingPC_nvarchar,t.PaymentStatus_char from " +
           "ec_order o left join ec_transaction t on  o.orderId_int = t.orderId_int " +
           "where o.orderId_int in (" + sb.substring(0, sb.length() - 1) + ")"
         logger.info(sql3)
-        val rs3: SqlRowSet = jsMysql.queryForRowSet(sql3)
-
+        val rs3: SqlRowSet = jsMssql.queryForRowSet(sql3)
         while ( rs3.next() ){
           val  orderIdInt:Int =  rs3.getInt("orderId_int")
           val  discountSum:Float =  rs3.getBigDecimal("discountSum_money").floatValue()
@@ -133,9 +131,29 @@ object SummarizingService {
             payMoney = payMoney + discountSum
             payOrder = payOrder + 1
           }else{
-            unpayOrder +=  mongoDB
+            Orders += mongoDB
           }
-          totalMoney = totalMoney + discountSum
+
+        }
+      }
+      var totalMoney = payMoney
+      var unpayOrder = MongoDBList.newBuilder
+      if ( Orders.result() != null ){
+        for(x  <-  0 until Orders.result().length ){
+          val orderId:Int = Orders.result().as[DBObject](x).as[Int]("orderId")
+          breakable{
+             for(y  <-  0 until payOrders.result().length ){
+                 val porderId:Int = payOrders.result().as[DBObject](y).as[Int]("orderId")
+                 if( orderId != porderId ){
+                   if( y == payOrders.result().length -1 ){
+                     unpayOrder += Orders.result().as[DBObject](x)
+                     totalMoney += Orders.result().as[DBObject](x).as[Float]("discountSum")
+                   }
+                 }else{
+                     break
+                 }
+             }
+          }
         }
       }
 
