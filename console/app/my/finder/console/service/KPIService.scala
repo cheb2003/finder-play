@@ -87,4 +87,28 @@ object KPIService {
     val query = "time" $gte from.getTime $lte to.getTime
     col.remove(query)
   }
+
+  def searchPreson(calend: Calendar): ListBuffer[String] = {
+    val day: Calendar = lang3.ObjectUtils.clone(calend)
+    val sdf: SimpleDateFormat = new SimpleDateFormat("yyyy-MM-dd")
+    val from: String = sdf.format(day.getTime()) + " 00:00:00"
+    val to: String = sdf.format(day.getTime()) + " 23:59:59"
+    val sql = "select k.PCCookieID_varchar,k.TraceStep_varchar from sea_keywordsTrace k where" +
+      " k.InsertTime_timestamp between '" + from + "' and '" + to + "'"
+    val conn: Connection = DBMysql.ds.getConnection()
+    val stem: Statement = conn.createStatement()
+    val rs: ResultSet = stem.executeQuery(sql)
+    var pcIdList: ListBuffer[String] = new ListBuffer[String]
+    while (rs.next()) {
+      val TraceStep:String = rs.getString("TraceStep_varchar")
+      if( "search".equals(TraceStep) ){
+         val pcId: String = rs.getString("PCCookieID_varchar")
+        if ( pcId != "" && pcId != null ){
+            pcIdList += pcId
+        }
+      }
+    }
+    DBMysql.colseConn(conn, stem, rs)
+    pcIdList
+  }
 }

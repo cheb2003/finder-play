@@ -12,6 +12,7 @@ GET		/query 						controllers.Application.query
 GET     /queryKeyword				controllers.Application.queryKeyword
 POST    /queryKeyword				controllers.Application.queryKeyword
 GET    	/generateSpellCheck			controllers.Application.generateSpellCheck
+GET     /mkt/searchPerson           controllers.Mkt.searchPerson
 GET     /mkt/searchOrder            controllers.Mkt.searchOrder
 GET     /mkt/createOrder            controllers.Mkt.createOrder
 GET     /mkt/deleteOrder            controllers.Mkt.deleteOrder
