@@ -2,11 +2,11 @@ package my.finder.console.service
 
 import java.util.{Date, Calendar}
 import java.text.SimpleDateFormat
-import java.sql.{Time, Connection, ResultSet, Statement}
+import java.sql.{Connection, ResultSet, Statement}
 import org.apache.commons.lang3
 import org.slf4j.LoggerFactory
 import org.slf4j
-import scala.collection.mutable.{Queue, ListBuffer}
+import scala.collection.mutable.ListBuffer
 import com.mongodb.casbah.commons.MongoDBObject
 import com.mongodb.casbah.Imports._
 
@@ -22,7 +22,7 @@ object KPIService {
     day2.add(Calendar.DATE, -2)
     val begin = sdf.format(day2.getTime()) + " 00:00:00"
     val end = sdf.format(day1.getTime()) + " 23:59:59"
-    //todo:查payment步骤状态的记录
+
     val sql = "select k.TraceOrderNO_varchar from sea_keywordsTrace k where k.TraceOrderNO_varchar is not null and k.TraceOrderNO_varchar <> '' and" +
       " k.ProjectName_varchar = 'www.dinodirect.com' and k.InsertTime_timestamp between '" + begin + "' and '" + end + "'"
     val conn: Connection = DBMysql.ds.getConnection()

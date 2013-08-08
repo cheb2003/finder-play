@@ -5,19 +5,14 @@ import org.quartz.Job;
 import org.quartz.JobExecutionContext;
 import org.quartz.JobExecutionException;
 
-import java.util.Date;
-
 @DisallowConcurrentExecution
 public class GenarateSearchOrderPerDay implements Job {
-
     public void execute(JobExecutionContext context)
             throws JobExecutionException {
-
-        java.util.Calendar ctime = java.util.Calendar.getInstance();
-        ctime.setTime( new Date() );
-        ctime.add(java.util.Calendar.DATE, -1);
-        KPIService.paymentOrder( ctime );
+        java.util.Calendar calend = java.util.Calendar.getInstance();
+        calend.setTime(context.getFireTime());
+        calend.add(java.util.Calendar.DATE, -1);
+        KPIService.paymentOrder(calend);
     }
-
 }
 
