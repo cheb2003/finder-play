@@ -2,11 +2,11 @@ package my.finder.console.service
 
 import java.util.{Date, Calendar}
 import java.text.SimpleDateFormat
-import java.sql.{Time, Connection, ResultSet, Statement}
+import java.sql.{Connection, ResultSet, Statement}
 import org.apache.commons.lang3
 import org.slf4j.LoggerFactory
 import org.slf4j
-import scala.collection.mutable.{Queue, ListBuffer}
+import scala.collection.mutable.ListBuffer
 import com.mongodb.casbah.commons.MongoDBObject
 import com.mongodb.casbah.Imports._
 
@@ -22,9 +22,10 @@ object KPIService {
     day2.add(Calendar.DATE, -2)
     val begin = sdf.format(day2.getTime()) + " 00:00:00"
     val end = sdf.format(day1.getTime()) + " 23:59:59"
-    //todo:查payment步骤状态的记录
+
     val sql = "select k.TraceOrderNO_varchar from sea_keywordsTrace k where k.TraceOrderNO_varchar is not null and k.TraceOrderNO_varchar <> '' and" +
-      " k.ProjectName_varchar = 'www.dinodirect.com' and k.InsertTime_timestamp between '" + begin + "' and '" + end + "'"
+      " k.projectname_varchar in('ar.dinodirect.com','au.dinodirect.com','br.dinodirect.com','ca.dinodirect.com','gb.dinodirect.com','il.dinodirect.com','nl.dinodirect.com','nz.dinodirect.com','ru.dinodirect.com','us.dinodirect.com','www.dinodirect.com','www.dinodirect.de','www.dinodirect.es','www.dinodirect.fr','www.dinodirect.nl','www.dinodirect.pt') and k.InsertTime_timestamp between '" + begin + "' and '" + end + "'"
+    logger.info(sql)
     val conn: Connection = DBMysql.ds.getConnection()
     val stem: Statement = conn.createStatement()
     val rs: ResultSet = stem.executeQuery(sql)
@@ -86,5 +87,33 @@ object KPIService {
     val col:MongoCollection = client("ddsearch")("searchSale")
     val query = "time" $gte from.getTime $lte to.getTime
     col.remove(query)
+  }
+
+  def searchPreson(calend: Calendar): ListBuffer[String] = {
+    val day: Calendar = lang3.ObjectUtils.clone(calend)
+    val sdf: SimpleDateFormat = new SimpleDateFormat("yyyy-MM-dd")
+    val from: String = sdf.format(day.getTime()) + " 00:00:00"
+    val to: String = sdf.format(day.getTime()) + " 23:59:59"
+    val sql = "select k.PCCookieID_varchar from sea_keywordsTrace k where" +
+      " k.InsertTime_timestamp between '" + from + "' and '" + to + "' and k.TraceStep_varchar = 'search' and k.projectname_varchar in('ar.dinodirect.com','au.dinodirect.com','br.dinodirect.com','ca.dinodirect.com','gb.dinodirect.com','il.dinodirect.com','nl.dinodirect.com','nz.dinodirect.com','ru.dinodirect.com','us.dinodirect.com','www.dinodirect.com','www.dinodirect.de','www.dinodirect.es','www.dinodirect.fr','www.dinodirect.nl','www.dinodirect.pt')"
+    val conn: Connection = DBMysql.ds.getConnection()
+    val stem: Statement = conn.createStatement()
+    val rs: ResultSet = stem.executeQuery(sql)
+    var pcIdList: ListBuffer[String] = new ListBuffer[String]
+    while (rs.next()) {
+      val pcId: String = rs.getString("PCCookieID_varchar")
+      if ( pcId != "" && pcId != null ){
+            pcIdList += pcId
+      }
+      /*val TraceStep:String = rs.getString("TraceStep_varchar")
+      if( "search".equals(TraceStep) ){
+         val pcId: String = rs.getString("PCCookieID_varchar")
+        if ( pcId != "" && pcId != null ){
+            pcIdList += pcId
+        }
+      }*/
+    }
+    DBMysql.colseConn(conn, stem, rs)
+    pcIdList
   }
 }

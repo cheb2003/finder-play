@@ -4,7 +4,7 @@ import play.api.mvc.{Action, Controller}
 import my.finder.console.service.{KPIService, SummarizingService, MyMongoManager}
 
 import com.mongodb.casbah.Imports._
-import scala.collection.mutable.Queue
+import scala.collection.mutable.{ListBuffer, Queue}
 
 import java.util.{Date, Calendar}
 
@@ -77,7 +77,6 @@ object Mkt extends Controller {
     val year = Util.getParamString(queryParams, "year", "")
     val month = Util.getParamString(queryParams, "month", "")
     val day = Util.getParamString(queryParams, "day", "")
-
     val calend:Calendar = Calendar.getInstance()
     val year_int:Int = year.toInt
     val month_int:Int =  month.toInt - 1
@@ -106,5 +105,33 @@ object Mkt extends Controller {
     calend.set(year_int,month_int,day_int)
     KPIService.deleteOrder(calend)
     Ok("success")
+  }
+   //每日搜索人次导出
+  def searchPerson() = Action { implicit request =>
+    val form = Form(
+      tuple(
+        "year" -> text,
+        "month" -> text,
+        "day" -> text )
+    )
+    val queryParams = form.bindFromRequest.data
+    val year = Util.getParamString(queryParams, "year", "")
+    val month = Util.getParamString(queryParams, "month", "")
+    val day = Util.getParamString(queryParams, "day", "")
+    val calend:Calendar = Calendar.getInstance()
+    val year_int:Int = year.toInt
+    val month_int:Int =  month.toInt - 1
+    val day_int:Int =  day.toInt
+    calend.set(year_int,month_int,day_int)
+    val pcIdList:ListBuffer[String] = KPIService.searchPreson(calend)
+    val nodes = new Queue[Node]()
+    if ( !pcIdList.isEmpty ) {
+       for (x <- pcIdList) {
+         var pcId = <pcId/>
+         pcId = pcId % Attribute(None, "value", Text(x), Null)
+         nodes += pcId
+       }
+    }
+    Ok(<root><pcIds count={nodes.length.toString}>{nodes}</pcIds></root>)
   }
 }

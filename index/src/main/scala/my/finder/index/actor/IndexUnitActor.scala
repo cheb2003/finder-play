@@ -1,9 +1,7 @@
 package my.finder.index.actor
 
-import edu.fudan.ml.types.Dictionary;
-import edu.fudan.nlp.cn.tag.CWSTagger;
+
 import akka.actor.{ ActorLogging, Actor }
-import my.finder.common.util.{ Util, MongoUtil, Config }
 import com.mongodb.casbah.Imports._
 import org.apache.lucene.document._
 
@@ -15,7 +13,7 @@ import java.util.Date
 import org.apache.lucene.index.IndexWriter
 import scala.concurrent.duration._
 import scala.concurrent.ExecutionContext.Implicits.global
-import java.io.{ FileWriter, File }
+import java.io.File
 import my.finder.index.service.DBService
 //import scala.slick.jdbc.{GetResult, StaticQuery => Q}
 import scala.collection.mutable.ListBuffer
@@ -24,14 +22,14 @@ import java.text.SimpleDateFormat
 
 import org.apache.lucene.analysis.en.EnglishAnalyzer
 import java.io.StringReader
-import org.apache.lucene.analysis.TokenStream
 import org.apache.lucene.util.Version
 /**
  *
  */
 case class SegmentWord(sku: String, word: String, lang: String, cn: String, titlecn: String)
 
-class IndexUnitActor extends Actor with ActorLogging with MongoUtil {
+class
+IndexUnitActor extends Actor with ActorLogging with MongoUtil {
   //implicit val getSegmentWordResult = GetResult(r => SegmentWord(r.<<, r.<<,r.<<,r.<<,r.<<))
   val workDir = Config.get("workDir")
   val oldDir = Config.get("oldDir")
@@ -284,15 +282,15 @@ class IndexUnitActor extends Actor with ActorLogging with MongoUtil {
             //log.info("{} == {}",x.sku,sku)
             if (x.sku == sku) {
               //log.info("----------enter words")
-              if (x.lang.toLowerCase() == "ru") {
+              if (x.lang.toLowerCase == "ru") {
                 segmentWordRuField.setStringValue(x.word.replace("|", " ").trim)
                 doc.add(segmentWordRuField)
               }
-              if (x.lang.toLowerCase() == "en") {
+              if (x.lang.toLowerCase == "en") {
                 segmentWordEnField.setStringValue(x.word.replace("|", " ").trim)
                 doc.add(segmentWordEnField)
               }
-              if (x.lang.toLowerCase() == "pt") {
+              if (x.lang.toLowerCase == "pt") {
                 segmentWordBrField.setStringValue(x.word.replace("|", " ").trim)
                 doc.add(segmentWordBrField)
               }
@@ -388,7 +386,7 @@ class IndexUnitActor extends Actor with ActorLogging with MongoUtil {
 
         val sql = "select top 100 productid_int as pId,ProductAliasName_nvarchar as alias,ExcavateKeyWords_nvarchar as keyword,CreateTime_datetime as date from ec_product with(nolock) where CreateTime_datetime > '" + sdf.format(from) + ".999'"
         log.info("old inc sql:{} ", sql)
-        conn = DBService.dataSource.getConnection()
+        conn = DBService.dataSource.getConnection
         stmt = conn.prepareStatement(sql)
         rs = stmt.executeQuery()
 
@@ -520,7 +518,7 @@ class IndexUnitActor extends Actor with ActorLogging with MongoUtil {
         //read mongo data
         //var time3 = System.currentTimeMillis()
         //val items: MongoCursor = productColl.find("ec_product.createtime_datetime" $lt now, fields).skip(Integer.valueOf((msg.seq * 2).toString())).limit(2000)
-        var q: DBObject = ("productid_int" $gte msg.minId $lte msg.maxId) ++ ("ec_product.qdwproductstatus_int" $lt 2) ++ ("ec_product.isstopsale_bit" -> false) ++ ("ec_productprice.unitprice_money" $gt 0)
+        var q: DBObject = MongoDBObject("ec_product.isstopsale_bit" -> false) ++ ("productid_int" $gte msg.minId $lte msg.maxId) ++ ("ec_product.qdwproductstatus_int" $lt 2) ++ ("ec_productprice.unitprice_money" $gt 0)
         val items: MongoCursor = productColl.find(q, fields, 0, msg.batchSize)
         val lst = items.toList
         //var time4 = System.currentTimeMillis()
@@ -576,7 +574,7 @@ class IndexUnitActor extends Actor with ActorLogging with MongoUtil {
       var stmt: Statement = null
       var rs: ResultSet = null
       try {
-        conn = DBService.dataSource.getConnection()
+        conn = DBService.dataSource.getConnection
         stmt = conn.createStatement()
         val sb = new StringBuffer()
         //sb.append("select ProductTitleCN_nvarchar as titlecn, ProductKeyID_nvarchar as sku,SearchKeyWordCN_nvarchar as wordcn,SegmentWord_nvarchar as word,LanguageCode_nvarchar as lang from QDW_TB_ProductTitleSegmentWord WITH (NOLOCK) where ProductKeyID_nvarchar in (")

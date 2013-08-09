@@ -517,6 +517,7 @@ object Application extends Controller {
       tuple(
         "keyword" -> text,
         "sort" -> text,
+        "indexcode" -> text,
         "size" -> number,
         "page" -> number))
 
@@ -524,6 +525,8 @@ object Application extends Controller {
     var page = Util.getParamInt(queryParams, "page", 1)
     var size = Util.getParamInt(queryParams, "size", 20)
     val keyword = Util.getParamString(queryParams, "keyword", "").trim.toLowerCase
+    val indexCode = Util.getParamString(queryParams, "indexcode", "").trim.toLowerCase
+    
     val sort = Util.getParamString(queryParams, "sort", "").trim
 
     if (page < 0) {
@@ -537,19 +540,30 @@ object Application extends Controller {
     val bq: BooleanQuery = new BooleanQuery()
     val bqKeyword: BooleanQuery = new BooleanQuery()
     val bqBrand: BooleanQuery = new BooleanQuery()
+    val bqSearch: BooleanQuery = new BooleanQuery()
     bqBrand.setBoost(5.0f)
     if (keyword != "") {
       val keywordSplit = keyword.toLowerCase().split(" ")
       for (k <- keywordSplit) {
         val term: Term = new Term("pName", k)
+        val brandTerm: Term = new Term("pBrandName", k)
         val pq: PrefixQuery = new PrefixQuery(term)
-        val tq: TermQuery = new TermQuery(term)
+        val tq: TermQuery = new TermQuery(brandTerm)
         bqKeyword.add(pq, BooleanClause.Occur.MUST)
         bqBrand.add(tq, BooleanClause.Occur.MUST)
       }
     }
-    bq.add(bqKeyword, BooleanClause.Occur.SHOULD)
-    bq.add(bqBrand, BooleanClause.Occur.SHOULD)
+    
+    if(indexCode != ""){
+      val term: Term = new Term("indexCode",indexCode)
+      val q: TermQuery = new TermQuery(term)
+      bq.add(q,BooleanClause.Occur.MUST)
+    }
+
+    bqSearch.add(bqKeyword, BooleanClause.Occur.SHOULD)
+    bqSearch.add(bqBrand, BooleanClause.Occur.SHOULD)
+
+    bq.add(bqSearch,BooleanClause.Occur.MUST)
     val searcher: IndexSearcher = SearcherManager.searcher
     val start = (page - 1) * size + 1;
     val sot: Sort = sorts(sort);

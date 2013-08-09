@@ -411,6 +411,11 @@ object Application extends Controller {
     Ok("success")
   }
 
+  //监控用
+  def heartbeat = Action { implicit request =>
+    Ok("success")
+  }
+
   private def docToXML(nodes: Queue[Node], document: org.apache.lucene.document.Document) = {
     val fields: List[IndexableField] = document.getFields()
     val ite = fields.iterator
