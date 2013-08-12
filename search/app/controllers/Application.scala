@@ -518,7 +518,10 @@ object Application extends Controller {
         "keyword" -> text,
         "sort" -> text,
         "indexcode" -> text,
+        "istaobao" -> text,
         "size" -> number,
+        "isquality" -> text,
+        "brandid" -> text,
         "page" -> number))
 
     val queryParams = form.bindFromRequest.data
@@ -526,6 +529,10 @@ object Application extends Controller {
     var size = Util.getParamInt(queryParams, "size", 20)
     val keyword = Util.getParamString(queryParams, "keyword", "").trim.toLowerCase
     val indexCode = Util.getParamString(queryParams, "indexcode", "").trim.toLowerCase
+    val isTaobaoStr = Util.getParamString(queryParams, "istaobao", "")
+    val isQualityStr = Util.getParamString(queryParams, "isquality", "")
+    val brandIdStr = Util.getParamString(queryParams, "brandid", "")
+
     
     val sort = Util.getParamString(queryParams, "sort", "").trim
 
@@ -558,6 +565,25 @@ object Application extends Controller {
       val term: Term = new Term("indexCode",indexCode)
       val q: TermQuery = new TermQuery(term)
       bq.add(q,BooleanClause.Occur.MUST)
+    }
+
+    if(brandIdStr != ""){
+      val q = NumericRangeQuery.newIntRange("pBrandId", Integer.valueOf(brandIdStr), Integer.valueOf(brandIdStr), true, true)
+      bq.add(q, BooleanClause.Occur.MUST)
+      
+    }
+
+    if (isTaobaoStr != "") {
+      /*val term:Term = new Term("isTaobao", isTaobaoStr);
+      val q:TermQuery = new TermQuery(term)*/
+      val q = NumericRangeQuery.newIntRange("isTaobao", Integer.valueOf(isTaobaoStr), Integer.valueOf(isTaobaoStr), true, true)
+      bq.add(q, BooleanClause.Occur.MUST)
+    }
+    if (isQualityStr != "") {
+      /*val term:Term = new Term("isQuality", isQualityStr);
+      val q:TermQuery = new TermQuery(term)*/
+      val q = NumericRangeQuery.newIntRange("isQuality", Integer.valueOf(isQualityStr), Integer.valueOf(isQualityStr), true, true)
+      bq.add(q, BooleanClause.Occur.MUST)
     }
 
     bqSearch.add(bqKeyword, BooleanClause.Occur.SHOULD)
