@@ -56,6 +56,9 @@ class ConsoleRootActor extends Actor with ActorLogging {
     case msg: MergeIndexMessage => {
 
     }
+    case msg:PartitionIndexAttributesTaskMessage => {
+      partitionActor ! msg
+    }
   }
 }
 

@@ -6,17 +6,14 @@ import my.finder.common.message._
 
 import com.mongodb.casbah.Imports._
 import my.finder.common.util.{Constants, Util}
-
+import my.finder.console.service.DBMssql
 import java.util.Date
 
 
 
 import my.finder.console.service.{MongoManager, IndexManage}
 
-import my.finder.common.message.IndexIncremetionalTaskMessage
-import my.finder.common.message.IndexTaskMessage
-import my.finder.common.message.CreateSubTask
-import my.finder.common.message.PartitionIndexTaskMessage
+
 
 import play.api.Play.current
 import scala.util.control.Breaks._
@@ -27,6 +24,8 @@ import java.sql.{ResultSet, Statement, Connection}
  *
  *
  */
+case class  ProductAttr(val id:Int,value:String,name:String)
+
 class PartitionIndexTaskActor extends Actor with ActorLogging {
   var mongoClient:MongoClient = MongoManager()
   val dinobuydb = current.configuration.getString("dinobuydb").get
@@ -62,12 +61,66 @@ class PartitionIndexTaskActor extends Actor with ActorLogging {
         partitionDDProductForDB()
       }
     }
+    case msg:PartitionIndexAttributesTaskMessage => {
+      partitionAttributes(msg)
+    }
   }
+
+  def partitionAttributes(msg:PartitionIndexAttributesTaskMessage) = {
+    val now = new Date()
+    var conn: Connection = null
+    var stmt: Statement = null
+    var rs: ResultSet = null
+    try { 
+      conn = DBMssql.ds.getConnection
+      val sql = "SELECT min(keyid_int) as min,max(keyid_int) as max from QDW_AttributeAndValueDictionary"
+      stmt = conn.createStatement()
+      rs = stmt.executeQuery(sql)
+      rs.next
+      var minId = rs.getInt("min")
+      val maxId = rs.getInt("max")
+      if(current.configuration.getBoolean("debugIndex").get) {
+        minId = maxId - current.configuration.getInt("debugItemCount").get
+      }
+
+      val totalCount: Long = maxId - minId + 1
+      val total: Long = totalCount / ddProductIndexSize + 1
+
+      var i = 0
+      var id = minId
+      var j = 0
+      breakable {
+        while(true){
+          if(id >= maxId){
+            break
+          }
+          j += 1
+          sendAttr(Constants.DD_PRODUCT_ATTRIBUTE, now, j, id, id + ddProductIndexSize - 1, total, ddProductIndexSize,msg.ddProductIndex)
+          id += ddProductIndexSize
+        }
+      }
+    } catch {
+      case e: Exception => //logger.error("{}",e)
+    } finally {
+      DBMssql.colseConn(conn,stmt,rs)
+    }
+    
+
+  }
+
+
   private def sendMsg(name: String, runId: Date, seq: Long,minId:Int, maxId:Int, total: Long, batchSize:Int) {
     //println("----------------send message " + seq)
     indexRootActor ! IndexTaskMessage(name, runId, seq, minId, maxId,batchSize)
     indexRootManager ! CreateSubTask(name, runId, total)
   }
+
+  private def sendAttr(name: String, runId: Date, seq: Long,minId:Int, maxId:Int, total: Long, batchSize:Int,ddProductIndex:String) {
+    //println("----------------send message " + seq)
+    indexRootActor ! IndexAttributeTaskMessage(name, runId, seq, minId, maxId,batchSize,ddProductIndex)
+    indexRootManager ! CreateSubTask(name, runId, total)
+  }
+
 
   private def sendMsgDD(name: String, runId: Date, seq: Long,startId:Int, endId:Int, total: Long, batchSize:Int) {
     indexRootActor ! IndexTaskMessageDD(name, runId, seq, startId, endId,total,batchSize)
