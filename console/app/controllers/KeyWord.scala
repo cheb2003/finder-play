@@ -66,9 +66,9 @@ object KeyWord extends Controller {
       }
     }
     if ( unPayOrderId.toString.equals("") ){
-      n = n % Attribute(None, "unPayOrder", Text(""), Null)
+      n = n % Attribute(None, "unPayOrderIds", Text(""), Null)
     }else{
-      n = n % Attribute(None, "unPayOrder", Text( unPayOrderId.substring(0, unPayOrderId.length() - 1)), Null)
+      n = n % Attribute(None, "unPayOrderIds", Text( unPayOrderId.substring(0, unPayOrderId.length() - 1)), Null)
     }
     val Plist = i.getAsOrElse[MongoDBList]("payOrders",null)
     val payOrderIds = new StringBuffer()
@@ -81,9 +81,9 @@ object KeyWord extends Controller {
       }
     }
     if ( payOrderIds.toString.equals("") ){
-       n = n % Attribute(None, "payOrders", Text(""), Null)
+       n = n % Attribute(None, "payOrderIds", Text(""), Null)
     }else{
-       n = n % Attribute(None, "payOrders", Text(payOrderIds.substring(0, payOrderIds.length() - 1)), Null)
+       n = n % Attribute(None, "payOrderIds", Text(payOrderIds.substring(0, payOrderIds.length() - 1)), Null)
     }
     val sdf: SimpleDateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss")
     n = n % Attribute(None, "time", Text(sdf.format(i.as[Date]("time"))), Null)

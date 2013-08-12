@@ -9,11 +9,16 @@ import org.slf4j
 import scala.collection.mutable.ListBuffer
 import com.mongodb.casbah.commons.MongoDBObject
 import com.mongodb.casbah.Imports._
+import org.springframework.jdbc.support.rowset.SqlRowSet
+import org.springframework.jdbc.core.JdbcTemplate
 
 
 object KPIService {
   var logger: slf4j.Logger = LoggerFactory.getLogger("kpi")
-
+  /**
+   *  统计指定时间前3天的搜索订单订单号
+   *  return ListBuffer
+   * */
   private def searchOrder(daySrc: Calendar): ListBuffer[Int] = {
     val day1: Calendar = lang3.ObjectUtils.clone(daySrc)
     val sdf: SimpleDateFormat = new SimpleDateFormat("yyyy-MM-dd")
@@ -38,6 +43,10 @@ object KPIService {
     orderNoList
   }
 
+  /**
+   * 统计指定时间当天的付款订单信息
+   * 统计结果写入mongo数据库中
+   * */
   def paymentOrder(daySrc: Calendar) = {
     val day: Calendar = lang3.ObjectUtils.clone(daySrc)
     val sdf: SimpleDateFormat = new SimpleDateFormat("yyyy-MM-dd")
@@ -70,7 +79,7 @@ object KPIService {
       col.save(obj)
       count = count + 1
     }
-    DBMysql.colseConn(conn, stem, rs)
+    DBMssql.colseConn(conn, stem, rs)
     logger.info("{}的搜索订单中付款订单有：{}", begin2, count)
   }
 
@@ -88,7 +97,9 @@ object KPIService {
     val query = "time" $gte from.getTime $lte to.getTime
     col.remove(query)
   }
-
+  /**
+   * 每日搜索人次统计
+   * */
   def searchPreson(calend: Calendar): ListBuffer[String] = {
     val day: Calendar = lang3.ObjectUtils.clone(calend)
     val sdf: SimpleDateFormat = new SimpleDateFormat("yyyy-MM-dd")

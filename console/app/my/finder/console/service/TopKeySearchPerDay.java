@@ -13,9 +13,10 @@ public class TopKeySearchPerDay implements Job {
             throws JobExecutionException {
 
         java.util.Calendar ctime = java.util.Calendar.getInstance();
-        ctime.setTime(context.getFireTime());
+        ctime.setTime( new Date() );
         ctime.add(java.util.Calendar.DATE, -1);
-        SummarizingService.paymentTopKey(ctime);
+        SummarizingService.paymentTopKey( ctime );
     }
+
 }
 

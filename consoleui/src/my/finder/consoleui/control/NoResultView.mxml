@@ -1,0 +1,74 @@
+<?xml version="1.0"?>
+<s:Group xmlns:fx="http://ns.adobe.com/mxml/2009"
+         xmlns:s="library://ns.adobe.com/flex/spark"
+         xmlns:mx="library://ns.adobe.com/flex/mx">
+    <fx:Script><![CDATA[
+        import mx.collections.ArrayCollection;
+        import mx.rpc.events.ResultEvent;
+
+        private function submit(event:Event):void {
+            search.send()
+        }
+        [Bindable]private var chartData:ArrayCollection = new ArrayCollection();
+        private function httpService_Result(event:ResultEvent):void{
+            chartData.removeAll()
+            var xmls = event.result.persons.person;
+            for (var i:int = 0; i < xmls.length ; i++){
+                var time = xmls.getItemAt(i).time;
+                var result = xmls.getItemAt(i).time;
+                chartData.addItem({time:time, noResult: result});
+            }
+        }
+        ]]></fx:Script>
+    <fx:Declarations>
+        <s:HTTPService id="search" method="GET" result="httpService_Result(event)" showBusyCursor="true"
+                       url="http://localhost:9000/mkt/searchNoResults">
+            <s:request xmlns="">
+                <s:bTime>{bTime.text}</s:bTime>
+                <s:eTime>{eTime.text}</s:eTime>
+            </s:request>
+        </s:HTTPService>
+    </fx:Declarations>
+    <mx:ViewStack id="vs">
+        <s:NavigatorContent label="Search1111">
+            <s:Panel title="搜索记录统计" color="0x000000"
+                     borderAlpha="0.15"
+                     width="100%" >
+                <s:layout>
+                    <s:VerticalLayout/>
+                </s:layout>
+                <s:Button click="vs.selectedIndex = 1"/>
+                <s:Form width="100%" color="0x323232">
+                    <s:FormItem label="开始时间">
+                        <s:TextInput id="bTime" width="50"/>
+                    </s:FormItem>
+                    <s:FormItem label="结束时间">
+                        <s:TextInput id="eTime" width="50"/>
+                    </s:FormItem>
+                    <s:Button label="Submit" click="submit(event)"/>
+                </s:Form>
+                <s:HGroup>
+                    <mx:LineChart id="linechart" color="0x323232" height="100%"
+                                  showDataTips="true" dataProvider="{chartData}"
+                             itemDoubleClick="" doubleClickEnabled="true">
+                        <mx:horizontalAxis>
+                            <mx:CategoryAxis categoryField="time" title="搜索时间"/>
+                        </mx:horizontalAxis>
+                        <mx:series>
+                            <mx:LineSeries yField="noResult" form="curve" displayName="0结果率"/>
+                        </mx:series>
+                    </mx:LineChart>
+                    <mx:Legend dataProvider="{linechart}" color="0x323232"/>
+                </s:HGroup>
+            </s:Panel>
+        </s:NavigatorContent>
+        <s:NavigatorContent>
+            <s:Panel title="dddddddddd">
+
+                <s:Button click="vs.selectedIndex = 0"/>
+            </s:Panel>
+        </s:NavigatorContent>
+
+    </mx:ViewStack>
+
+</s:Group>
