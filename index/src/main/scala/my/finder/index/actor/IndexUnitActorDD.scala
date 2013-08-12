@@ -11,11 +11,16 @@ import scala.collection.mutable.{ListBuffer}
 import scala.collection.mutable.HashMap
 import scala.util.control.Breaks._
 import java.util.Date
+import java.lang.String
+import scala.Predef.String
+import org.apache.commons.lang.StringUtils
 
 case class Product(id:Int,name:String,sku:String,  indexCode:String,isOneSale:Int,isAliExpress:Int,
                    businessName:String,var createTime:String,var typeId:Int,isQuality:Int,ventureStatus:Int,ventureLevelNew:Int,
                    isTaobao:Int,brandId:Int,brandName:String,var attribute:String,var iseventproduct:Int,var searchKeyword:String,
-                   var areaScore:String,var isDailyDeal:Int,var isLifeStyle:Option[Int],var wwwScore:Float
+                   var areaScore:String,var isDailyDeal:Int,var isLifeStyle:Option[Int],var wwwScore:Float,
+                   var shopIds:String,var shopCategorys:String
+
                     )
 
 class IndexUnitActorDD extends Actor with ActorLogging {
@@ -50,6 +55,8 @@ class IndexUnitActorDD extends Actor with ActorLogging {
 
   private val pIsDailyDealField =  new IntField("isDailyDeal", 0, Field.Store.YES)
   private val pIsLifeStyle =  new IntField("isLifeStyle", 0, Field.Store.YES)
+  private val shopIdsField =  new TextField("shopIds", "", Field.Store.YES)
+  private val shopCategorysField =  new TextField("shopCategorys", "", Field.Store.YES)
 
   private var doc: Document = null
 
@@ -96,7 +103,7 @@ class IndexUnitActorDD extends Actor with ActorLogging {
             rs.getInt("ProductID_int"),rs.getString("productaliasname_nvarchar"),rs.getString("ProductKeyID_nvarchar"),rs.getString("IndexCode_nvarchar"),rs.getInt("IsOneSale_tinyint"),rs.getInt("IsAliExpress_tinyint"),
             rs.getString("BusinessName_nvarchar"),rs.getString("CreateTime_datetime"),rs.getInt("ProductTypeID_int"),rs.getInt("IsQualityProduct_tinyint"),rs.getInt("VentureStatus_tinyint"),rs.getInt("VentureLevelNew_tinyint"),
             rs.getInt("IsTaoBao_tinyint"),rs.getInt("ProductBrandID_int"),rs.getString("productbrand_nvarchar"),null,0,null,
-            null,0,None,Float.NaN
+            null,0,None,Float.NaN,"",""
           )
           lst += product
           buffer1.append(rs.getInt("ProductID_int")).append(',')
@@ -243,6 +250,23 @@ class IndexUnitActorDD extends Actor with ActorLogging {
           }
         }
 
+        //读取店铺信息
+        sql = String.format("select ShopID_bigint,ProductKeyID_nvarchar from SRM_Plat_ShopAndProductRelation where ProductKeyID_nvarchar in (%s)",skus)
+        rs = stmt.executeQuery(sql)
+        while(rs.next){
+          for(p <- lst if(p.sku == rs.getString("ProductKeyID_nvarchar"))) {
+            p.shopIds += p.shopIds + " " + rs.getString("ShopID_bigint")
+          }
+        }
+        //读取店铺品类信息
+        sql = String.format("select CategoryID_int,ProductKeyID_nvarchar from SRM_Plat_ShopCategoryProductRelations where ProductKeyID_nvarchar in (%s)",skus)
+        rs = stmt.executeQuery(sql)
+        while(rs.next){
+          for(p <- lst if(p.sku == rs.getString("ProductKeyID_nvarchar"))) {
+            p.shopCategorys += p.shopCategorys + " " + rs.getString("CategoryID_int")
+          }
+        }
+
         for (pro <- lst) {
           total = lst.length
           val time3 = System.currentTimeMillis()
@@ -301,11 +325,17 @@ class IndexUnitActorDD extends Actor with ActorLogging {
       pSearchKeywordField.setStringValue("")
       pIsDailyDealField.setIntValue(-1)
       pIsLifeStyle.setIntValue(-1)
+      shopIdsField.setStringValue("")
+      shopCategorysField.setStringVale("")
 
 
       //设置本次结果集的值
       doc = new Document()
 
+      if (StringUtils.isNotBlank(p.shopIds)){
+        shopIdsField.setStringValue(p.shopIds)
+        doc.add(shopIdsField)
+      }
 
       if(p.wwwScore != Float.NaN){
         wwwScoreField.setDoubleValue(p.wwwScore)

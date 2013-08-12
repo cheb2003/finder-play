@@ -13,10 +13,13 @@ GET     /queryKeyword				controllers.Application.queryKeyword
 POST    /queryKeyword				controllers.Application.queryKeyword
 GET    	/generateSpellCheck			controllers.Application.generateSpellCheck
 GET     /mkt/searchPerson           controllers.Mkt.searchPerson
+POST     /mkt/searchPerson           controllers.Mkt.searchPerson
 GET     /mkt/searchOrder            controllers.Mkt.searchOrder
+POST     /mkt/searchOrder            controllers.Mkt.searchOrder
 GET     /mkt/createOrder            controllers.Mkt.createOrder
 GET     /mkt/deleteOrder            controllers.Mkt.deleteOrder
 GET     /keyword/searchPerDay       controllers.KeyWord.searchPerDay
+POST     /keyword/searchPerDay       controllers.KeyWord.searchPerDay
 GET     /keyword/createPerDay       controllers.KeyWord.createPerDay
 GET     /keyword/deletePerDay       controllers.KeyWord.deletePerDay
 GET     /heartbeat                  controllers.Application.heartbeat

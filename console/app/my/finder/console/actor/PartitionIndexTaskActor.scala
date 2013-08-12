@@ -40,8 +40,8 @@ class PartitionIndexTaskActor extends Actor with ActorLogging {
   val indexRootManager = context.actorFor(Util.getIndexManagerAkkaURL)
 
   override def preStart() {
-    //mongoClient = MongoManager()
-    //productColl = mongoClient(dinobuydb)("ec_productinformation")
+    mongoClient = MongoManager()
+    productColl = mongoClient(dinobuydb)("ec_productinformation")
   }
 
   def receive = {
@@ -102,6 +102,7 @@ class PartitionIndexTaskActor extends Actor with ActorLogging {
         j += 1
         sendMsg(Constants.DD_PRODUCT, now, j, id, id + ddProductIndexSize - 1, total, ddProductIndexSize)
         id += ddProductIndexSize
+        Thread.sleep(100)
       }
     }
   }
