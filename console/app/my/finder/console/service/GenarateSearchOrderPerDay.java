@@ -5,6 +5,8 @@ import org.quartz.Job;
 import org.quartz.JobExecutionContext;
 import org.quartz.JobExecutionException;
 
+import java.util.Date;
+
 @DisallowConcurrentExecution
 public class GenarateSearchOrderPerDay implements Job {
     public void execute(JobExecutionContext context)
@@ -14,5 +16,6 @@ public class GenarateSearchOrderPerDay implements Job {
         calend.add(java.util.Calendar.DATE, -1);
         KPIService.paymentOrder(calend);
     }
+
 }
 

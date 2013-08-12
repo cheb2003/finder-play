@@ -54,7 +54,7 @@ object SummarizingService {
     while ( rs.next()){
       val keyword:String = rs.getString("Keyword_varchar")
       val sql1 = "select TraceStep_varchar,TraceOrderNO_varchar,SearchCount_int from sea_keywordsTrace k where k.Keyword_varchar ='"+ keyword + "' and " +
-        "k.InsertTime_timestamp between '" + begin + "' and '" + end + "' and projectname_varchar = 'www.dinodirect.com'"
+        "k.InsertTime_timestamp between '" + begin + "' and '" + end + "' and ProjectName_varchar = 'www.dinodirect.com'"
       logger.info(sql1)
       val rs1: SqlRowSet = jsMysql.queryForRowSet(sql1)
 
@@ -157,7 +157,7 @@ object SummarizingService {
         }
       }
 
-      //logger.info(obj.toString())
+      //rs3.close()
       var sKeyword:String = ""
       if ( KeywordUtil.normalizeKeyword(keyword) == null ){
           if( totalOrder != 0 ){
@@ -169,8 +169,8 @@ object SummarizingService {
       val obj = MongoDBObject("keyword" -> sKeyword, "count" -> count, "time" -> time, "resultCount" -> resultCount,"resultClickCount" -> resultClickCount,
         "payOrder" ->payOrder, "clickProducts" ->clickProductIds, "totalOrder" ->totalOrder,"payMoney" ->payMoney, "totalMoney" ->totalMoney,
         "noResultCount" ->noResultCount, "unpayOrder" ->unpayOrder.result(), "payOrders" ->payOrders.result())
+      //logger.info(obj.toString())
       col.save(obj)
-
     }
     //DBMysql.colseConn(conn, stem, rs)
   }
