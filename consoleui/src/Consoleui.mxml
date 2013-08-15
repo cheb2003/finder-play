@@ -9,12 +9,12 @@
 
     <mx:TabNavigator id="tn"  width="100%" height="100%" color="0x323232" >
 
-        <s:NavigatorContent label=" 0结果关键字">
+        <s:NavigatorContent label="0结果关键字">
             <my:NoResultView></my:NoResultView>
         </s:NavigatorContent>
 
-        <s:NavigatorContent label="Panel 2">
-            <s:Label text="TabNavigator container panel 2"/>
+        <s:NavigatorContent label="关键字点击数">
+            <my:KeyWordView></my:KeyWordView>
         </s:NavigatorContent>
 
         <s:NavigatorContent label="Panel 3">
