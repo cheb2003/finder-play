@@ -28,8 +28,7 @@ import org.apache.lucene.util.Version
  */
 case class SegmentWord(sku: String, word: String, lang: String, cn: String, titlecn: String)
 
-class
-IndexUnitActor extends Actor with ActorLogging with MongoUtil {
+class IndexUnitActor extends Actor with ActorLogging with MongoUtil {
   //implicit val getSegmentWordResult = GetResult(r => SegmentWord(r.<<, r.<<,r.<<,r.<<,r.<<))
   val workDir = Config.get("workDir")
   val oldDir = Config.get("oldDir")

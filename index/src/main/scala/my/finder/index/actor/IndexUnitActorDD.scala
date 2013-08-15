@@ -15,43 +15,46 @@ import java.lang.String
 import scala.Predef.String
 import org.apache.commons.lang.StringUtils
 
-class Product(val id:Int,val name:String,var sku:String,var indexCode:String,var isOneSale:Int,var isAliExpress:Int,var businessName:String,var createTime:String,var typeId:Int,var isQuality:Int,var ventureStatus:Int,var ventureLevelNew:Int,
-                   var isTaobao:Int,var brandId:Int,var brandName:String,var attribute:String,var iseventproduct:Int,var searchKeyword:String,
-                   var areaScore:String,var isDailyDeal:Int,var isLifeStyle:Option[Int],var wwwScore:Float,
+class Product(val id:String,val name:String,var sku:String,var indexCode:String,var isOneSale:String,
+                  var isAliExpress:String,var businessName:String,var createTime:String,var typeId:String,
+                  var isQuality:String,var ventureStatus:String,var ventureLevelNew:String,
+                   var isTaobao:String,var brandId:String,var brandName:String,var attribute:String,
+                   var isEvent:String,var searchKeyword:String, var areaScore:String,var isDailyDeal:String,
+                   var isLifeStyle:String,var wwwScore:Float,
                    var shopIds:String,var shopCategorys:String,var fitType:String)
 
 class IndexUnitActorDD extends Actor with ActorLogging {
   val workDir = Config.get("workDir")
   //val indexBatchSize = Integer.valueOf(Config.get("indexBatchSize"))
 
-  private val pIdField = new IntField("id", 0, Field.Store.YES)
+  private val pIdField = new StringField("id", "", Field.Store.YES)
   private val pNameField = new TextField("name", "", Field.Store.YES)
   private val pSkuField = new StringField("sku", "", Field.Store.YES)
   private val pIndexCodeField = new StringField("indexCode", "", Field.Store.YES)
-  private val pIsOneSaleField = new IntField("isOneSale", 0, Field.Store.YES)
-  private val pIsAliExpressField = new IntField("isAliExpress", 0, Field.Store.YES)
+  private val pIsOneSaleField = new StringField("isOneSale", "", Field.Store.YES)
+  private val pIsAliExpressField = new StringField("isAliExpress", "", Field.Store.YES)
   private val pBusinessNameField = new TextField("businessName", "", Field.Store.YES)
   private val pCreateTimeField = new StringField("createTime", "", Field.Store.YES)
   //osell
-  private val pProductTypeIdField = new IntField("typeId", 0, Field.Store.YES)
-  private val pIsQualityProductField = new IntField("isQuality", 0, Field.Store.YES)
-  private val pVentureStatusField = new IntField("ventureStatus", 0, Field.Store.YES)
-  private val pVentureLevelNewField = new IntField("ventureLevelNew", 0, Field.Store.YES)
-  private val pIsTaobaoField = new IntField("isTaobao", 0, Field.Store.YES)
-  private val pProductBrandIdField = new IntField("brandId", 0, Field.Store.YES)
+  private val pProductTypeIdField = new StringField("typeId", "", Field.Store.YES)
+  private val pIsQualityProductField = new StringField("isQuality", "", Field.Store.YES)
+  private val pVentureStatusField = new StringField("ventureStatus", "", Field.Store.YES)
+  private val pVentureLevelNewField = new StringField("ventureLevelNew", "", Field.Store.YES)
+  private val pIsTaobaoField = new StringField("isTaobao", "", Field.Store.YES)
+  private val pProductBrandIdField = new StringField("brandId", "", Field.Store.YES)
   private val pProductBrandNameField = new TextField("brandName", "", Field.Store.YES)
   //private val pProductTypeNameField = new TextField("typeName", "", Field.Store.YES)
   //private val skuOrderField = new IntField("skuOrder", 50, Field.Store.YES)
 
 
   private val pAttributeValueField =  new StringField("attribute", "", Field.Store.YES)
-  private val pIseventproductField =  new IntField("iseventproduct", 0, Field.Store.YES)
+  private val pIsEventField =  new StringField("isEvent", "", Field.Store.YES)
   private val pSearchKeywordField =  new StringField("searchKeyword", "", Field.Store.YES)
   //www score
   private val wwwScoreField = new DoubleField("wwwScore", 0d, Field.Store.YES)
 
-  private val pIsDailyDealField =  new IntField("isDailyDeal", 0, Field.Store.YES)
-  private val pIsLifeStyle =  new IntField("isLifeStyle", 0, Field.Store.YES)
+  private val pIsDailyDealField =  new StringField("isDailyDeal", "", Field.Store.YES)
+  private val pIsLifeStyle =  new StringField("isLifeStyle", "", Field.Store.YES)
   private val shopIdsField =  new TextField("shopIds", "", Field.Store.YES)
   private val shopCategorysField =  new TextField("shopCategorys", "", Field.Store.YES)
   private val fitTypeField = new TextField("fitType","",Field.Store.YES)
@@ -62,6 +65,7 @@ class IndexUnitActorDD extends Actor with ActorLogging {
   }
 
   def receive = {
+    
     case msg: IndexTaskMessageDD => {
       var conn: Connection = null
       var stmt: Statement = null
@@ -98,10 +102,10 @@ class IndexUnitActorDD extends Actor with ActorLogging {
         var product:Product  = null
         while (rs.next()) {
           product = new Product(
-            rs.getInt("ProductID_int"),rs.getString("productaliasname_nvarchar"),rs.getString("ProductKeyID_nvarchar"),rs.getString("IndexCode_nvarchar"),rs.getInt("IsOneSale_tinyint"),rs.getInt("IsAliExpress_tinyint"),
-            rs.getString("BusinessName_nvarchar"),rs.getString("CreateTime_datetime"),rs.getInt("ProductTypeID_int"),rs.getInt("IsQualityProduct_tinyint"),rs.getInt("VentureStatus_tinyint"),rs.getInt("VentureLevelNew_tinyint"),
-            rs.getInt("IsTaoBao_tinyint"),rs.getInt("ProductBrandID_int"),rs.getString("productbrand_nvarchar"),null,0,null,
-            null,0,None,Float.NaN,"","",""
+            rs.getString("ProductID_int"),rs.getString("productaliasname_nvarchar"),rs.getString("ProductKeyID_nvarchar"),rs.getString("IndexCode_nvarchar"),rs.getString("IsOneSale_tinyint"),rs.getString("IsAliExpress_tinyint"),
+            rs.getString("BusinessName_nvarchar"),rs.getString("CreateTime_datetime"),rs.getString("ProductTypeID_int"),rs.getString("IsQualityProduct_tinyint"),rs.getString("VentureStatus_tinyint"),rs.getString("VentureLevelNew_tinyint"),
+            rs.getString("IsTaoBao_tinyint"),rs.getString("ProductBrandID_int"),rs.getString("productbrand_nvarchar"),null,null,null,
+            null,null,null,Float.NaN,null,null,null
           )
           lst += product
           buffer1.append(rs.getInt("ProductID_int")).append(',')
@@ -124,9 +128,10 @@ class IndexUnitActorDD extends Actor with ActorLogging {
           val v = rs.getString("itemvalueeng_nvarchar")
           val vv = v.split(",")
           val sb = new StringBuffer()
-          val i = 0
+          var i = 0
           while(i < vv.length){
             sb.append("###").append(rs.getString("itemnameeng_nvarchar")).append("###").append(vv(i)).append("###").append(' ')
+            i += 1
           }
           s = s + sb.toString
           map.put(rs.getInt("productid_int"),s)
@@ -214,7 +219,7 @@ class IndexUnitActorDD extends Actor with ActorLogging {
           if(rs.getInt("count") > 0) {
             for(p <- lst) {
               if(rs.getString("ProductKeyID_nvarchar").equals(p.sku)) {
-                p.iseventproduct = 1
+                p.isEvent = "true"
               }
             }
           }
@@ -229,7 +234,7 @@ class IndexUnitActorDD extends Actor with ActorLogging {
           if(rs.getString("starttime_datetime") != null && rs.getString("endtime_datetime") != null && (now.after(rs.getTimestamp("starttime_datetime"))) && (now.before(rs.getTimestamp("endtime_datetime"))) ) {
             for(p <- lst) {
               if(rs.getInt("productid_int").equals(p.id)) {
-                p.isDailyDeal = 1
+                p.isDailyDeal = "true"
               }
             }
           }
@@ -243,7 +248,7 @@ class IndexUnitActorDD extends Actor with ActorLogging {
           if(rs.getInt("count") > 0) {
             for(p <- lst) {
               if(rs.getString("productid_int").equals(p.sku)) {
-                p.isLifeStyle = Some(1)
+                p.isLifeStyle = "true"
               }
             }
           }
@@ -310,28 +315,28 @@ class IndexUnitActorDD extends Actor with ActorLogging {
   def writeDocNew(p:Product,writer: IndexWriter): Boolean = {
     try {
       //先清空上一个结果集的数据
-      pIdField.setIntValue(-1)
+      pIdField.setStringValue("")
       pNameField.setStringValue("")
       pSkuField.setStringValue("")
       pIndexCodeField.setStringValue("")
-      pIsOneSaleField.setIntValue(-1)
-      pIsAliExpressField.setIntValue(-1)
+      pIsOneSaleField.setStringValue("")
+      pIsAliExpressField.setStringValue("")
       pBusinessNameField.setStringValue("")
       pCreateTimeField.setStringValue("")
-      pProductTypeIdField.setIntValue(-1)
-      pIsQualityProductField.setIntValue(-1)
-      pVentureStatusField.setIntValue(-1)
-      pVentureLevelNewField.setIntValue(-1)
-      pIsTaobaoField.setIntValue(-1)
-      pProductBrandIdField.setIntValue(-1)
+      pProductTypeIdField.setStringValue("")
+      pIsQualityProductField.setStringValue("")
+      pVentureStatusField.setStringValue("")
+      pVentureLevelNewField.setStringValue("")
+      pIsTaobaoField.setStringValue("")
+      pProductBrandIdField.setStringValue("")
       pProductBrandNameField.setStringValue("")
       wwwScoreField.setDoubleValue(0d)
 
       pAttributeValueField.setStringValue("")
-      pIseventproductField.setIntValue(-1)
+      pIsEventField.setStringValue("")
       pSearchKeywordField.setStringValue("")
-      pIsDailyDealField.setIntValue(-1)
-      pIsLifeStyle.setIntValue(-1)
+      pIsDailyDealField.setStringValue("")
+      pIsLifeStyle.setStringValue("")
       shopIdsField.setStringValue("")
       shopCategorysField.setStringValue("")
       fitTypeField.setStringValue("")
@@ -344,6 +349,7 @@ class IndexUnitActorDD extends Actor with ActorLogging {
         fitTypeField.setStringValue(p.fitType)
         doc.add(fitTypeField)
       }
+      
       if (StringUtils.isNotBlank(p.shopIds)){
         shopIdsField.setStringValue(p.shopIds)
         doc.add(shopIdsField)
@@ -355,60 +361,44 @@ class IndexUnitActorDD extends Actor with ActorLogging {
       }
 
       if(p.id != null)
-        pIdField.setIntValue(p.id)
-      log.info("{}",p.id)
+        pIdField.setStringValue(p.id)
 
       if(p.name != null)
         pNameField.setStringValue(p.name)
-      log.info("{}",p.name)
 
       if(p.sku != null)
         pSkuField.setStringValue(p.sku)
-      log.info("{}",p.sku)
 
       if(p.indexCode != null)
         pIndexCodeField.setStringValue(p.indexCode)
-      log.info("{}",p.indexCode)
 
-      pIsOneSaleField.setIntValue(p.isOneSale)
-      log.info("{}",p.isOneSale)
+      pIsOneSaleField.setStringValue(p.isOneSale)
 
-      pIsAliExpressField.setIntValue(p.isAliExpress)
-      log.info("{}",p.isAliExpress)
+      pIsAliExpressField.setStringValue(p.isAliExpress)
 
       if(p.businessName != null)
         pBusinessNameField.setStringValue(p.businessName)
-      log.info("{}",p.businessName)
 
       if(p.createTime != null)
         pCreateTimeField.setStringValue(p.createTime)
-      log.info("{}",p.createTime)
 
-      pProductTypeIdField.setIntValue(p.typeId)
-      log.info("{}",p.typeId)
+      pProductTypeIdField.setStringValue(p.typeId)
 
-      pIsQualityProductField.setIntValue(p.isQuality)
-      log.info("{}",p.isQuality)
+      pIsQualityProductField.setStringValue(p.isQuality)
 
-      pVentureStatusField.setIntValue(p.ventureStatus)
-      log.info("{}",p.ventureStatus)
+      pVentureStatusField.setStringValue(p.ventureStatus)
 
-      pVentureLevelNewField.setIntValue(p.ventureLevelNew)
-      log.info("{}",p.ventureLevelNew)
+      pVentureLevelNewField.setStringValue(p.ventureLevelNew)
 
-      pIsTaobaoField.setIntValue(p.isTaobao)
-      log.info("{}",p.isTaobao)
+      pIsTaobaoField.setStringValue(p.isTaobao)
 
-      pProductBrandIdField.setIntValue(p.brandId)
-      log.info("{}",p.brandId)
+      pProductBrandIdField.setStringValue(p.brandId)
 
       if(p.brandName != null)
         pProductBrandNameField.setStringValue(p.brandName)
-      log.info("{}",p.brandName)
 
       if(p.attribute != null)
         pAttributeValueField.setStringValue(p.attribute)
-      log.info("{}",p.attribute)
 
       if(p.areaScore != null) {
         log.info("p.areaScore=="+p.areaScore)
@@ -455,19 +445,15 @@ class IndexUnitActorDD extends Actor with ActorLogging {
         }
       }
 
-      pIseventproductField.setIntValue(p.iseventproduct)
-      log.info("{}",p.iseventproduct)
+      pIsEventField.setStringValue(p.isEvent)
 
       if(p.searchKeyword != null)
         pSearchKeywordField.setStringValue(p.searchKeyword)
-      log.info("{}",p.searchKeyword)
 
-      pIsDailyDealField.setIntValue(p.isDailyDeal)
-      log.info("{}",p.isDailyDeal)
+      pIsDailyDealField.setStringValue(p.isDailyDeal)
 
       if(p.isLifeStyle != None){
-        pIsLifeStyle.setIntValue(p.isLifeStyle.get)
-        log.info("{}",p.isLifeStyle)
+        pIsLifeStyle.setStringValue(p.isLifeStyle)
       }
 
 
@@ -488,7 +474,7 @@ class IndexUnitActorDD extends Actor with ActorLogging {
       doc.add(pProductBrandNameField)
 
       doc.add(pAttributeValueField)
-      doc.add(pIseventproductField)
+      doc.add(pIsEventField)
       doc.add(pSearchKeywordField)
       doc.add(pIsDailyDealField)
       doc.add(pIsLifeStyle)

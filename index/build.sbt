@@ -14,5 +14,7 @@ libraryDependencies in ThisBuild ++= Seq(
     "org.apache.lucene" % "lucene-analyzers-common" % "4.3.0",
     "org.apache.lucene" % "lucene-core" % "4.3.0",
     "com.h2database" % "h2" % "1.3.172",
+    "org.apache.lucene" % "lucene-queryparser" % "4.3.0",
     "net.sf.trove4j" % "trove4j" % "3.0.3"
 )
+
