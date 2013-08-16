@@ -76,12 +76,16 @@ class PartitionIndexTaskActor extends Actor with ActorLogging {
       val sql = "SELECT min(keyid_int) as min,max(keyid_int) as max from QDW_AttributeAndValueDictionary"
       stmt = conn.createStatement()
       rs = stmt.executeQuery(sql)
-      rs.next
-      var minId = rs.getInt("min")
-      val maxId = rs.getInt("max")
-      if(current.configuration.getBoolean("debugIndex").get) {
-        minId = maxId - current.configuration.getInt("debugItemCount").get
+      var minId:Int = 0
+      var maxId:Int = 0
+      while(rs.next){
+        minId = rs.getInt("min")
+        maxId = rs.getInt("max")
+        if(current.configuration.getBoolean("debugIndex").get) {
+          minId = maxId - current.configuration.getInt("debugItemCount").get
+        }
       }
+
 
       val totalCount: Long = maxId - minId + 1
       val total: Long = totalCount / ddProductIndexSize + 1
@@ -91,7 +95,7 @@ class PartitionIndexTaskActor extends Actor with ActorLogging {
       var j = 0
       breakable {
         while(true){
-          if(id >= maxId){
+          if(id > maxId){
             break
           }
           j += 1

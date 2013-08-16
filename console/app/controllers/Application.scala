@@ -70,12 +70,9 @@ object Application extends Controller {
     }
     Ok("hello")
   }
-  def indexDDAttributes(name: String) = Action { implicit request =>
+  def indexDDAttributes = Action { implicit request =>
     val form = Form(
-      tuple(
-        "i" -> text,
-        "ii" -> text
-      )
+        "i" -> text
     )
     val queryParams = form.bindFromRequest.data
 

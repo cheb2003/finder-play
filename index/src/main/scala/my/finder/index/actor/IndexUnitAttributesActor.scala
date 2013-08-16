@@ -8,6 +8,10 @@ import org.apache.lucene.util.Version
 import my.finder.common.util.{Util, MyAnalyzer}
 import scala.collection.mutable.ListBuffer
 import org.apache.lucene.document.{Field, StringField, Document}
+import org.apache.lucene.index.Term
+import org.apache.lucene.search.TermQuery
+import org.apache.lucene.analysis.standard.StandardAnalyzer
+import org.apache.lucene.analysis.core.WhitespaceAnalyzer
 
 
 /**
@@ -36,12 +40,21 @@ class IndexUnitAttributesActor extends Actor with ActorLogging{
           val id = rs.getString("id")
           val aValue = rs.getString("aValue")
           val aName = rs.getString("aName")
-          val searchStr = QueryParserBase.escape("\"" + s"###$aName###$aValue###".toLowerCase + "\"")
-          val parser = new QueryParser(Version.LUCENE_43,"attribute",new MyAnalyzer)
-          val qAttr = parser.parse(searchStr)
+
+          val searchStr = QueryParserBase.escape(s"###$aName###$aValue###".toLowerCase)
+          val t = new Term("attribute","\"" + searchStr + "\"")
+          //val t = new Term("indexCode","s2")
+          val q = new TermQuery(t)
+          val parser = new QueryParser(Version.LUCENE_43,"attribute",new WhitespaceAnalyzer(Version.LUCENE_43))
+          val qAttr = parser.parse("\"" + searchStr + "\"")
+          log.info("{}",qAttr)
           val topDocs = searcher.search(qAttr,Integer.MAX_VALUE)
           val scoreDocs = topDocs.scoreDocs
           val list = new ListBuffer[Int]
+          idField.setStringValue("")
+          valueField.setStringValue("")
+          nameField.setStringValue("")
+          docIdsField.setStringValue("")
           scoreDocs.foreach{
             list += _.doc
           }
