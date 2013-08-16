@@ -49,12 +49,12 @@ object SummarizingService {
     val client = MyMongoManager()
     val col = client.getDB("ddsearch").getCollection("topKeySearchPerDay")
     val sql = "select distinct k.Keyword_varchar from sea_keywordsTrace k where k.InsertTime_timestamp between '" +
-      begin + "' and '" + end + "' and projectname_varchar in('ar.dinodirect.com','au.dinodirect.com','br.dinodirect.com','ca.dinodirect.com','gb.dinodirect.com','il.dinodirect.com','nl.dinodirect.com','nz.dinodirect.com','ru.dinodirect.com','us.dinodirect.com','www.dinodirect.com','www.dinodirect.de','www.dinodirect.es','www.dinodirect.fr','www.dinodirect.nl','www.dinodirect.pt')"
+      begin + "' and '" + end + "' and projectname_varchar like '%dinodirect%'"
     val rs: SqlRowSet = jsMysql.queryForRowSet(sql)
     while ( rs.next()){
       val keyword:String = rs.getString("Keyword_varchar")
       val sql1 = "select TraceStep_varchar,TraceOrderNO_varchar,SearchCount_int from sea_keywordsTrace k where k.Keyword_varchar ='"+ keyword + "' and " +
-        "k.InsertTime_timestamp between '" + begin + "' and '" + end + "' and projectname_varchar in('ar.dinodirect.com','au.dinodirect.com','br.dinodirect.com','ca.dinodirect.com','gb.dinodirect.com','il.dinodirect.com','nl.dinodirect.com','nz.dinodirect.com','ru.dinodirect.com','us.dinodirect.com','www.dinodirect.com','www.dinodirect.de','www.dinodirect.es','www.dinodirect.fr','www.dinodirect.nl','www.dinodirect.pt')"
+        "k.InsertTime_timestamp between '" + begin + "' and '" + end + "' and projectname_varchar like '%dinodirect%'"
       logger.info(sql1)
       val rs1: SqlRowSet = jsMysql.queryForRowSet(sql1)
 
