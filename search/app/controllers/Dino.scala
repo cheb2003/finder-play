@@ -448,4 +448,22 @@ object Dino extends Controller {
     }
   }
 
+  /**
+    * 店铺查询接口
+    */
+  def shop = Action { implicit request =>
+    val form = Form(
+      tuple(
+        "keyword" -> text,
+        "sort" -> text,
+        "size" -> number,
+        "page" -> number,
+        "range" -> text,
+        "country" -> text,
+        "indexcode" -> text,
+        "tag"-> text
+      )
+    )
+    val queryParams = form.bindFromRequest.data
+  }
 }
