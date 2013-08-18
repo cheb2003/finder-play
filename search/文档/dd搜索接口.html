@@ -1,0 +1,351 @@
+<!-- dd搜索接口 -->
+<html>
+	<head>
+		<title></title>
+	</head>
+	<body>
+		<b>站内搜索接口</b>
+		<form action="http://localhost:9999/dd/search/product">
+			<table>
+				<tr>
+					<td>关键字keyword：</td>
+					<td><input type="text" name="keyword"> </td>
+					<td></td>
+				</tr>
+				<tr>
+					<td>页数page：</td>
+					<td><input type="text" name="page"> </td>
+					<td>默认第一页，小于1设置成1</td>
+				</tr>
+				<tr>
+					<td>每页结果数size</td>
+					<td><input type="text" name="size"> </td>
+					<td>最大值100</td>
+				</tr>
+				<tr>
+					<td>属性attributes</td>
+					<td><input type="text" name="attributes"></td>
+					<td>多个值用英文逗号分隔：###a###b###,###c###d###</td>
+				</tr>
+				<tr>
+					<td>排序sort</td>
+					<td><input type="text" name="size"> </td>
+					<td>价格降序price-,升序price+;发布日期降序releasedate-；相关度降序popularity-；回复降序reviews-；diggs-；视频降序videos-</td>
+				</tr>
+				<tr>
+					<td>品类indexcode</td>
+					<td><input type="text" name="indexcode"> </td>
+					<td></td>
+				</tr>
+				<tr>
+					<td>国家代码country</td>
+					<td><input type="text" name="country"> </td>
+					<td>eg:us ua</td>
+				</tr>
+				<tr>
+					<td>标签tag</td>
+					<td><input type="text" name="tag"> </td>
+					<td>对应dd网站搜索结果页面4个标签：all显示所有结果，new显示新品，event显示事件营销产品，clear清仓产品</td>
+				</tr>
+				<tr>
+					<td>排除产品excludeid</td>
+					<td><input type="text" name="excludeid"></td>
+					<td>排除特定的产品英文逗号分隔，eg： 1000,1001,1002</td>
+				</tr>
+				<tr>
+					<td>风险区域riskyarea</td>
+					<td><input type="text" name="riskarea"></td>
+					<td>区域代码逗号分隔，eg： 5_0,6_3</td>
+				</tr>
+				<tr>
+					<td><input type="submit"></td>
+				</tr>
+			</table>
+		</form>
+		<b>品类搜索接口</b>
+		<form action="http://localhost:9999/dd/search/categories">
+			<table>
+				<tr>
+					<td>页数page：</td>
+					<td><input type="text" name="page"> </td>
+					<td>默认第一页，小于1设置成1</td>
+				</tr>
+				<tr>
+					<td>每页结果数size</td>
+					<td><input type="text" name="size"> </td>
+					<td>最大值100</td>
+				</tr>
+				<tr>
+					<td>属性attributes</td>
+					<td><input type="text" name="attributes"></td>
+					<td>多个值用英文逗号分隔：###a###b###,###c###d###</td>
+				</tr>
+				<tr>
+					<td>排序sort</td>
+					<td><input type="text" name="size"> </td>
+					<td>价格降序price-,升序price+;发布日期降序releasedate-；相关度降序popularity-；回复降序reviews-；diggs-；视频降序videos-</td>
+				</tr>
+				<tr>
+					<td>品类indexcode</td>
+					<td><input type="text" name="indexcode"> </td>
+					<td></td>
+				</tr>
+				<tr>
+					<td>国家代码country</td>
+					<td><input type="text" name="country"> </td>
+					<td>eg:us ua</td>
+				</tr>
+				<tr>
+					<td>排除产品excludeid</td>
+					<td><input type="text" name="excludeid"></td>
+					<td>排除特定的产品英文逗号分隔，eg： 1000,1001,1002</td>
+				</tr>
+				<tr>
+					<td>风险区域riskyarea</td>
+					<td><input type="text" name="riskarea"></td>
+					<td>区域代码逗号分隔，eg： 5_0,6_3</td>
+				</tr>
+				<tr>
+					<td><input type="submit"></td>
+				</tr>
+			</table>
+		</form>
+		<b>店铺搜索接口</b>
+		<form action="http://localhost:9999/dd/search/shop">
+			<table>
+				<tr>
+					<td>关键字keyword：</td>
+					<td><input type="text" name="keyword"> </td>
+					<td></td>
+				</tr>
+				<tr>
+					<td>页数page：</td>
+					<td><input type="text" name="page"> </td>
+					<td>默认第一页，小于1设置成1</td>
+				</tr>
+				<tr>
+					<td>每页结果数size</td>
+					<td><input type="text" name="size"> </td>
+					<td>最大值100</td>
+				</tr>
+				<tr>
+					<td>排序sort</td>
+					<td><input type="text" name="size"> </td>
+					<td>价格降序price-,升序price+;发布日期降序releasedate-；相关度降序popularity-；回复降序reviews-；diggs-；视频降序videos-</td>
+				</tr>
+				<tr>
+					<td>店铺品类indexcode</td>
+					<td><input type="text" name="indexcode"> </td>
+					<td>店铺的品类</td>
+				</tr>
+				<tr>
+					<td>国家代码country</td>
+					<td><input type="text" name="country"> </td>
+					<td>eg:us ua</td>
+				</tr>
+				<tr>
+					<td>排除产品excludeid</td>
+					<td><input type="text" name="excludeid"></td>
+					<td>排除特定的产品英文逗号分隔，eg： 1000,1001,1002</td>
+				</tr>
+				<tr>
+					<td>风险区域riskyarea</td>
+					<td><input type="text" name="riskarea"></td>
+					<td>区域代码逗号分隔，eg： 5_0,6_3</td>
+				</tr>
+				<tr>
+					<td><input type="submit"></td>
+				</tr>
+			</table>
+		</form>
+		<b>品牌搜索接口</b>
+		<form action="http://localhost:9999/dd/search/brand">
+			<table>
+				<tr>
+					<td>关键字keyword：</td>
+					<td><input type="text" name="keyword"> </td>
+					<td></td>
+				</tr>
+				<tr>
+					<td>页数page：</td>
+					<td><input type="text" name="page"> </td>
+					<td>默认第一页，小于1设置成1</td>
+				</tr>
+				<tr>
+					<td>每页结果数size</td>
+					<td><input type="text" name="size"> </td>
+					<td>最大值100</td>
+				</tr>
+				<tr>
+					<td>排序sort</td>
+					<td><input type="text" name="size"> </td>
+					<td>价格降序price-,升序price+;发布日期降序releasedate-；相关度降序popularity-；回复降序reviews-；diggs-；视频降序videos-</td>
+				</tr>
+				<tr>
+					<td>品牌id brandid</td>
+					<td><input type="text" name="brandid"> </td>
+					<td></td>
+				</tr>
+				<tr>
+					<td>国家代码country</td>
+					<td><input type="text" name="country"> </td>
+					<td>eg:us ua</td>
+				</tr>
+				<tr>
+					<td>排除产品excludeid</td>
+					<td><input type="text" name="excludeid"></td>
+					<td>排除特定的产品英文逗号分隔，eg： 1000,1001,1002</td>
+				</tr>
+				<tr>
+					<td>风险区域riskyarea</td>
+					<td><input type="text" name="riskarea"></td>
+					<td>区域代码逗号分隔，eg： 5_0,6_3</td>
+				</tr>
+				<tr>
+					<td><input type="submit"></td>
+				</tr>
+			</table>
+		</form>
+		<b>NewArrival搜索接口</b>
+		<form action="http://localhost:9999/dd/search/newarrival">
+			<table>
+				<tr>
+					<td>关键字keyword：</td>
+					<td><input type="text" name="keyword"> </td>
+					<td></td>
+				</tr>
+				<tr>
+					<td>页数page：</td>
+					<td><input type="text" name="page"> </td>
+					<td>默认第一页，小于1设置成1</td>
+				</tr>
+				<tr>
+					<td>每页结果数size</td>
+					<td><input type="text" name="size"> </td>
+					<td>最大值100</td>
+				</tr>
+				<tr>
+					<td>排序sort</td>
+					<td><input type="text" name="size"> </td>
+					<td>价格降序price-,升序price+;发布日期降序releasedate-；相关度降序popularity-；回复降序reviews-；diggs-；视频降序videos-</td>
+				</tr>
+				<tr>
+					<td>区间</td>
+					<td><input type="text" name="ranges"> </td>
+					<td>价格区间price:0.99:100</td>
+				</tr>
+				<tr>
+					<td>国家代码country</td>
+					<td><input type="text" name="country"> </td>
+					<td>eg:us ua</td>
+				</tr>
+				<tr>
+					<td>排除产品excludeid</td>
+					<td><input type="text" name="excludeid"></td>
+					<td>排除特定的产品英文逗号分隔，eg： 1000,1001,1002</td>
+				</tr>
+				<tr>
+					<td>风险区域riskyarea</td>
+					<td><input type="text" name="riskarea"></td>
+					<td>区域代码逗号分隔，eg： 5_0,6_3</td>
+				</tr>
+				<tr>
+					<td><input type="submit"></td>
+				</tr>
+			</table>
+		</form>	
+			
+		<b>Under $9.99搜索接口</b>
+		<form action="http://localhost:9999/dd/search/under999">
+			<table>
+				<tr>
+					<td>关键字keyword：</td>
+					<td><input type="text" name="keyword"> </td>
+					<td></td>
+				</tr>
+				<tr>
+					<td>页数page：</td>
+					<td><input type="text" name="page"> </td>
+					<td>默认第一页，小于1设置成1</td>
+				</tr>
+				<tr>
+					<td>每页结果数size</td>
+					<td><input type="text" name="size"> </td>
+					<td>最大值100</td>
+				</tr>
+				<tr>
+					<td>排序sort</td>
+					<td><input type="text" name="size"> </td>
+					<td>价格降序price-,升序price+;发布日期降序releasedate-；相关度降序popularity-；回复降序reviews-；diggs-；视频降序videos-</td>
+				</tr>
+				<tr>
+					<td>国家代码country</td>
+					<td><input type="text" name="country"> </td>
+					<td>eg:us ua</td>
+				</tr>
+				<tr>
+					<td>排除产品excludeid</td>
+					<td><input type="text" name="excludeid"></td>
+					<td>排除特定的产品英文逗号分隔，eg： 1000,1001,1002</td>
+				</tr>
+				<tr>
+					<td>风险区域riskyarea</td>
+					<td><input type="text" name="riskarea"></td>
+					<td>区域代码逗号分隔，eg： 5_0,6_3</td>
+				</tr>
+				<tr>
+					<td><input type="submit"></td>
+				</tr>
+			</table>
+		</form>	
+		<b>清仓搜索接口</b>
+		<form action="http://localhost:9999/dd/search/clearance">
+			<table>
+				<tr>
+					<td>关键字keyword：</td>
+					<td><input type="text" name="keyword"> </td>
+					<td></td>
+				</tr>
+				<tr>
+					<td>页数page：</td>
+					<td><input type="text" name="page"> </td>
+					<td>默认第一页，小于1设置成1</td>
+				</tr>
+				<tr>
+					<td>每页结果数size</td>
+					<td><input type="text" name="size"> </td>
+					<td>最大值100</td>
+				</tr>
+				<tr>
+					<td>排序sort</td>
+					<td><input type="text" name="size"> </td>
+					<td>价格降序price-,升序price+;发布日期降序releasedate-；相关度降序popularity-；回复降序reviews-；diggs-；视频降序videos-</td>
+				</tr>
+				<tr>
+					<td>区间</td>
+					<td><input type="text" name="ranges"> </td>
+					<td>价格区间price:0.99:100</td>
+				</tr>
+				<tr>
+					<td>国家代码country</td>
+					<td><input type="text" name="country"> </td>
+					<td>eg:us ua</td>
+				</tr>
+				<tr>
+					<td>排除产品excludeid</td>
+					<td><input type="text" name="excludeid"></td>
+					<td>排除特定的产品英文逗号分隔，eg： 1000,1001,1002</td>
+				</tr>
+				<tr>
+					<td>风险区域riskyarea</td>
+					<td><input type="text" name="riskarea"></td>
+					<td>区域代码逗号分隔，eg： 5_0,6_3</td>
+				</tr>
+				<tr>
+					<td><input type="submit"></td>
+				</tr>
+			</table>
+		</form>	
+		
+	</body>
+</html>
