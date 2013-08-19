@@ -18,9 +18,83 @@ import java.text.{DateFormat, SimpleDateFormat}
 import scala.xml.{Null, Text, Attribute, Node}
 import org.apache.lucene.search.grouping.{TopGroups, GroupingSearch}
 import scala.Predef._
+import org.apache.commons.lang.StringUtils
 
 object Dino extends Controller {
 
+
+  def category = Action { implicit request =>
+    val form = Form(
+      tuple(
+        "sort" -> text,
+        "size" -> number,
+        "page" -> number,
+        "country" -> text,
+        "indexcode" -> text,
+        "attributes" -> text
+      )
+    )
+    val queryParams = form.bindFromRequest.data
+    val sort = Util.getParamString(queryParams, "sort", "")
+    var size = Util.getParamInt(queryParams, "size", 20)
+    var page = Util.getParamInt(queryParams, "page", 1)
+    val country = Util.getParamString(queryParams, "country", "")
+    val indexCode = Util.getParamString(queryParams, "indexcode", "")
+    val attributes = Util.getParamString(queryParams, "attributes", "")
+    if(StringUtils.isBlank(indexCode)){
+      Ok(empty)
+    }
+    
+    if (page < 0) {
+      page = 1
+    }
+
+    if (size < 1 || size > 100) {
+      size = 20;
+    }
+
+    val bqAll = new BooleanQuery
+    val tIndexCode = new Term("indexCode",indexCode)
+    val qIndexCode = new PrefixQuery(tIndexCode)
+    bqAll.add(qIndexCode,BooleanClause.Occur.MUST)
+
+    val attrSplit = attributes.trim.toLowerCase.split(",")
+    for(attr <- attrSplit if(attr.trim != "")){
+      val tAttribute = new Term("attribute",attribute)
+      val qAttribute = new TermQuery(tAttribute)
+      bqAll.add(qAttribute,BooleanClause.Occur.MUST)
+    }
+
+    val searcher: IndexSearcher = SearcherManager.ddSearcher
+
+    val start = (page - 1) * size + 1;
+    //分页
+    val tsdc: TopFieldCollector = TopFieldCollector.create(sot, start + size, false, false, false, false);
+    println(bqAll)
+    searcher.search(bqAll, tsdc);
+
+    //从0开始计算
+    val topDocs: TopDocs = tsdc.topDocs(start - 1, size);
+    val scoreDocs = topDocs.scoreDocs;
+    val total = tsdc.getTotalHits()
+    val ids = ListBuffer[Long]()
+    for (i <- 0 until scoreDocs.length) {
+      val indexDoc = searcher.getIndexReader().document(scoreDocs(i).doc);
+      ids += Long.valueOf(indexDoc.get("pId"))
+    }
+
+    Ok(
+      toJson(
+        Map(
+          "total" -> toJson(total),
+          "productIds" -> toJson(ids.toArray)
+          )
+      )
+    )
+  }
+  def empty: String = {
+    "{\"totalHits\":0,\"productIds\":[]}"
+  }
   def productJSON = Action { implicit request =>
     val form = Form(
       tuple(
@@ -181,7 +255,6 @@ object Dino extends Controller {
   private def getIndexCode(indexcode: String,p: HashMap[Int,String]) = {
 
   }
-
 
   private def docToXML(nodes: Queue[Node], document: org.apache.lucene.document.Document) = {
 
@@ -359,49 +432,26 @@ object Dino extends Controller {
   }
   //排序
   def sorts(sort: String): Sort = {
-
-    val sortStrs: Array[String] = sort.split(",")
     val lst = ListBuffer[SortField]()
-    for (s <- sortStrs) {
-      var sortField: SortField = null
-      if ("price-".equals(s)) {
-        sortField = new SortField("unitPrice", SortField.Type.DOUBLE, true);
-      } else if ("price+".equals(s)) {
-        sortField = new SortField("unitPrice", SortField.Type.DOUBLE, false);
-      } else if ("releasedate-".equals(s)) {
-        sortField = new SortField("createTime", SortField.Type.DOUBLE, true);
-      } else if ("popularity-".equals(s)) {
-        sortField = new SortField("popularity", SortField.Type.INT, true);
-      } else if ("reviews-".equals(s)) {
-        sortField = new SortField("reviews", SortField.Type.INT, true);
-      } else if ("diggs-".equals(s)) {
-        sortField = new SortField("diggs", SortField.Type.INT, false);
-      } else if ("videos-".equals(s)) {
-        sortField = new SortField("videos", SortField.Type.INT, false);
-      }
-      if (sortField != null) {
-        lst += sortField
-      }
+    
+    val sortField = sort match {
+      case "price-" => new SortField("unitPrice", SortField.Type.DOUBLE, true)
+      case "price+" => new SortField("unitPrice", SortField.Type.DOUBLE, false)
+      case "releasedate-" => new SortField("createTime", SortField.Type.DOUBLE, true)
+      case "releasedate+" => new SortField("createTime", SortField.Type.DOUBLE, false)
+      case "reviews-" => new SortField("reviews", SortField.Type.INT, true)
+      case "reviews+" => new SortField("reviews", SortField.Type.INT, false)
+      case "diggs-" => new SortField("diggs", SortField.Type.INT, true)
+      case "diggs+" => new SortField("diggs", SortField.Type.INT, false)
+      case "videos-" => new SortField("videos", SortField.Type.INT, true)
+      case "videos+" => new SortField("videos", SortField.Type.INT, false)
+      case _ => null
     }
-
-    var sot: Sort = null;
-    if (lst.length == 0) {
-      //默认按相关度排序
-      //sortField = ;
-      sot = new Sort(SortField.FIELD_SCORE);
-    } else {
-      val list = new util.ArrayList[SortField]();
-      for (x <- lst) {
-        list.add(x)
-      }
-      sot = Helper.addSortField(list)
-    }
-    sot;
+    var sot: Sort = new Sort(sortField)
+    sot
   }
 
-
   //返回属性
-
   private def searchProductAttribute(bq: BooleanQuery) = {
 
     val attributesSearcher: IndexSearcher = SearcherManager.searcher
