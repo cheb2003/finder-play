@@ -166,6 +166,8 @@ object Application extends Controller {
         val bqBrandName: BooleanQuery = new BooleanQuery
         val bqSegmentWord: BooleanQuery = new BooleanQuery
         val bqSourceKeyword: BooleanQuery = new BooleanQuery
+        bqSegmentWord.setBoost(10f)
+        bqSourceKeyword.setBoost(20f)
         //search title
         for (k <- keywords) {
           val term: Term = new Term("pName", k)
@@ -580,6 +582,8 @@ object Application extends Controller {
       val bqBrandName: BooleanQuery = new BooleanQuery
       val bqSegmentWord: BooleanQuery = new BooleanQuery
       val bqSourceKeyword: BooleanQuery = new BooleanQuery
+      bqSegmentWord.setBoost(10f)
+      bqSourceKeyword.setBoost(20f)
       for (k <- keywordSplit) {
         val term: Term = new Term("pName", k)
         val pq: PrefixQuery = new PrefixQuery(term)
