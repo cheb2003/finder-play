@@ -20,6 +20,12 @@ POST	/searchKeywordGroupByCategory     controllers.Application.searchKeywordGrou
 
 #POST    /search/product/json		controllers.Dino.productJSON
 #POST    /search/product/xml		controllers.Dino.productXML
-
+#POST	/dd/search/product			controllers.Dino.product
+#POST	/dd/search/categories		controllers.Dino.categories
+#POST	/dd/search/shop				controllers.Dino.shop
+#POST	/dd/search/brand			controllers.Dino.brand
+#POST	/dd/search/newarrival		controllers.Dino.newarrival
+#POST	/dd/search/under999			controllers.Dino.under999
+#POST	/dd/search/clearance		controllers.Dino.clearance
 # Map static resources from the /public folder to the /assets URL path
 GET     /assets/*file               controllers.Assets.at(path="/public", file)

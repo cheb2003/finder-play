@@ -59,7 +59,7 @@ object Dino extends Controller {
     bqAll.add(qIndexCode,BooleanClause.Occur.MUST)
 
     val attrSplit = attributes.trim.toLowerCase.split(",")
-    for(attr <- attrSplit if(attr.trim != "")){
+    /*for(attr <- attrSplit if(attr.trim != "")){
       val tAttribute = new Term("attribute",attribute)
       val qAttribute = new TermQuery(tAttribute)
       bqAll.add(qAttribute,BooleanClause.Occur.MUST)
@@ -90,7 +90,8 @@ object Dino extends Controller {
           "productIds" -> toJson(ids.toArray)
           )
       )
-    )
+    )*/
+    Ok("")
   }
   def empty: String = {
     "{\"totalHits\":0,\"productIds\":[]}"
@@ -501,7 +502,7 @@ object Dino extends Controller {
   /**
     * 店铺查询接口
     */
-  def shop = Action { implicit request =>
+  /*def shop = Action { implicit request =>
     val form = Form(
       tuple(
         "keyword" -> text,
@@ -515,5 +516,5 @@ object Dino extends Controller {
       )
     )
     val queryParams = form.bindFromRequest.data
-  }
+  }*/
 }

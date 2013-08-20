@@ -158,18 +158,43 @@ object Application extends Controller {
       }
 
       val bq: BooleanQuery = new BooleanQuery()
+      val bqKeyword: BooleanQuery = new BooleanQuery()
       if (productAliasName != "") {
         val keywords = productAliasName.toLowerCase().split(" ")
         val bqKeyEn: BooleanQuery = new BooleanQuery()
+        val bqTypeName: BooleanQuery = new BooleanQuery
+        val bqBrandName: BooleanQuery = new BooleanQuery
+        val bqSegmentWord: BooleanQuery = new BooleanQuery
+        val bqSourceKeyword: BooleanQuery = new BooleanQuery
         //search title
         for (k <- keywords) {
           val term: Term = new Term("pName", k)
           val pq: PrefixQuery = new PrefixQuery(term)
           bqKeyEn.add(pq, BooleanClause.Occur.MUST)
-        }
-        bq.add(bqKeyEn, BooleanClause.Occur.MUST)
-      }
 
+          val typeNameTerm: Term = new Term("pTypeNameEN", k)
+          val qTypeName: TermQuery = new TermQuery(typeNameTerm)
+          bqTypeName.add(qTypeName, BooleanClause.Occur.MUST)
+
+          val brandNameTerm: Term = new Term("pBrandName", k)
+          val qBrandName: TermQuery = new TermQuery(brandNameTerm)
+          bqBrandName.add(qBrandName, BooleanClause.Occur.MUST)
+
+          val segmentWordEnTerm: Term = new Term("segmentWordEn", k)
+          val qSegmentWordEn: TermQuery = new TermQuery(segmentWordEnTerm)
+          bqSegmentWord.add(qSegmentWordEn, BooleanClause.Occur.MUST)
+
+          val sourceKeywordTerm: Term = new Term("sourceKeyword", k)
+          val qSourceKeyword: TermQuery = new TermQuery(sourceKeywordTerm)
+          bqSourceKeyword.add(qSourceKeyword, BooleanClause.Occur.MUST)
+        }
+        bqKeyword.add(bqKeyEn, BooleanClause.Occur.SHOULD)
+        bqKeyword.add(bqTypeName, BooleanClause.Occur.SHOULD)
+        bqKeyword.add(bqBrandName, BooleanClause.Occur.SHOULD)
+        bqKeyword.add(bqSegmentWord, BooleanClause.Occur.SHOULD)
+        bqKeyword.add(bqSourceKeyword, BooleanClause.Occur.SHOULD)
+      }
+      bq.add(bqKeyword, BooleanClause.Occur.MUST)
       //search indexCode
       if (indexCode != "") {
         val indexCodeTerm: Term = new Term("indexCode", indexCode);
@@ -533,7 +558,6 @@ object Application extends Controller {
     val isQualityStr = Util.getParamString(queryParams, "isquality", "")
     val brandIdStr = Util.getParamString(queryParams, "brandid", "")
 
-    
     val sort = Util.getParamString(queryParams, "sort", "").trim
 
     if (page < 0) {
@@ -548,29 +572,52 @@ object Application extends Controller {
     val bqKeyword: BooleanQuery = new BooleanQuery()
     val bqBrand: BooleanQuery = new BooleanQuery()
     val bqSearch: BooleanQuery = new BooleanQuery()
-    bqBrand.setBoost(5.0f)
+    
     if (keyword != "") {
       val keywordSplit = keyword.toLowerCase().split(" ")
+      val bqKeyEn: BooleanQuery = new BooleanQuery()
+      val bqTypeName: BooleanQuery = new BooleanQuery
+      val bqBrandName: BooleanQuery = new BooleanQuery
+      val bqSegmentWord: BooleanQuery = new BooleanQuery
+      val bqSourceKeyword: BooleanQuery = new BooleanQuery
       for (k <- keywordSplit) {
         val term: Term = new Term("pName", k)
-        val brandTerm: Term = new Term("pBrandName", k)
         val pq: PrefixQuery = new PrefixQuery(term)
-        val tq: TermQuery = new TermQuery(brandTerm)
-        bqKeyword.add(pq, BooleanClause.Occur.MUST)
-        bqBrand.add(tq, BooleanClause.Occur.MUST)
+        bqKeyEn.add(pq, BooleanClause.Occur.MUST)
+
+        val typeNameTerm: Term = new Term("pTypeNameEN", k)
+        val qTypeName: TermQuery = new TermQuery(typeNameTerm)
+        bqTypeName.add(qTypeName, BooleanClause.Occur.MUST)
+
+        val brandNameTerm: Term = new Term("pBrandName", k)
+        val qBrandName: TermQuery = new TermQuery(brandNameTerm)
+        bqBrandName.add(qBrandName, BooleanClause.Occur.MUST)
+
+        val segmentWordEnTerm: Term = new Term("segmentWordEn", k)
+        val qSegmentWordEn: TermQuery = new TermQuery(segmentWordEnTerm)
+        bqSegmentWord.add(qSegmentWordEn, BooleanClause.Occur.MUST)
+
+        val sourceKeywordTerm: Term = new Term("sourceKeyword", k)
+        val qSourceKeyword: TermQuery = new TermQuery(sourceKeywordTerm)
+        bqSourceKeyword.add(qSourceKeyword, BooleanClause.Occur.MUST)
       }
+      bqSearch.add(bqKeyEn, BooleanClause.Occur.SHOULD)
+      bqSearch.add(bqTypeName, BooleanClause.Occur.SHOULD)
+      bqSearch.add(bqBrandName, BooleanClause.Occur.SHOULD)
+      bqSearch.add(bqSegmentWord, BooleanClause.Occur.SHOULD)
+      bqSearch.add(bqSourceKeyword, BooleanClause.Occur.SHOULD)
     }
     
-    if(indexCode != ""){
-      val term: Term = new Term("indexCode",indexCode)
+    if (indexCode != "") {
+      val term: Term = new Term("indexCode", indexCode)
       val q: TermQuery = new TermQuery(term)
-      bq.add(q,BooleanClause.Occur.MUST)
+      bq.add(q, BooleanClause.Occur.MUST)
     }
 
-    if(brandIdStr != ""){
+    if (brandIdStr != "") {
       val q = NumericRangeQuery.newIntRange("pBrandId", Integer.valueOf(brandIdStr), Integer.valueOf(brandIdStr), true, true)
       bq.add(q, BooleanClause.Occur.MUST)
-      
+
     }
 
     if (isTaobaoStr != "") {
@@ -586,10 +633,10 @@ object Application extends Controller {
       bq.add(q, BooleanClause.Occur.MUST)
     }
 
-    bqSearch.add(bqKeyword, BooleanClause.Occur.SHOULD)
-    bqSearch.add(bqBrand, BooleanClause.Occur.SHOULD)
+    /*bqSearch.add(bqKeyword, BooleanClause.Occur.SHOULD)
+    bqSearch.add(bqBrand, BooleanClause.Occur.SHOULD)*/
 
-    bq.add(bqSearch,BooleanClause.Occur.MUST)
+    bq.add(bqSearch, BooleanClause.Occur.MUST)
     val searcher: IndexSearcher = SearcherManager.searcher
     val start = (page - 1) * size + 1;
     val sot: Sort = sorts(sort);
