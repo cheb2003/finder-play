@@ -195,8 +195,9 @@ object Application extends Controller {
         bqKeyword.add(bqBrandName, BooleanClause.Occur.SHOULD)
         bqKeyword.add(bqSegmentWord, BooleanClause.Occur.SHOULD)
         bqKeyword.add(bqSourceKeyword, BooleanClause.Occur.SHOULD)
+        bq.add(bqKeyword, BooleanClause.Occur.MUST)
       }
-      bq.add(bqKeyword, BooleanClause.Occur.MUST)
+      
       //search indexCode
       if (indexCode != "") {
         val indexCodeTerm: Term = new Term("indexCode", indexCode);
@@ -611,7 +612,7 @@ object Application extends Controller {
       bqSearch.add(bqSegmentWord, BooleanClause.Occur.SHOULD)
       bqSearch.add(bqSourceKeyword, BooleanClause.Occur.SHOULD)
     }
-    
+    bq.add(bqSearch, BooleanClause.Occur.MUST)
     if (indexCode != "") {
       val term: Term = new Term("indexCode", indexCode)
       val q: TermQuery = new TermQuery(term)
@@ -640,7 +641,7 @@ object Application extends Controller {
     /*bqSearch.add(bqKeyword, BooleanClause.Occur.SHOULD)
     bqSearch.add(bqBrand, BooleanClause.Occur.SHOULD)*/
 
-    bq.add(bqSearch, BooleanClause.Occur.MUST)
+    
     val searcher: IndexSearcher = SearcherManager.searcher
     val start = (page - 1) * size + 1;
     val sot: Sort = sorts(sort);
