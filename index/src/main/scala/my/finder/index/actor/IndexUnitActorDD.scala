@@ -21,7 +21,8 @@ class Product(val id:String,val name:String,var sku:String,var indexCode:String,
                    var isTaobao:String,var brandId:String,var brandName:String,var attribute:String,
                    var isEvent:String,var searchKeyword:String, var areaScore:String,var isDailyDeal:String,
                    var isLifeStyle:String,var wwwScore:Float,
-                   var shopIds:String,var shopCategorys:String,var fitType:String)
+                   var shopIds:String,var shopCategorys:String,var fitType:String,
+                  var indexCodeOfTypeShow:String)
 
 class IndexUnitActorDD extends Actor with ActorLogging {
   val workDir = Config.get("workDir")
@@ -58,6 +59,9 @@ class IndexUnitActorDD extends Actor with ActorLogging {
   private val shopIdsField =  new TextField("shopIds", "", Field.Store.YES)
   private val shopCategorysField =  new TextField("shopCategorys", "", Field.Store.YES)
   private val fitTypeField = new TextField("fitType","",Field.Store.YES)
+  private val indexCodeTypeShowField =  new TextField("indexCodeTypeShow", "", Field.Store.YES)
+  private val showPositionTypeShowField =  new StringField("showPositionTypeShow", "", Field.Store.YES)
+
 
   private var doc: Document = null
 
@@ -71,7 +75,7 @@ class IndexUnitActorDD extends Actor with ActorLogging {
       var stmt: Statement = null
       var rs: ResultSet = null
 
-      val buffer1:StringBuffer = new StringBuffer()
+      //val buffer1:StringBuffer = new StringBuffer()
       val buffer2:StringBuffer = new StringBuffer()
       val buffer3:StringBuffer = new StringBuffer()
 
@@ -80,53 +84,70 @@ class IndexUnitActorDD extends Actor with ActorLogging {
       try {
 
         val time1 = System.currentTimeMillis()
+        var bSql:Long = 0
+        var eSql:Long = 0
         val writer = IndexWriteManager.getIndexWriter(msg.name, msg.date)
         var successCount: Int = 0
         var failCount: Int = 0
         var skipCount: Int = 0
-
+        val ids = msg.ids.mkString(",")
+        /*val minId = msg.ids(0)
+        val maxId = msg.ids(msg.ids.length - 1)*/
 
         conn = DBService.dataSource.getConnection()
         stmt = conn.createStatement()
 
         //读取ec_product
-        var sql = "select ProductID_int,productaliasname_nvarchar,ProductKeyID_nvarchar,IndexCode_nvarchar,IsOneSale_tinyint,IsAliExpress_tinyint, "+
-          "BusinessName_nvarchar,CreateTime_datetime,ProductTypeID_int,IsQualityProduct_tinyint,VentureStatus_tinyint,VentureLevelNew_tinyint, "+
-          "IsTaoBao_tinyint,ProductBrandID_int,productbrand_nvarchar, " +
-          "BusinessBrand_nvarchar,ProductPrice_money,QDWProductStatus_int " +
-          "from ec_product with(nolock) where VentureStatus_tinyint <> 3 and ProductPrice_money > 0 "+
-          "and isnull(VentureLevelNew_tinyint,0) = 0 and QDWProductStatus_int = 0 and VentureStatus_tinyint <> 4 "+
-          "and ProductID_int between "+msg.minId+" and "+msg.maxId
-
+        var sql = s"""select ProductID_int,productaliasname_nvarchar,ProductKeyID_nvarchar,
+                IndexCode_nvarchar,IsOneSale_tinyint,IsAliExpress_tinyint,BusinessName_nvarchar,CreateTime_datetime,
+                ProductTypeID_int,IsQualityProduct_tinyint,VentureStatus_tinyint,VentureLevelNew_tinyint,
+                IsTaoBao_tinyint,ProductBrandID_int,productbrand_nvarchar,BusinessBrand_nvarchar,
+                ProductPrice_money,QDWProductStatus_int from ec_product with(nolock) where ProductID_int in ($ids)"""
+        stmt.setFetchSize(msg.batchSize)
+        bSql = System.currentTimeMillis()
         rs = stmt.executeQuery(sql)
+
         var product:Product  = null
         while (rs.next()) {
           product = new Product(
             rs.getString("ProductID_int"),rs.getString("productaliasname_nvarchar"),rs.getString("ProductKeyID_nvarchar"),rs.getString("IndexCode_nvarchar"),rs.getString("IsOneSale_tinyint"),rs.getString("IsAliExpress_tinyint"),
             rs.getString("BusinessName_nvarchar"),rs.getString("CreateTime_datetime"),rs.getString("ProductTypeID_int"),rs.getString("IsQualityProduct_tinyint"),rs.getString("VentureStatus_tinyint"),rs.getString("VentureLevelNew_tinyint"),
             rs.getString("IsTaoBao_tinyint"),rs.getString("ProductBrandID_int"),rs.getString("productbrand_nvarchar"),"","","",
-            "","","",Float.NaN,"","",""
+            "","","",Float.NaN,"","","",""
           )
           lst += product
-          buffer1.append(rs.getInt("ProductID_int")).append(',')
+          //buffer1.append(rs.getInt("ProductID_int")).append(',')
           buffer2.append("'").append(rs.getString("ProductKeyID_nvarchar")).append("'").append(',')
           buffer3.append("'").append(rs.getString("ProductTypeID_int")).append("'").append(',')
         }
-        if(lst.length > 0){
-
+        eSql = System.currentTimeMillis()
+        if(eSql - bSql > 1000){
+          log.info("sql:{};time:{}",sql,eSql - bSql)
         }
-        val ids = buffer1.substring(0,buffer1.length() - 1)
+
         val skus = buffer2.substring(0,buffer2.length() - 1)
         val stypeid = buffer3.substring(0,buffer3.length() - 1)
 
         //读取EC_ProductExtendItem
-        sql = String.format("select productid_int,itemvalueeng_nvarchar,itemnameeng_nvarchar from EC_ProductExtendItem with(nolock) where ProductID_int in(%s) and WebSiteID_smallint = 61 and AttributeInputType_int = 1 ",ids)
-
+        //sql = String.format("select productid_int,itemvalueeng_nvarchar,itemnameeng_nvarchar from EC_ProductExtendItem with(nolock) where ProductID_int in(%s) and WebSiteID_smallint = 61 and AttributeInputType_int = 1 ",ids)
+        sql = s"""select ProductId_int as id,AttributeValue_nvarchar as attr from EC_ExtendsForProductId with(nolock)
+                where ProductId_int in ($ids)"""
+        bSql = System.currentTimeMillis()
         rs = stmt.executeQuery(sql)
 
         //属性
+        while(rs.next()){
+          breakable {
+            for (p <- lst) {
+              if(p.id == rs.getString("id")){
+                p.attribute = rs.getString("attr")
+                break
+              }
+            }
+          }
+        }
         val map = new HashMap[String,String]()
-        while (rs.next()) {
+        /*while (rs.next()) {
           var s = map.getOrElse(rs.getString("productid_int"),"")
           val v = rs.getString("itemvalueeng_nvarchar")
           val vv = v.split(",")
@@ -143,12 +164,17 @@ class IndexUnitActorDD extends Actor with ActorLogging {
         for (i <- ite;p <- lst;if i._1 == p.id) {
           p.attribute = i._2
         }
-        map.clear()
-
+        map.clear()*/
+        eSql = System.currentTimeMillis()
+        if(eSql - bSql > 1000){
+          log.info("sql:{};time:{}",sql,eSql - bSql)
+        }
         //读取EC_SearchKeywordConfig
         sql = String.format("select ProductTypeID_int,SearchKeyword_nvarchar from EC_SearchKeywordConfig with(nolock) where ProductTypeID_int in(%s)",stypeid)
 
+        bSql = System.currentTimeMillis()
         rs = stmt.executeQuery(sql)
+
 
         while (rs.next()) {
           var s = map.getOrElse(rs.getString("ProductTypeID_int"),"")
@@ -169,11 +195,17 @@ class IndexUnitActorDD extends Actor with ActorLogging {
           }
         }
         map.clear()
+        eSql = System.currentTimeMillis()
+        if(eSql - bSql > 1000){
+          log.info("sql:{};time:{}",sql,eSql - bSql)
+        }
 
         //读取rs_dd_prod_score_area
         sql = String.format("select ProductKeyID_nvarchar,countryid_int,score_float from rs_dd_prod_score_area with(nolock) where ProductKeyID_nvarchar in(%s) ",skus)
 
+        bSql = System.currentTimeMillis()
         rs = stmt.executeQuery(sql)
+
         val map2 = new HashMap[String,String]()
         while (rs.next()) {
           val area = rs.getString("countryid_int")
@@ -195,9 +227,15 @@ class IndexUnitActorDD extends Actor with ActorLogging {
             }
           }
         }
+        eSql = System.currentTimeMillis()
+        if(eSql - bSql > 1000){
+          log.info("sql:{};time:{}",sql,eSql - bSql)
+        }
         //read www product score
         sql = String.format("select ProductKeyID_nvarchar,score_float from RS_DD_PROD_SCORE with(nolock) where ProductKeyID_nvarchar in(%s) ",skus)
+        bSql = System.currentTimeMillis()
         rs = stmt.executeQuery(sql)
+
         
         while(rs.next()){
           breakable {
@@ -209,11 +247,17 @@ class IndexUnitActorDD extends Actor with ActorLogging {
             }
           }
         }
+        eSql = System.currentTimeMillis()
+        if(eSql - bSql > 1000){
+          log.info("sql:{};time:{}",sql,eSql - bSql)
+        }
         //读取EC_eventProduct
         sql = String.format("select ProductKeyID_nvarchar,COUNT(ProductKeyID_nvarchar) as count from EC_eventProduct with(nolock) " +
           "where ProductKeyID_nvarchar in(%s) group by ProductKeyID_nvarchar ",skus)
 
+        bSql = System.currentTimeMillis()
         rs = stmt.executeQuery(sql)
+
         while(rs.next()) {
           if(rs.getInt("count") > 0) {
             for(p <- lst) {
@@ -223,11 +267,17 @@ class IndexUnitActorDD extends Actor with ActorLogging {
             }
           }
         }
-
+        eSql = System.currentTimeMillis()
+        if(eSql - bSql > 1000){
+          log.info("sql:{};time:{}",sql,eSql - bSql)
+        }
         //读取ec_indexproduct
         sql = String.format("select productid_int,starttime_datetime,endtime_datetime from ec_indexproduct with(nolock) where productid_int in(%s) ",ids)
 
+        bSql = System.currentTimeMillis()
         rs = stmt.executeQuery(sql)
+
+
         val now:Date = new Date()
         while(rs.next()) {
           if(rs.getString("starttime_datetime") != null && rs.getString("endtime_datetime") != null && (now.after(rs.getTimestamp("starttime_datetime"))) && (now.before(rs.getTimestamp("endtime_datetime"))) ) {
@@ -238,11 +288,17 @@ class IndexUnitActorDD extends Actor with ActorLogging {
             }
           }
         }
-
+        eSql = System.currentTimeMillis()
+        if(eSql - bSql > 1000){
+          log.info("sql:{};time:{}",sql,eSql - bSql)
+        }
         //读取ec_indexlifeproduct
         sql = String.format("select productid_int,count(productid_int) count from ec_indexlifeproduct with(nolock) where productid_int in(%s) group by productid_int ",ids)
 
+        bSql = System.currentTimeMillis()
         rs = stmt.executeQuery(sql)
+
+
         while(rs.next()) {
           if(rs.getInt("count") > 0) {
             for(p <- lst) {
@@ -252,32 +308,72 @@ class IndexUnitActorDD extends Actor with ActorLogging {
             }
           }
         }
-
+        eSql = System.currentTimeMillis()
+        if(eSql - bSql > 1000){
+          log.info("sql:{};time:{}",sql,eSql - bSql)
+        }
         //读取店铺信息
-        sql = String.format("select ShopID_bigint,ProductKeyID_nvarchar from SRM_Plat_ShopAndProductRelation where ProductKeyID_nvarchar in (%s)",skus)
+        sql = String.format("select ShopID_bigint,ProductKeyID_nvarchar from SRM_Plat_ShopAndProductRelation with(nolock) where ProductKeyID_nvarchar in (%s)",skus)
+        bSql = System.currentTimeMillis()
         rs = stmt.executeQuery(sql)
+
         while(rs.next){
           for(p <- lst if(p.sku == rs.getString("ProductKeyID_nvarchar"))) {
             p.shopIds += p.shopIds + " " + rs.getString("ShopID_bigint")
           }
         }
+        eSql = System.currentTimeMillis()
+        if(eSql - bSql > 1000){
+          log.info("sql:{};time:{}",sql,eSql - bSql)
+        }
+
         //读取店铺品类信息
-        sql = String.format("select CategoryID_int,ProductKeyID_nvarchar from SRM_Plat_ShopCategoryProductRelations where ProductKeyID_nvarchar in (%s)",skus)
+        sql = String.format("select CategoryID_int,ProductKeyID_nvarchar from SRM_Plat_ShopCategoryProductRelations with(nolock) where ProductKeyID_nvarchar in (%s)",skus)
+        bSql = System.currentTimeMillis()
         rs = stmt.executeQuery(sql)
+
         while(rs.next){
           for(p <- lst if(p.sku == rs.getString("ProductKeyID_nvarchar"))) {
             p.shopCategorys += p.shopCategorys + " " + rs.getString("CategoryID_int")
           }
         }
+        eSql = System.currentTimeMillis()
+        if(eSql - bSql > 1000){
+          log.info("sql:{};time:{}",sql,eSql - bSql)
+        }
         //read fitproducttype
-        sql = String.format("select productid_int,IndexCode_nvarchar from ec_fitproducttype where productid_int in (%s)",ids)
+        sql = String.format("select productid_int,IndexCode_nvarchar from ec_fitproducttype with(nolock) where productid_int in (%s)",ids)
+        bSql = System.currentTimeMillis()
         rs = stmt.executeQuery(sql)
+
         while(rs.next){
           for(p <- lst if(p.id == rs.getString("productid_int"))) {
             p.fitType += p.fitType + " " + rs.getString("IndexCode_nvarchar")
           }
         }
+        eSql = System.currentTimeMillis()
+        if(eSql - bSql > 1000){
+          log.info("sql:{};time:{}",sql,eSql - bSql)
+        }
 
+        //typeshow
+        sql = s"""select ProductKeyID_nvarchar,IndexCode_nvarchar from EC_TypeShow with(nolock) where ProductKeyID_nvarchar in ($skus)"""
+        bSql = System.currentTimeMillis()
+        rs = stmt.executeQuery(sql)
+
+        while(rs.next){
+          for(p <- lst if(p.sku == rs.getString("ProductKeyID_nvarchar"))) {
+            p.indexCodeOfTypeShow += p.indexCodeOfTypeShow + " " + rs.getString("IndexCode_nvarchar")
+          }
+        }
+        eSql = System.currentTimeMillis()
+        if(eSql - bSql > 1000){
+          log.info("sql:{};time:{}",sql,eSql - bSql)
+        }
+
+
+
+        bSql = System.currentTimeMillis()
         for (pro <- lst) {
           try {
             if(writeDocNew(pro,writer)) successCount += 1 else skipCount += 1
@@ -285,6 +381,9 @@ class IndexUnitActorDD extends Actor with ActorLogging {
             case e: Exception => failCount + 1
           }
         }
+        eSql = System.currentTimeMillis()
+        log.info("index data time {}",eSql - bSql)
+
 
         val consoleRoot = context.actorFor(Util.getConsoleRootAkkaURLFromMyConfig)
         consoleRoot ! CompleteSubTask(msg.name, msg.date, msg.seq, successCount, failCount, skipCount)
@@ -295,7 +394,7 @@ class IndexUnitActorDD extends Actor with ActorLogging {
         arr(2) = failCount
         arr(3) = skipCount
         arr(4) = lst.size
-        log.info("index time {} success {} fail {} skip {} total {}", arr)
+        log.info("index total time {} success {} fail {} skip {} total {}", arr)
       } catch {
         case e: Exception => log.error("{}", e); e.printStackTrace()
       } finally {
@@ -335,10 +434,17 @@ class IndexUnitActorDD extends Actor with ActorLogging {
       shopCategorysField.setStringValue("")
       fitTypeField.setStringValue("")
       skuOrderField.setStringValue("")
+      indexCodeTypeShowField.setStringValue("")
+
 
 
       //设置本次结果集的值
       doc = new Document()
+
+      if (StringUtils.isNotBlank(p.indexCodeOfTypeShow)){
+        indexCodeTypeShowField.setStringValue(p.indexCodeOfTypeShow)
+        doc.add(indexCodeTypeShowField)
+      }
 
       if (StringUtils.isNotBlank(p.fitType)){
         fitTypeField.setStringValue(p.fitType)
