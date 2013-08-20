@@ -6,8 +6,6 @@ import my.finder.index.actor.{IndexRootActor}
 import my.finder.common.util._
 import my.finder.index.service.DBService
 
-import scala.collection.mutable.Queue
-import scala.xml._
 /**
  *
  */
