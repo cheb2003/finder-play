@@ -73,6 +73,63 @@ object DDSearchService {
     
   }
 
+  /**
+   * NewArrival搜索接口
+   * 必须传入shopid参数
+   * @param queryParams
+   */
+  def newarrival(queryParams: Map[String, String]):PageResult = {
+    val sort = Util.getParamString(queryParams, "sort", "")
+    val size = Util.getSize(queryParams, 20)
+    val page = Util.getPage(queryParams, 1)
+    //val country = Util.getParamString(queryParams, "country", "")
+    val indexCode = Util.getParamString(queryParams, "indexcode", "")
+    val shopId = Util.getParamString(queryParams, "shopid", "")
+    val keyword = Util.getParamString(queryParams, "keyword", "")
+    def searchNewArrival:IdsPageResult = {
+      val bq = new BooleanQuery
+
+      val tShopId:Term = new Term("shopIds",shopId)
+      val tqShopId = new TermQuery(tShopId)
+      bq.add(tqShopId,Occur.MUST)
+
+      val bqKeyword = getKeyWord(keyword)
+      if (bqKeyword != null) {
+        bq.add(bqKeyword,Occur.MUST)
+      }
+
+      if(StringUtils.isNotBlank(indexCode)){
+        val tIndexCode = new Term("shopCategorys",indexCode)
+        val tqIndexCode = new TermQuery(tIndexCode)
+        bq.add(tqIndexCode,Occur.MUST)
+      }
+
+      val sot: Sort = sorts(sort);
+      val searcher: IndexSearcher = service.SearcherManager.ddSearcher
+      val start = (page - 1) * size + 1;
+      val tsdc: TopFieldCollector = TopFieldCollector.create(sot, start + size, false, false, false, false);
+
+      searcher.search(bq, tsdc);
+
+
+      val topDocs: TopDocs = tsdc.topDocs(start - 1, size);
+      val ids = readIds(searcher,topDocs.scoreDocs)
+      val total = tsdc.getTotalHits()
+
+      new IdsPageResult(ids,page,size,total,bq.toString)
+    }
+
+
+
+    if(StringUtils.isNotBlank(shopId)){
+      searchNewArrival
+    } else {
+      new ErrorResult("require shopid")
+    }
+
+
+  }
+
   private def readIds(searcher:IndexSearcher,scoreDocs:Array[ScoreDoc]):ListBuffer[Int] = {
     val ids = ListBuffer[Int]()
     val set = new util.HashSet[String]()
