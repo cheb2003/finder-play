@@ -12,8 +12,12 @@ class IndexRootActor extends Actor{
   val units = context.actorOf(Props[IndexUnitActor].withDispatcher("my-pinned-dispatcher").withRouter(RoundRobinRouter(nrOfInstances = 32)),"indexUint")
   val ddunits = context.actorOf(Props[IndexUnitActorDD].withDispatcher("my-pinned-dispatcher").withRouter(RoundRobinRouter(nrOfInstances = 32)),"indexUintDD")
   val attrUnits = context.actorOf(Props[IndexUnitAttributesActor].withDispatcher("my-pinned-dispatcher").withRouter(RoundRobinRouter(nrOfInstances = 32)),"indexAttrUnit")
+  val liftStyleUnits = context.actorOf(Props[IndexUnitLiftStyleActor].withDispatcher("my-pinned-dispatcher").withRouter(RoundRobinRouter(nrOfInstances = 32)),"indexLiftStyleUnit")
   val indexWriterManager = context.actorOf(Props[IndexWriteManager],"indexWriterManager")
   def receive = {
+    case msg:IndexUnitLiftStyleTaskMessage => {
+      liftStyleUnits ! msg
+    }
     case msg:IndexAttributeTaskMessage => {
       attrUnits ! msg
     }

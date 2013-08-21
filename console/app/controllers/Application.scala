@@ -2,7 +2,7 @@ package controllers
 import java.io.File
 import java.util._;
 
-import my.finder.common.message.{ OldIndexIncremetionalTaskMessage, IndexIncremetionalTaskMessage, CommandParseMessage,PartitionIndexAttributesTaskMessage}
+import my.finder.common.message._
 import my.finder.console.actor.MessageFacade.rootActor
 import my.finder.common.util._
 
@@ -32,9 +32,12 @@ import java.util.regex.Pattern
 import org.apache.lucene.analysis.Analyzer
 import org.apache.lucene.analysis.en.EnglishAnalyzer
 
-import org.slf4j.LoggerFactory
-//import my.finder.console.service.Resolution
 
+import org.slf4j.LoggerFactory
+import my.finder.common.message.PartitionIndexAttributesTaskMessage
+import my.finder.common.message.OldIndexIncremetionalTaskMessage
+import my.finder.common.message.IndexIncremetionalTaskMessage
+import my.finder.common.message.CommandParseMessage
 
 object Application extends Controller {
   val logger = LoggerFactory.getLogger("my")
@@ -79,6 +82,17 @@ object Application extends Controller {
     val key = Util.getKey(Constants.DD_PRODUCT_ATTRIBUTE,new Date())
     rootActor ! PartitionIndexAttributesTaskMessage(key,i)
     Ok("hello attr")
+  }
+
+  def indexDDLiftStyle() = Action { implicit request =>
+    val form = Form(
+      "lift" -> text
+    )
+    val queryParams = form.bindFromRequest.data
+    val lift = Util.getParamString(queryParams, "lift", "")
+    val key = Util.getKey(Constants.DD_PRODUCT_LIFTSTYLE,new Date())
+    rootActor ! PartitionIndexLiftStyleTaskMessage(key,lift)
+    Ok("hello liftStyle")
   }
 
   def inc = Action { implicit request =>

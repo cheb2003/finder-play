@@ -177,7 +177,7 @@ object Dino extends Controller {
   }
 
   private def searchProduct(queryParams:Map[String,String],format:String) = {
-
+                 9
     //设置参数
     val page = Util.getPage(queryParams, 1)
     val size = Util.getSize(queryParams, 20)
@@ -361,7 +361,7 @@ object Dino extends Controller {
 
   //查产品属性 ###a###b###,###c###d###
   def getAttributeQuery(attribute: String):Query = {
-    val bqAttr = if(StringUtils.isNotBlank(attribute)) {
+    val q:Query = if(StringUtils.isNotBlank(attribute)) {
       val bqAttr: BooleanQuery = new BooleanQuery()
       val attributeSplit = attribute.split(",")
       for(att <- attributeSplit) {
@@ -369,13 +369,14 @@ object Dino extends Controller {
           val tqAttr: TermQuery = new TermQuery(tAttr)
           bqAttr.add(tqAttr, BooleanClause.Occur.MUST)
       }
+      bqAttr
     } else {
       null
     }
-    bqAttr
+    q
   }
 
-  def getExcludeIdQuery(excludeId: String):BooleanQuery = {
+  def getExcludeIdQuery(excludeId: String):Query = {
     val q = if (StringUtils.isNotBlank(excludeId)) {
       val bqExcludeId: BooleanQuery = new BooleanQuery()
       val excludeIdSplit = excludeId.split(",")
@@ -384,21 +385,24 @@ object Dino extends Controller {
         val tqExcludeId: TermQuery = new TermQuery(tExcludeId)
         bqExcludeId.add(tqExcludeId, Occur.MUST)
       }
+      bqExcludeId
     } else {
       null
     }
     q
   }
 
-  def getExcludeAreaQuery(ecProduct001: String):BooleanQuery = {
-    val bqEcProduct001: BooleanQuery = new BooleanQuery()
-    if(ecProduct001 != null) {
-      val ecProduct001Term: Term = new Term("ecProduct001",ecProduct001)
-      val ecProduct001Pq: PrefixQuery = new PrefixQuery(ecProduct001Term)
-      bqEcProduct001.add(ecProduct001Pq, BooleanClause.Occur.MUST)
-      println(bqEcProduct001)
+  def getExcludeAreaQuery(excludeIds: String):BooleanQuery = {
+    val q = if(StringUtils.isNotBlank(excludeIds)) {
+      val bqExcludeIds: BooleanQuery = new BooleanQuery()
+      val tExcludeId: Term = new Term("id",excludeIds)
+      val tqExcludeId: TermQuery = new TermQuery(tExcludeId)
+      bqExcludeIds.add(tqExcludeId, BooleanClause.Occur.MUST)
+      bqExcludeIds  
+    } else {
+      null
     }
-    bqEcProduct001
+    q
   }
   
 

@@ -39,11 +39,11 @@ CREATE TABLE EC_ProductExtendItem(
 )
 insert into EC_ProductExtendItem values(2,1003,'Sound Card','Type',61,1)
 
--- CREATE TABLE EC_ExtendsForProductId(
--- 	ProductId_int int primary key,
--- 	AttributeValue_nvarchar nvarchar(max) NULL
--- )
--- insert into EC_ExtendsForProductId values(1003,'###Type###Audi Sound Card### hasAttributes')
+CREATE TABLE EC_ExtendsForProductId(
+ 	ProductId_int int primary key,
+ 	AttributeValue_nvarchar nvarchar(max) NULL
+)
+insert into EC_ExtendsForProductId values(1003,'###Type###Audi Sound Card### hasAttributes')
  
 
 CREATE TABLE EC_SearchKeywordConfig(
@@ -109,7 +109,7 @@ insert into ec_indexlifeproduct values(1004)
 
 create table ec_product001(
 	productid_int int NOT NULL,
-	ProductCountryInfoForCreator varchar(100)
+	ProductCountryInfoForCreator_nvarchar varchar(100)
 )
 
 insert into ec_product001 values(1003,'5_0,6_0');
@@ -143,8 +143,31 @@ insert into SRM_Plat_ShopCategoryProductRelations values(1,'s3');
 
 CREATE TABLE ec_fitproducttype(
 	ProductID_int int NOT NULL,
-	IndexCode_nvarchar nvarchar(50) not NULL
+	IndexCode_nvarchar varchar(50) not NULL
 );
 
 insert into ec_fitproducttype values(1003,'00010001');
 insert into ec_fitproducttype values(1004,'00010002');
+
+CREATE TABLE QDW_CategoryAttributeDictionary(
+	KeyID_int int NULL,
+	AttributeName_nvarchar varchar(200) NULL
+)
+insert into QDW_CategoryAttributeDictionary values(1,'Type')
+
+CREATE TABLE QDW_AttributeAndValueDictionary(
+	KeyID_int int null,
+	AttributeID_bigint bigint NULL,
+	AttributeValue_nvarchar varchar(4000) NULL,
+)
+
+insert into QDW_AttributeAndValueDictionary values(1,1,'Sound Card')
+
+
+create TABLE EC_TypeShow(
+	ProductKeyID_nvarchar varchar(20),
+	IndexCode_nvarchar varchar(100),
+	ShowPosition_int int
+)
+
+insert into EC_TypeShow('s3','0001',12)

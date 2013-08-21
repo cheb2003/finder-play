@@ -28,7 +28,7 @@ object KPIService {
     val begin = sdf.format(day2.getTime()) + " 00:00:00"
     val end = sdf.format(day1.getTime()) + " 23:59:59"
     val sql = "select k.TraceOrderNO_varchar from sea_keywordsTrace k where " +
-      "k.TraceOrderNO_varchar is not null and k.TraceOrderNO_varchar <> '' and k.projectname_varchar like '%dinodirect%'" +
+      "k.TraceOrderNO_varchar is not null and k.TraceOrderNO_varchar <> '' and k.ProjectName_varchar like '%dinodirect%'" +
       "and k.InsertTime_timestamp between '" + begin + "' and '" + end + "'"
     logger.info(sql)
     val conn: Connection = DBMysql.ds.getConnection()
@@ -105,8 +105,8 @@ object KPIService {
     val sdf: SimpleDateFormat = new SimpleDateFormat("yyyy-MM-dd")
     val from: String = sdf.format(day.getTime()) + " 00:00:00"
     val to: String = sdf.format(day.getTime()) + " 23:59:59"
-    val sql = "select k.PCCookieID_varchar from sea_keywordsTrace k where" +
-      " k.InsertTime_timestamp between '" + from + "' and '" + to + "' and k.TraceStep_varchar = 'search' and k.projectname_varchar in('ar.dinodirect.com','au.dinodirect.com','br.dinodirect.com','ca.dinodirect.com','gb.dinodirect.com','il.dinodirect.com','nl.dinodirect.com','nz.dinodirect.com','ru.dinodirect.com','us.dinodirect.com','www.dinodirect.com','www.dinodirect.de','www.dinodirect.es','www.dinodirect.fr','www.dinodirect.nl','www.dinodirect.pt')"
+    val sql = "select k.PCCookieID_varchar from sea_keywordsTrace k where k.InsertTime_timestamp " +
+      "between '" + from + "' and '" + to + "' and k.TraceStep_varchar = 'search' and k.ProjectName_varchar like '%dinodirect%'"
     val conn: Connection = DBMysql.ds.getConnection()
     val stem: Statement = conn.createStatement()
     val rs: ResultSet = stem.executeQuery(sql)
@@ -116,15 +116,65 @@ object KPIService {
       if ( pcId != "" && pcId != null ){
             pcIdList += pcId
       }
-      /*val TraceStep:String = rs.getString("TraceStep_varchar")
-      if( "search".equals(TraceStep) ){
-         val pcId: String = rs.getString("PCCookieID_varchar")
-        if ( pcId != "" && pcId != null ){
-            pcIdList += pcId
-        }
-      }*/
     }
     DBMysql.colseConn(conn, stem, rs)
     pcIdList
+  }
+
+  def searchNoResult(calend: Calendar) = {
+    val day: Calendar = lang3.ObjectUtils.clone(calend)
+    val sdf: SimpleDateFormat = new SimpleDateFormat("yyyy-MM-dd")
+    val from: String = sdf.format(day.getTime()) + " 00:00:00"
+    val to: String = sdf.format(day.getTime()) + " 23:59:59"
+    val sdf2:SimpleDateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss")
+    val time: Date = sdf2.parse(sdf.format(day.getTime()) + " 00:30:00")
+    val sql = "select count(k.Keyword_varchar) as count from sea_keywordsTrace k where k.InsertTime_timestamp between '" +
+      from + "' and '" + to + "' and k.TraceStep_varchar = 'search' and k.ProjectName_varchar like '%dinodirect%'"
+
+    val sql2 = "select count(k.Keyword_varchar) as count from sea_keywordsTrace k where k.SearchCount_int = 0 and k.InsertTime_timestamp between '" +
+      from + "' and '" + to + "' and k.TraceStep_varchar = 'search' and k.ProjectName_varchar like '%dinodirect%'"
+    val jsMysql:JdbcTemplate = new JdbcTemplate(DBMysql.ds)
+    val rs: SqlRowSet = jsMysql.queryForRowSet(sql)
+    val rs2: SqlRowSet = jsMysql.queryForRowSet(sql2)
+    var count:Int = 0
+    while( rs.next()){
+      count = rs.getInt("count")
+    }
+    var noCount:Int = 0
+    while( rs2.next() ){
+      noCount = rs2.getInt("count")
+    }
+    var value:Float = 0.0F
+    if ( count != 0 ){
+      val reult:Float = noCount.toFloat/ count.toFloat
+      val str:String = String.valueOf(reult)
+      value = str.substring( 0, (str.indexOf(".") + 2)).toFloat
+    }
+    val client = MyMongoManager()
+    val col:MongoCollection = client("ddsearch")("noResultPerDay")
+    val obj = MongoDBObject("time" -> time, "value" -> value)
+    col.save(obj)
+  }
+
+  def searchNoResultsPerDay(calend: Calendar): ListBuffer[MongoDBObject] = {
+    val day: Calendar = lang3.ObjectUtils.clone(calend)
+    val sdf: SimpleDateFormat = new SimpleDateFormat("yyyy-MM-dd")
+    val from: String = sdf.format(day.getTime()) + " 00:00:00"
+    val to: String = sdf.format(day.getTime()) + " 23:59:59"
+    val sql = "select k.Keyword_varchar,k.ProjectName_varchar,k.InsertTime_timestamp from sea_keywordsTrace k " +
+      "where k.SearchCount_int = 0 and k.InsertTime_timestamp between '" + from + "' and '" + to +
+      "' and k.TraceStep_varchar = 'search' and k.ProjectName_varchar like '%dinodirect%'"
+
+    val jsMysql:JdbcTemplate = new JdbcTemplate(DBMysql.ds)
+    val rs: SqlRowSet = jsMysql.queryForRowSet(sql)
+    var list: ListBuffer[MongoDBObject] = new ListBuffer[MongoDBObject]
+    while (rs.next()) {
+      val keyWord:String = rs.getString("Keyword_varchar")
+      val pName:String = rs.getString("ProjectName_varchar")
+      val time:Date = rs.getDate("InsertTime_timestamp")
+      val obj = MongoDBObject("keyword" -> keyWord, "pName" -> pName, "time" -> time)
+      list += obj
+    }
+    list
   }
 }
