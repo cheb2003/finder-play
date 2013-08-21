@@ -4,7 +4,7 @@ import play.api.mvc.{Action, Controller}
 import my.finder.console.service.{SummarizingService, MyMongoManager}
 
 import com.mongodb.casbah.Imports._
-import scala.collection.mutable.Queue
+import scala.collection.mutable.{ListBuffer, Queue}
 
 import java.util.{Date, Calendar}
 
@@ -135,4 +135,55 @@ object KeyWord extends Controller {
     Ok("success")
   }
 
+  def searchKeyWord() = Action { implicit request =>
+    val form = Form(
+      tuple(
+        "year" -> text,
+        "month" -> text,
+        "day" -> text )
+    )
+    val queryParams = form.bindFromRequest.data
+    val year = Util.getParamString(queryParams, "year", "")
+    val month = Util.getParamString(queryParams, "month", "")
+    val day = Util.getParamString(queryParams, "day", "")
+    val calend:Calendar = Calendar.getInstance()
+    calend.set( year.toInt,month.toInt - 1,day.toInt)
+    val resultList:ListBuffer[MongoDBObject] =  SummarizingService.searchKeyWord(calend)
+    val list = resultList.toList
+    val nodes = new Queue[Node]()
+    for (i <- list) {
+      var result = <item/>
+      result = result % Attribute(None, "keyword", Text(i.as[String]("keyword")), Null)
+      result = result % Attribute(None, "value", Text(i.as[Int]("value").toString), Null)
+      nodes += result
+    }
+    Ok(<root>{nodes}</root>)
+  }
+
+  def expatiationKeyWord() = Action { implicit request =>
+    val form = Form(
+      tuple(
+        "date" -> text,
+        "keyword" -> text)
+    )
+    val queryParams = form.bindFromRequest.data
+    val time = Util.getParamString(queryParams, "date", "")
+    val times:Array[String] = time.split("-")
+    val calend:Calendar = Calendar.getInstance()
+    calend.set(times(0).toInt,times(1).toInt - 1,times(2).toInt)
+    val keyword = Util.getParamString(queryParams, "keyword", "")
+    val resultList:ListBuffer[MongoDBObject] =  SummarizingService.expatiationKeyWord(keyword,calend)
+    val list = resultList.toList
+    val nodes = new Queue[Node]()
+    val sdf: SimpleDateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss")
+    for (i <- list) {
+      var result = <item/>
+      result = result % Attribute(None, "keyword", Text(i.as[String]("keyword")), Null)
+      result = result % Attribute(None, "traceStep", Text(i.as[String]("traceStep")), Null)
+      result = result % Attribute(None, "resultCount", Text(i.as[Int]("resultCount").toString), Null)
+      result = result % Attribute(None, "time", Text(sdf.format(i.as[Date]("time"))), Null)
+      nodes += result
+    }
+    Ok(<root>{nodes}</root>)
+  }
 }
