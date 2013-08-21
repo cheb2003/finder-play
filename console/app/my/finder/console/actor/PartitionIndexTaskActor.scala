@@ -6,27 +6,27 @@ import my.finder.common.message._
 
 import com.mongodb.casbah.Imports._
 import my.finder.common.util.{Constants, Util}
-
+import my.finder.console.service.DBMssql
 import java.util.Date
 
 
 
 import my.finder.console.service.{MongoManager, IndexManage}
 
-import my.finder.common.message.IndexIncremetionalTaskMessage
-import my.finder.common.message.IndexTaskMessage
-import my.finder.common.message.CreateSubTask
-import my.finder.common.message.PartitionIndexTaskMessage
+
 
 import play.api.Play.current
 import scala.util.control.Breaks._
 import my.finder.index.service.DDService
 import java.sql.{ResultSet, Statement, Connection}
+import scala.collection.mutable.ListBuffer
 
 /**
  *
  *
  */
+case class  ProductAttr(val id:Int,value:String,name:String)
+
 class PartitionIndexTaskActor extends Actor with ActorLogging {
   var mongoClient:MongoClient = MongoManager()
   val dinobuydb = current.configuration.getString("dinobuydb").get
@@ -62,15 +62,73 @@ class PartitionIndexTaskActor extends Actor with ActorLogging {
         partitionDDProductForDB()
       }
     }
+    case msg:PartitionIndexAttributesTaskMessage => {
+      partitionAttributes(msg)
+    }
   }
+
+  def partitionAttributes(msg:PartitionIndexAttributesTaskMessage) = {
+    val now = new Date()
+    var conn: Connection = null
+    var stmt: Statement = null
+    var rs: ResultSet = null
+    try { 
+      conn = DBMssql.ds.getConnection
+      val sql = "SELECT min(keyid_int) as min,max(keyid_int) as max from QDW_AttributeAndValueDictionary"
+      stmt = conn.createStatement()
+      rs = stmt.executeQuery(sql)
+      var minId:Int = 0
+      var maxId:Int = 0
+      while(rs.next){
+        minId = rs.getInt("min")
+        maxId = rs.getInt("max")
+        if(current.configuration.getBoolean("debugIndex").get) {
+          minId = maxId - current.configuration.getInt("debugItemCount").get
+        }
+      }
+
+
+      val totalCount: Long = maxId - minId + 1
+      val total: Long = totalCount / ddProductIndexSize + 1
+
+      var i = 0
+      var id = minId
+      var j = 0
+      breakable {
+        while(true){
+          if(id > maxId){
+            break
+          }
+          j += 1
+          sendAttr(Constants.DD_PRODUCT_ATTRIBUTE, now, j, id, id + ddProductIndexSize - 1, total, ddProductIndexSize,msg.ddProductIndex)
+          id += ddProductIndexSize
+        }
+      }
+    } catch {
+      case e: Exception => //logger.error("{}",e)
+    } finally {
+      DBMssql.colseConn(conn,stmt,rs)
+    }
+    
+
+  }
+
+
   private def sendMsg(name: String, runId: Date, seq: Long,minId:Int, maxId:Int, total: Long, batchSize:Int) {
     //println("----------------send message " + seq)
     indexRootActor ! IndexTaskMessage(name, runId, seq, minId, maxId,batchSize)
     indexRootManager ! CreateSubTask(name, runId, total)
   }
 
-  private def sendMsgDD(name: String, runId: Date, seq: Long,startId:Int, endId:Int, total: Long, batchSize:Int) {
-    indexRootActor ! IndexTaskMessageDD(name, runId, seq, startId, endId,total,batchSize)
+  private def sendAttr(name: String, runId: Date, seq: Long,minId:Int, maxId:Int, total: Long, batchSize:Int,ddProductIndex:String) {
+    //println("----------------send message " + seq)
+    indexRootActor ! IndexAttributeTaskMessage(name, runId, seq, minId, maxId,batchSize,ddProductIndex)
+    indexRootManager ! CreateSubTask(name, runId, total)
+  }
+
+
+  private def sendMsgDD(name: String, runId: Date, seq: Long, ids:ListBuffer[Int], total: Long, batchSize:Int) {
+    indexRootActor ! IndexTaskMessageDD(name, runId, seq, ids,total,batchSize)
     indexRootManager ! CreateSubTask(name, runId, total)
   }
   def partitionDDProduct() = {
@@ -116,27 +174,50 @@ class PartitionIndexTaskActor extends Actor with ActorLogging {
     var rs: ResultSet = null
     var maxId:Int = 0
     var minId:Int = 0
+    var totalCount:Int = 0
     try {
       conn = DDService.dataSource.getConnection()
       stmt = conn.createStatement()
-      val sql = "select max(ProductID_int),min(ProductID_int) from EC_Product ec where " +
+      var sql = "select max(ProductID_int),min(ProductID_int),count(productid_int) from EC_Product ec with(nolock) where " +
                 "ec.VentureStatus_tinyint <> 3 and ec.ProductPrice_money > 0 and isnull(ec.VentureLevelNew_tinyint,0) = 0 " +
                 "and ec.QDWProductStatus_int = 0 and ec.VentureStatus_tinyint <> 4 "
       rs = stmt.executeQuery(sql)
       if (rs.next()) {
         maxId = rs.getInt(1)
         minId = rs.getInt(2)
+        totalCount = rs.getInt(3)
       }
-
-      if(current.configuration.getBoolean("debugIndex").get) {
+      sql = s"""select productid_int from EC_Product ec with(nolock) where
+                ec.VentureStatus_tinyint <> 3 and ec.ProductPrice_money > 0
+                and isnull(ec.VentureLevelNew_tinyint,0) = 0
+                and ec.QDWProductStatus_int = 0 and ec.VentureStatus_tinyint <> 4
+                and productid_int between $minId and $maxId"""
+      rs = stmt.executeQuery(sql)
+      /*if(current.configuration.getBoolean("debugIndex").get) {
         minId = maxId - current.configuration.getInt("debugItemCount").get
-      }
+      }*/
 
-      val totalCount: Long = maxId - minId + 1
+
       val total: Long = totalCount / ddProductIndexSize + 1
       log.info("minId=========={}",minId)
       log.info("maxId=========={}",maxId)
-      var id = minId
+      log.info("totalCount====={}",totalCount)
+      val ids:ListBuffer[Int] = new ListBuffer[Int]
+      var j = 0
+      while(rs.next()){
+        ids += rs.getInt(1)
+        if(ids.length == 200){
+          j += 1
+          sendMsgDD(Constants.DD_PRODUCT_FORDB, now, j, ids, total, ddProductIndexSize)
+          ids.clear()
+          log.info("send dd index msg {}",j)
+        }
+      }
+      if (ids.length > 0) {
+        j += 1
+        sendMsgDD(Constants.DD_PRODUCT_FORDB, now, j, ids, total, ddProductIndexSize)
+      }
+      /*var id = minId
       var j = 0
       breakable {
         while(true){
@@ -147,7 +228,7 @@ class PartitionIndexTaskActor extends Actor with ActorLogging {
           sendMsgDD(Constants.DD_PRODUCT_FORDB, now, j, id, id + ddProductIndexSize - 1, total, ddProductIndexSize)
           id += ddProductIndexSize
         }
-      }
+      }*/
     } catch {
       case e: Exception => e.printStackTrace()
     } finally {

@@ -2,12 +2,12 @@ package controllers
 
 import org.apache.lucene.util.BytesRef
 import play.api.mvc._
-import play.api.libs.json.{JsValue, Json}
+import play.api.libs.json.{JsArray, Writes, JsValue, Json}
 import play.api.libs.json.Json._
 import scala.collection.mutable.{HashMap, Queue, ListBuffer}
 import java.lang.Long
 import org.apache.lucene.search._
-import my.finder.search.service.{Helper, SearcherManager}
+import my.finder.search.service.{DDSearchService, Helper, SearcherManager}
 import org.apache.lucene.index.{IndexableField, Term}
 import play.api.data._
 import play.api.data.Forms._
@@ -18,9 +18,123 @@ import java.text.{DateFormat, SimpleDateFormat}
 import scala.xml.{Null, Text, Attribute, Node}
 import org.apache.lucene.search.grouping.{TopGroups, GroupingSearch}
 import scala.Predef._
+import org.apache.commons.lang.StringUtils
+import my.finder.common.model.{ErrorResult, IdsPageResult}
 
 object Dino extends Controller {
+  implicit val ids1PageResultWrites = new Writes[IdsPageResult] {
+    def writes(c: IdsPageResult): JsValue = {
+      Json.obj(
+        "page" -> c.page,
+        "size" -> c.size,
+        "total" -> c.total,
+        "ids" -> c.data,
+        "query" -> c.query
+      )
+    }
+  }
+  def shop = Action { implicit request =>
+    val form = Form(
+      tuple(
+        "sort" -> text,
+        "size" -> number,
+        "page" -> number,
+        "country" -> text,
+        "indexcode" -> text,
+        "shopId" -> text,
+        "keyword" -> text
+      )
+    )
+    val queryParams = form.bindFromRequest.data
+    val result = DDSearchService.shop(queryParams)
+    val json = if (result.isInstanceOf[IdsPageResult]) {
+      toJson(result.asInstanceOf[IdsPageResult])
+    } else if (result.isInstanceOf[ErrorResult]){
+      //toJson(result.asInstanceOf[ErrorResult])
+      Json.parse("{}")
+    } else {
+      Json.parse("{}")
+    }
 
+
+    /*if (result.isInstanceOf[ErrorResult]) {
+      Ok(toJson(result.asInstanceOf[ErrorResult]))
+    }*/
+    Ok(json)
+  }
+  def category = Action { implicit request =>
+    val form = Form(
+      tuple(
+        "sort" -> text,
+        "size" -> number,
+        "page" -> number,
+        "country" -> text,
+        "indexcode" -> text,
+        "attributes" -> text
+      )
+    )
+    val queryParams = form.bindFromRequest.data
+    val sort = Util.getParamString(queryParams, "sort", "")
+    var size = Util.getParamInt(queryParams, "size", 20)
+    var page = Util.getParamInt(queryParams, "page", 1)
+    val country = Util.getParamString(queryParams, "country", "")
+    val indexCode = Util.getParamString(queryParams, "indexcode", "")
+    val attributes = Util.getParamString(queryParams, "attributes", "")
+    if(StringUtils.isBlank(indexCode)){
+      Ok(empty)
+    }
+    
+    if (page < 0) {
+      page = 1
+    }
+
+    if (size < 1 || size > 100) {
+      size = 20;
+    }
+
+    val bqAll = new BooleanQuery
+    val tIndexCode = new Term("indexCode",indexCode)
+    val qIndexCode = new PrefixQuery(tIndexCode)
+    bqAll.add(qIndexCode,BooleanClause.Occur.MUST)
+
+    val attrSplit = attributes.trim.toLowerCase.split(",")
+    /*for(attr <- attrSplit if(attr.trim != "")){
+      val tAttribute = new Term("attribute",attribute)
+      val qAttribute = new TermQuery(tAttribute)
+      bqAll.add(qAttribute,BooleanClause.Occur.MUST)
+    }
+
+    val searcher: IndexSearcher = SearcherManager.ddSearcher
+
+    val start = (page - 1) * size + 1;
+    //分页
+    val tsdc: TopFieldCollector = TopFieldCollector.create(sot, start + size, false, false, false, false);
+    println(bqAll)
+    searcher.search(bqAll, tsdc);
+
+    //从0开始计算
+    val topDocs: TopDocs = tsdc.topDocs(start - 1, size);
+    val scoreDocs = topDocs.scoreDocs;
+    val total = tsdc.getTotalHits()
+    val ids = ListBuffer[Long]()
+    for (i <- 0 until scoreDocs.length) {
+      val indexDoc = searcher.getIndexReader().document(scoreDocs(i).doc);
+      ids += Long.valueOf(indexDoc.get("pId"))
+    }
+
+    Ok(
+      toJson(
+        Map(
+          "total" -> toJson(total),
+          "productIds" -> toJson(ids.toArray)
+          )
+      )
+    )*/
+    Ok("")
+  }
+  def empty: String = {
+    "{\"totalHits\":0,\"productIds\":[]}"
+  }
   def productJSON = Action { implicit request =>
     val form = Form(
       tuple(
@@ -84,7 +198,7 @@ object Dino extends Controller {
     if (size < 1 || size > 100) {
       size = 20;
     }
-    bqAll.add(getKeyWord(keyword), BooleanClause.Occur.MUST)
+    bqAll.add(DDSearchService.getKeyWord(keyword), BooleanClause.Occur.MUST)
     bqAll.add(getTag(tag), BooleanClause.Occur.MUST)
     bqAll.add(getIndexcode(indexcode), BooleanClause.Occur.MUST)
     bqAll.add(getAttribute(attribute), BooleanClause.Occur.MUST)
@@ -93,7 +207,7 @@ object Dino extends Controller {
     println(bqAll)
 
     //查询产品
-    val sot: Sort = sorts(sort);
+    val sot: Sort = DDSearchService.sorts(sort);
     val ids = ListBuffer[Long]()
     val searcher: IndexSearcher = SearcherManager.searcher
 
@@ -182,7 +296,6 @@ object Dino extends Controller {
 
   }
 
-
   private def docToXML(nodes: Queue[Node], document: org.apache.lucene.document.Document) = {
 
     val fields: List[IndexableField] = document.getFields()
@@ -195,68 +308,7 @@ object Dino extends Controller {
     nodes += n
   }
 
-  def getKeyWord(keyword: String):BooleanQuery = {
-
-    val bq: BooleanQuery = new BooleanQuery()
-    //查关键字
-    if (keyword != "") {
-      val keywordSplit = keyword.split(" ")
-
-      val bqKeyEn: BooleanQuery = new BooleanQuery()
-      val bqKeywordBoundCategory: BooleanQuery = new BooleanQuery()
-      val bqseokeyword: BooleanQuery = new BooleanQuery()
-      val bqtype: BooleanQuery = new BooleanQuery()
-      val bqshortdes: BooleanQuery = new BooleanQuery()
-      val bqbrand: BooleanQuery = new BooleanQuery()
-
-      for (k <- keywordSplit) {
-        //名称 40
-        val nameTerm: Term = new Term("name", k)
-        val namePq: PrefixQuery = new PrefixQuery(nameTerm)
-        bqKeyEn.add(namePq, BooleanClause.Occur.MUST)
-
-        //绑定品类 90
-        val keywordBoundCategoryTerm: Term = new Term("keywordBoundCategory", k)
-        val keywordBoundCategoryPq: TermQuery = new TermQuery(keywordBoundCategoryTerm)
-        bqKeywordBoundCategory.add(keywordBoundCategoryPq, BooleanClause.Occur.MUST)
-
-        //seokeyword 7
-        val seokeywordTerm: Term = new Term("seokeyword", k)
-        val seokeywordPq: TermQuery = new TermQuery(seokeywordTerm)
-        bqseokeyword.add(seokeywordPq, BooleanClause.Occur.MUST)
-
-        //品类 3
-        val typeTerm: Term = new Term("type", k)
-        val typePq: TermQuery = new TermQuery(typeTerm)
-        bqtype.add(typePq, BooleanClause.Occur.MUST)
-
-        //短描述2
-        val shortdesTerm: Term = new Term("shortdes", k)
-        val shortdesPq: TermQuery = new TermQuery(shortdesTerm)
-        bqshortdes.add(shortdesPq, BooleanClause.Occur.MUST)
-
-        //品牌 18
-        val brandTerm: Term = new Term("brand", k)
-        val brandPq: TermQuery = new TermQuery(brandTerm)
-        bqbrand.add(brandPq, BooleanClause.Occur.MUST)
-      }
-      bqKeyEn.setBoost(40f)
-      bqKeywordBoundCategory.setBoost(90f)
-      bqseokeyword.setBoost(7f)
-      bqtype.setBoost(3f)
-      bqshortdes.setBoost(2f)
-      bqbrand.setBoost(18f)
-
-      bq.add(bqKeyEn, BooleanClause.Occur.SHOULD)
-      bq.add(bqKeywordBoundCategory, BooleanClause.Occur.SHOULD)
-      bq.add(bqseokeyword, BooleanClause.Occur.SHOULD)
-      bq.add(bqtype, BooleanClause.Occur.SHOULD)
-      bq.add(bqshortdes, BooleanClause.Occur.SHOULD)
-      bq.add(bqbrand, BooleanClause.Occur.SHOULD)
-      println(bq)
-    }
-    bq
-  }
+  
   //tag: all new event clear
   //+(isLifeStyle:true isDailyDeal:true isEventProduct:true)
   //+isClearanceTinyint:1
@@ -357,51 +409,9 @@ object Dino extends Controller {
     }
     bqEcProduct001
   }
-  //排序
-  def sorts(sort: String): Sort = {
-
-    val sortStrs: Array[String] = sort.split(",")
-    val lst = ListBuffer[SortField]()
-    for (s <- sortStrs) {
-      var sortField: SortField = null
-      if ("price-".equals(s)) {
-        sortField = new SortField("unitPrice", SortField.Type.DOUBLE, true);
-      } else if ("price+".equals(s)) {
-        sortField = new SortField("unitPrice", SortField.Type.DOUBLE, false);
-      } else if ("releasedate-".equals(s)) {
-        sortField = new SortField("createTime", SortField.Type.DOUBLE, true);
-      } else if ("popularity-".equals(s)) {
-        sortField = new SortField("popularity", SortField.Type.INT, true);
-      } else if ("reviews-".equals(s)) {
-        sortField = new SortField("reviews", SortField.Type.INT, true);
-      } else if ("diggs-".equals(s)) {
-        sortField = new SortField("diggs", SortField.Type.INT, false);
-      } else if ("videos-".equals(s)) {
-        sortField = new SortField("videos", SortField.Type.INT, false);
-      }
-      if (sortField != null) {
-        lst += sortField
-      }
-    }
-
-    var sot: Sort = null;
-    if (lst.length == 0) {
-      //默认按相关度排序
-      //sortField = ;
-      sot = new Sort(SortField.FIELD_SCORE);
-    } else {
-      val list = new util.ArrayList[SortField]();
-      for (x <- lst) {
-        list.add(x)
-      }
-      sot = Helper.addSortField(list)
-    }
-    sot;
-  }
-
+  
 
   //返回属性
-
   private def searchProductAttribute(bq: BooleanQuery) = {
 
     val attributesSearcher: IndexSearcher = SearcherManager.searcher
@@ -447,5 +457,4 @@ object Dino extends Controller {
       }
     }
   }
-
 }

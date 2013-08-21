@@ -83,4 +83,12 @@ object Util {
       null
   }
 
+  def getSize(queryParams: Map[String, String],default:Int = 20) = {
+    val size = getParamInt(queryParams, "size", default)
+    if(size < 0 || size > 100) 20 else size
+  }
+  def getPage(queryParams: Map[String, String],default:Int = 1) = {
+    val page = getParamInt(queryParams, "page", default)
+    if(page < 0) 1 else page
+  }
 }

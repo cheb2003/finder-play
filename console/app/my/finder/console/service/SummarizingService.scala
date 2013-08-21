@@ -13,6 +13,7 @@ import scala.util.control.Breaks._
 import scala.collection.mutable.ListBuffer
 
 
+
 object SummarizingService {
   var logger: slf4j.Logger = LoggerFactory.getLogger("kpi")
   def deleteTopKey(calend: Calendar){
@@ -55,6 +56,7 @@ object SummarizingService {
       var noResultCount:Int = 0
       var resultClickCount:Int = 0
       var totalOrder:Int = 0
+
       var sb = new StringBuffer()
       while ( rs1.next() ){
         val TraceStep_varchar = rs1.getString("TraceStep_varchar")
@@ -98,6 +100,7 @@ object SummarizingService {
           clickProductIds = clickProducts.substring(0, clickProducts.length() - 1)
         }
       }
+
       //付款订单
       var payOrder:Int = 0
       var payMoney:Float = 0F
@@ -107,7 +110,6 @@ object SummarizingService {
         val sql3 = "select o.orderId_int,o.discountSum_money,o.TrackingPC_nvarchar,t.PaymentStatus_char from " +
           "ec_order o left join ec_transaction t on  o.orderId_int = t.orderId_int " +
           "where o.orderId_int in (" + sb.substring(0, sb.length() - 1) + ")"
-        logger.info(sql3)
         val rs3: SqlRowSet = jsMssql.queryForRowSet(sql3)
         while ( rs3.next() ){
           val  orderIdInt:Int =  rs3.getInt("orderId_int")
@@ -175,7 +177,7 @@ object SummarizingService {
     val sql2 = "select distinct k.Keyword_varchar from sea_keywordsTrace k where k.InsertTime_timestamp between '" +
       begin + "' and '" + end + "' and k.projectname_varchar like '%dinodirect%'"
     val rs2: SqlRowSet = jsMysql.queryForRowSet(sql2)
-    var list: ListBuffer[MongoDBObject] = new ListBuffer[MongoDBObject]
+    var list:ListBuffer[MongoDBObject] = new ListBuffer[MongoDBObject]
     while ( rs2.next()){
       val keyword:String = rs2.getString("Keyword_varchar")
       val sql3 = "select k.Keyword_varchar from sea_keywordsTrace k where k.Keyword_varchar ='"+ keyword + "' and " +

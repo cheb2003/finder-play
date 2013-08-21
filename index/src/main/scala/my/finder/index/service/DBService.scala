@@ -25,6 +25,10 @@ object DBService {
     ds.setJdbcUrl(Config.get("dbUrl"))
     ds.setUsername(Config.get("dbUser"))
     ds.setPassword(Config.get("dbPassword"))
+    ds.setPartitionCount(3)
+    ds.setMaxConnectionsPerPartition(15)
+    ds.setReleaseHelperThreads(5)
+
     _ds = ds
 
     _tag = new CWSTagger(Config.get("tag"))

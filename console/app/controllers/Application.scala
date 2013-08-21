@@ -2,7 +2,7 @@ package controllers
 import java.io.File
 import java.util._;
 
-import my.finder.common.message.{ OldIndexIncremetionalTaskMessage, IndexIncremetionalTaskMessage, CommandParseMessage }
+import my.finder.common.message.{ OldIndexIncremetionalTaskMessage, IndexIncremetionalTaskMessage, CommandParseMessage,PartitionIndexAttributesTaskMessage}
 import my.finder.console.actor.MessageFacade.rootActor
 import my.finder.common.util._
 
@@ -62,10 +62,23 @@ object Application extends Controller {
     if(name == Constants.DD_PRODUCT) {
       rootActor ! CommandParseMessage(Constants.DD_PRODUCT)
       Ok("hello dbsearch")
-    }else {
+    }
+    if(name == Constants.DD_PRODUCT_FORDB){
       rootActor ! CommandParseMessage(Constants.DD_PRODUCT_FORDB)
       Ok("hello ddsearch")
     }
+    Ok("hello")
+  }
+  def indexDDAttributes = Action { implicit request =>
+    val form = Form(
+        "i" -> text
+    )
+    val queryParams = form.bindFromRequest.data
+
+    val i = Util.getParamString(queryParams, "i", "")
+    val key = Util.getKey(Constants.DD_PRODUCT_ATTRIBUTE,new Date())
+    rootActor ! PartitionIndexAttributesTaskMessage(key,i)
+    Ok("hello attr")
   }
 
   def inc = Action { implicit request =>
