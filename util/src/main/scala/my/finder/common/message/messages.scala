@@ -26,4 +26,6 @@ case class GetIndexesPathMessage()
 case class IncIndexeMessage(name:String,date:Date)
 case class GetIndexesPathMessageReponse(msg:List[String])
 case class ResolutionMessage()
+case class IndexResolutionMessage(msg:List[Int])
+case class SearchResolutionMessage()
 
