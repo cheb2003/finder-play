@@ -19,12 +19,5 @@ object IndexApp {
             ActorSystem("index", ConfigFactory.load().getConfig("index." + Constants.PROFILE_TEST))
         else null
     system.actorOf(Props[IndexRootActor], name = "root")
-    /*var nodes = new Queue[Node]()
-    var n = <Service id="1" cnt="12"/> 
-    n = n % Attribute(None,"fff",Text("dddd"),Null)
-    /*nodes += n
-    nodes += <Service id="2" cnt="34"/>*/
-    println(<root>{n}</root>)*/
   }
-
 }
