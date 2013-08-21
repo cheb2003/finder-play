@@ -44,12 +44,12 @@ object SummarizingService {
     val client = MyMongoManager()
     val col = client.getDB("ddsearch").getCollection("topKeySearchPerDay")
     val sql = "select distinct k.Keyword_varchar from sea_keywordsTrace k where k.InsertTime_timestamp between '" +
-      begin + "' and '" + end + "' and projectname_varchar like '%dinodirect%'"
+      begin + "' and '" + end + "' and k.ProjectName_varchar like '%dinodirect%'"
     val rs: SqlRowSet = jsMysql.queryForRowSet(sql)
     while ( rs.next()){
       val keyword:String = rs.getString("Keyword_varchar")
-      val sql1 = "select TraceStep_varchar,TraceOrderNO_varchar,SearchCount_int from sea_keywordsTrace k where k.Keyword_varchar ='"+ keyword +
-        "' and k.InsertTime_timestamp between '" + begin + "' and '" + end + "' and projectname_varchar like '%dinodirect%'"
+      val sql1 = "select TraceStep_varchar,TraceOrderNO_varchar,SearchCount_int from sea_keywordsTrace where k.Keyword_varchar ='"+ keyword +
+        "' and InsertTime_timestamp between '" + begin + "' and '" + end + "' and ProjectName_varchar like '%dinodirect%'"
       val rs1: SqlRowSet = jsMysql.queryForRowSet(sql1)
       var count:Int = 0
       var resultCount:Int = 0
@@ -168,14 +168,14 @@ object SummarizingService {
     val end: String = sdf.format(day.getTime()) + " 23:59:59"
     val jsMysql:JdbcTemplate = new JdbcTemplate(DBMysql.ds)
     val sql = "select k.Keyword_varchar from sea_keywordsTrace k where k.InsertTime_timestamp between '" +
-      begin + "' and '" + end + "' and k.projectname_varchar like '%dinodirect%'"
+      begin + "' and '" + end + "' and k.ProjectName_varchar like '%dinodirect%'"
     val rs: SqlRowSet = jsMysql.queryForRowSet(sql)
     var count:Int = 0
     while ( rs.next ){
         count += 1
     }
     val sql2 = "select distinct k.Keyword_varchar from sea_keywordsTrace k where k.InsertTime_timestamp between '" +
-      begin + "' and '" + end + "' and k.projectname_varchar like '%dinodirect%'"
+      begin + "' and '" + end + "' and k.ProjectName_varchar like '%dinodirect%'"
     val rs2: SqlRowSet = jsMysql.queryForRowSet(sql2)
     var list:ListBuffer[MongoDBObject] = new ListBuffer[MongoDBObject]
     while ( rs2.next()){
@@ -212,7 +212,7 @@ object SummarizingService {
     val end: String = sdf.format(day.getTime()) + " 23:59:59"
     val sql = "select k.Keyword_varchar,k.TraceStep_varchar,k.SearchCount_int,k.InsertTime_timestamp from sea_keywordsTrace k " +
       "where k.Keyword_varchar ='"+ keyword + "' and k.InsertTime_timestamp between '" + begin + "' and '" + end + "' and "
-      "projectname_varchar like '%dinodirect%'"
+      "k.ProjectName_varchar like '%dinodirect%'"
     val jsMysql:JdbcTemplate = new JdbcTemplate(DBMysql.ds)
     val rs: SqlRowSet = jsMysql.queryForRowSet(sql)
     var list: ListBuffer[MongoDBObject] = new ListBuffer[MongoDBObject]
