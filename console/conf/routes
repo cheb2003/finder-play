@@ -3,27 +3,26 @@
 # ~~~~
 
 # Home page
-GET     /                           controllers.Application.index
-GET     /hello/:name                controllers.Application.hello(name:String)
-GET     /inc                        controllers.Application.inc
-GET     /incDD                      controllers.Application.incDD
-GET		/indexInfo					controllers.Application.indexInfo
-GET		/query 						controllers.Application.query
-GET     /queryKeyword				controllers.Application.queryKeyword
-POST    /queryKeyword				controllers.Application.queryKeyword
-GET    	/generateSpellCheck			controllers.Application.generateSpellCheck
-GET     /mkt/searchPerson           controllers.Mkt.searchPerson
-POST     /mkt/searchPerson           controllers.Mkt.searchPerson
-GET     /mkt/searchOrder            controllers.Mkt.searchOrder
-POST     /mkt/searchOrder            controllers.Mkt.searchOrder
-GET     /mkt/createOrder            controllers.Mkt.createOrder
-GET     /mkt/deleteOrder            controllers.Mkt.deleteOrder
-GET     /keyword/searchPerDay       controllers.KeyWord.searchPerDay
-POST     /keyword/searchPerDay       controllers.KeyWord.searchPerDay
-GET     /keyword/createPerDay       controllers.KeyWord.createPerDay
-GET     /keyword/deletePerDay       controllers.KeyWord.deletePerDay
-GET     /heartbeat                  controllers.Application.heartbeat
-GET     /indexAttr                  controllers.Application.indexDDAttributes
-
+GET         /                                 controllers.Application.index
+GET         /hello/:name                      controllers.Application.hello(name:String)
+GET         /inc                              controllers.Application.inc
+GET         /incDD                            controllers.Application.incDD
+GET         /indexInfo                        controllers.Application.indexInfo
+GET         /query                            controllers.Application.query
+GET         /queryKeyword                     controllers.Application.queryKeyword
+POST        /queryKeyword                     controllers.Application.queryKeyword
+GET         /generateSpellCheck               controllers.Application.generateSpellCheck
+GET         /mkt/searchPerson                 controllers.Mkt.searchPerson
+GET         /mkt/searchNoResults              controllers.Mkt.searchNoResults
+GET         /mkt/searchNoResultsPerDay        controllers.Mkt.searchNoResultsPerDay
+GET         /mkt/searchOrder                  controllers.Mkt.searchOrder
+GET         /mkt/createOrder                  controllers.Mkt.createOrder
+GET         /mkt/deleteOrder                  controllers.Mkt.deleteOrder
+GET         /keyword/searchPerDay             controllers.KeyWord.searchPerDay
+GET         /keyword/createPerDay             controllers.KeyWord.createPerDay
+GET         /keyword/deletePerDay             controllers.KeyWord.deletePerDay
+GET         /keyword/searchKeyWord            controllers.KeyWord.searchKeyWord
+GET         /keyword/expatiationKeyWord       controllers.KeyWord.expatiationKeyWord
+GET         /heartbeat                        controllers.Application.heartbeat
 # Map static resources from the /public folder to the /assets URL path
 GET     /assets/*file               controllers.Assets.at(path="/public", file)

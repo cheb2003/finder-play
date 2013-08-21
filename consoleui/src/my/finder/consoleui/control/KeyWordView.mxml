@@ -1,0 +1,106 @@
+<?xml version="1.0"?>
+<s:Group xmlns:fx="http://ns.adobe.com/mxml/2009"
+         xmlns:s="library://ns.adobe.com/flex/spark"
+         xmlns:mx="library://ns.adobe.com/flex/mx">
+    <fx:Script><![CDATA[
+        import mx.charts.events.ChartItemEvent;
+        import mx.events.CalendarLayoutChangeEvent;
+        import mx.formatters.DateFormatter;
+        import mx.rpc.events.ResultEvent;
+        [Bindable]private var timeRequst:String;
+        private function dateChanged(event:CalendarLayoutChangeEvent):void {
+            var sdf:DateFormatter = new DateFormatter();
+            sdf.formatString = 'YYYY-MM-DD';
+            timeRequst = sdf.format(time.selectedDate);
+            var dates:Array = timeRequst.split("-")
+            search.url="http://localhost:9000/keyword/searchKeyWord?year="+ dates[0] +"&month=" +
+                    dates[1] + "&day=" + dates[2]
+        }
+        private function submit(event:Event):void {
+            if ( time.text != ""){
+                search.send();
+            }
+        }
+        [Bindable]private var chartData:XMLList = new XMLList();
+        private function Result(event:ResultEvent):void{
+            var xml:XML = new XML(event.result);
+            chartData = xml.item
+        }
+
+        [Bindable]
+        private var keyword:String
+        private function submit2(event:ChartItemEvent):void {
+            keyword = event.hitData.item.@keyword
+            if ( keyword != null ){
+                search2.send();
+            }
+        }
+        [Bindable]private var dpFlat:XMLList = new XMLList();
+        private function Result2(event:ResultEvent):void{
+            var xml:XML = new XML(event.result);
+            dpFlat = xml.item
+            if ( dpFlat.length() > 0){
+                vs.selectedIndex = 1
+            }
+        }
+        ]]></fx:Script>
+    <fx:Declarations>
+        <s:HTTPService id="search" method="GET" result="Result(event)" showBusyCursor="true"
+                       resultFormat="xml">
+        </s:HTTPService>
+        <s:HTTPService id="search2" method="GET" result="Result2(event)" showBusyCursor="true"
+                       resultFormat="xml" url="http://localhost:9000/keyword/expatiationKeyWord">
+            <s:request xmlns="">
+                <s:date>{timeRequst}</s:date>
+                <s:keyword>{keyword}</s:keyword>
+            </s:request>
+        </s:HTTPService>
+    </fx:Declarations>
+    <mx:ViewStack id="vs">
+    <s:NavigatorContent>
+     <s:Panel title="关键字点击率" width="100%" >
+         <s:layout>
+            <s:VerticalLayout/>
+         </s:layout>
+         <s:Form width="100%" color="0x323232">
+             <s:FormItem label="查询时间：">
+                <mx:DateField id="time" width="150" yearNavigationEnabled="true"
+                      change="dateChanged(event)" />
+                </s:FormItem>
+                <s:Button label="Submit" click="submit(event)"/>
+             </s:Form>
+
+         <s:HGroup>
+             <mx:LineChart id="linechart" height="100%" showDataTips="true" dataProvider="{chartData}"
+                           itemDoubleClick="submit2(event)" doubleClickEnabled="true">
+                 <mx:horizontalAxis>
+                     <mx:CategoryAxis categoryField="@keyword"/>
+                 </mx:horizontalAxis>
+                 <mx:series>
+                     <mx:LineSeries yField="@value" form="curve"/>
+                 </mx:series>
+             </mx:LineChart>
+         </s:HGroup>
+     </s:Panel>
+    </s:NavigatorContent>
+
+    <s:NavigatorContent>
+     <s:Panel title="关键字点击详细">
+         <s:layout>
+             <s:VerticalLayout/>
+         </s:layout>
+         <mx:AdvancedDataGrid id="myADG" width="100%" height="100%"
+              color="0x323232" dataProvider="{dpFlat}">
+              <mx:groupedColumns>
+                  <mx:AdvancedDataGridColumn headerText="关键字" dataField="@keyword" />
+                  <mx:AdvancedDataGridColumn headerText="操作结果" dataField="@traceStep" />
+                  <mx:AdvancedDataGridColumn headerText="返回结果" dataField="@resultCount" />
+                  <mx:AdvancedDataGridColumn headerText="点击时间" dataField="@time" />
+               </mx:groupedColumns>
+         </mx:AdvancedDataGrid>
+         <s:Button label="返回上页" click="vs.selectedIndex = 0"/>
+     </s:Panel>
+    </s:NavigatorContent>
+
+    </mx:ViewStack>
+</s:Group>

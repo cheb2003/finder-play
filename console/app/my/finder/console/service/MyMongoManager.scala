@@ -20,9 +20,5 @@ object MyMongoManager {
       mongoClient
     }
   }
-  /*def coleDB(mongoClient:MongoClient ) ={
-        if( mongoClient != null ){
-          mongoClient.close()
-        }
-  }*/
+
 }

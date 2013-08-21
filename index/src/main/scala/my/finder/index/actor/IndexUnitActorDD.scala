@@ -14,15 +14,35 @@ import java.util.Date
 import java.lang.String
 import scala.Predef.String
 import org.apache.commons.lang.StringUtils
+import scala.collection.mutable
 
-class Product(val id:String,val name:String,var sku:String,var indexCode:String,var isOneSale:String,
-                  var isAliExpress:String,var businessName:String,var createTime:String,var typeId:String,
-                  var isQuality:String,var ventureStatus:String,var ventureLevelNew:String,
-                   var isTaobao:String,var brandId:String,var brandName:String,var attribute:String,
-                   var isEvent:String,var searchKeyword:String, var areaScore:String,var isDailyDeal:String,
-                   var isLifeStyle:String,var wwwScore:Float,
-                   var shopIds:String,var shopCategorys:String,var fitType:String,
-                  var indexCodeOfTypeShow:String)
+class Product(val id:String,
+  val name:String,
+  var sku:String,
+  var indexCode:String,
+  var isOneSale:String,
+  var isAliExpress:String,
+  var businessName:String,
+  var createTime:String,
+  var typeId:String,
+  var isQuality:String,
+  var ventureStatus:String,
+  var ventureLevelNew:String,
+  var isTaobao:String,
+  var brandId:String,
+  var brandName:String,
+  var attribute:String,
+  var isEvent:String,
+  var searchKeyword:String,
+  var areaScore:String,
+  var isDailyDeal:String,
+  var isLifeStyle:String,
+  var wwwScore:Float,
+  var shopIds:String,
+  var shopCategorys:String,
+  var fitType:String,
+  var indexCodeOfTypeShow:String,
+  var excludeAreas:String)
 
 class IndexUnitActorDD extends Actor with ActorLogging {
   val workDir = Config.get("workDir")
@@ -61,6 +81,8 @@ class IndexUnitActorDD extends Actor with ActorLogging {
   private val fitTypeField = new TextField("fitType","",Field.Store.YES)
   private val indexCodeTypeShowField =  new TextField("indexCodeTypeShow", "", Field.Store.YES)
   private val showPositionTypeShowField =  new StringField("showPositionTypeShow", "", Field.Store.YES)
+  private val excludeAreasField = new TextField("excludeAreas","",Field.Store.YES)
+
 
 
   private var doc: Document = null
@@ -113,7 +135,7 @@ class IndexUnitActorDD extends Actor with ActorLogging {
             rs.getString("ProductID_int"),rs.getString("productaliasname_nvarchar"),rs.getString("ProductKeyID_nvarchar"),rs.getString("IndexCode_nvarchar"),rs.getString("IsOneSale_tinyint"),rs.getString("IsAliExpress_tinyint"),
             rs.getString("BusinessName_nvarchar"),rs.getString("CreateTime_datetime"),rs.getString("ProductTypeID_int"),rs.getString("IsQualityProduct_tinyint"),rs.getString("VentureStatus_tinyint"),rs.getString("VentureLevelNew_tinyint"),
             rs.getString("IsTaoBao_tinyint"),rs.getString("ProductBrandID_int"),rs.getString("productbrand_nvarchar"),"","","",
-            "","","",Float.NaN,"","","",""
+            "","","",Float.NaN,"","","","",""
           )
           lst += product
           //buffer1.append(rs.getInt("ProductID_int")).append(',')
@@ -373,6 +395,34 @@ class IndexUnitActorDD extends Actor with ActorLogging {
 
 
 
+        //ec_product001
+        sql = s"""select productid_int as id,ProductCountryInfoForCreator_nvarchar as area from EC_product001 with(nolock) where productid_int in ($ids)"""
+        bSql = System.currentTimeMillis()
+        rs = stmt.executeQuery(sql)
+        while(rs.next){
+          for(p <- lst if(p.id == rs.getString("id"))) {
+            val area = rs.getString("area")
+            if(StringUtils.isNotBlank(area)){
+              val areaSplite = area.split(",")
+              val sb = new mutable.StringBuilder()
+              val len = areaSplite.length
+              var i = 0
+              while(i < len){
+                sb.append(areaSplite(i)).append(" ")
+                i += 1
+              }
+              p.excludeAreas = sb.toString
+            }
+            
+          }
+        }
+        eSql = System.currentTimeMillis()
+        if(eSql - bSql > 1000){
+          log.info("sql:{};time:{}",sql,eSql - bSql)
+        }
+
+
+
         bSql = System.currentTimeMillis()
         for (pro <- lst) {
           try {
@@ -435,11 +485,17 @@ class IndexUnitActorDD extends Actor with ActorLogging {
       fitTypeField.setStringValue("")
       skuOrderField.setStringValue("")
       indexCodeTypeShowField.setStringValue("")
+      excludeAreasField.setStringValue("")
 
 
 
       //设置本次结果集的值
       doc = new Document()
+
+      if(StringUtils.isNotBlank(p.excludeAreas)){
+        excludeAreasField.setStringValue(p.excludeAreas)
+        doc.add(excludeAreasField)
+      }
 
       if (StringUtils.isNotBlank(p.indexCodeOfTypeShow)){
         indexCodeTypeShowField.setStringValue(p.indexCodeOfTypeShow)

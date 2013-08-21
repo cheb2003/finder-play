@@ -3,104 +3,118 @@
          xmlns:s="library://ns.adobe.com/flex/spark"
          xmlns:mx="library://ns.adobe.com/flex/mx">
     <fx:Script><![CDATA[
-        import mx.collections.ArrayCollection;
+        import mx.charts.events.ChartItemEvent;
+        import mx.events.CalendarLayoutChangeEvent;
+        import mx.formatters.DateFormatter;
         import mx.rpc.events.ResultEvent;
+        [Bindable]
+        private var bTimeRequst:String
+        [Bindable]
+        private var eTimeRequst:String
+        private function bdateChanged(event:CalendarLayoutChangeEvent):void {
+            var sdf:DateFormatter = new DateFormatter()
+            sdf.formatString = 'YYYY-MM-DD'
+            bTimeRequst = sdf.format(bTime.selectedDate)
 
+        }
+        private function edateChanged(event:CalendarLayoutChangeEvent):void {
+            var sdf:DateFormatter = new DateFormatter()
+            sdf.formatString = 'YYYY-MM-DD'
+            eTimeRequst = sdf.format(eTime.selectedDate)
+        }
         private function submit(event:Event):void {
-            search.send();
-            vs.selectedIndex = 1;
+            if ( bTime.text != "" && eTime.text != ""){
+                search.send();
+            }
         }
-        [Bindable]private var chartData:ArrayCollection = new ArrayCollection();
+        [Bindable]private var chartData:XMLList = new XMLList();
         private function httpService_Result(event:ResultEvent):void{
-            chartData.removeAll()
-            var xmls = event.result.persons.person;
-            for (var i:int = 0; i < xmls.length ; i++){
-                var time = xmls.getItemAt(i).time;
-                var result = xmls.getItemAt(i).value;
-                chartData.addItem({time:time, noResult: result});
+            var xml:XML = new XML(event.result);
+            chartData = xml.Result;
+        }
+
+        [Bindable]
+        private var timeRequst:String
+        private function submit2(event:ChartItemEvent):void {
+            timeRequst = event.hitData.item.@time
+            if ( timeRequst != null ){
+                 search2.send();
+            }
+        }
+        [Bindable]private var dpFlat:XMLList = new XMLList();
+        private function result_tabel(event:ResultEvent):void{
+            var xml:XML = new XML(event.result)
+            dpFlat = xml.Result;
+            if ( dpFlat.length() > 0){
+                vs.selectedIndex = 1
             }
         }
 
-        private function submit2(event:Event):void {
-            search2.send();
-        }
-        [Bindable]private var dpFlat:ArrayCollection = new ArrayCollection([]);
-        private function result_tabel(event:ResultEvent):void{
-            dpFlat.removeAll()
-            var arr:ArrayCollection = ArrayCollection(event.result);
-            for (var i:int = 0; i < arr.length ; i++){
-                var keyword = arr[i].keyword;
-                var searchCount = arr[i].searchCount;
-                var searchTime = arr[i].searchTime;
-                dpFlat.addItemAt({关键字: keyword, 搜索次数: searchCount, 搜索时间:searchTime}, i);
-            }
-        }
     ]]></fx:Script>
     <fx:Declarations>
         <s:HTTPService id="search" method="GET" result="httpService_Result(event)" showBusyCursor="true"
-                       url="http://localhost:9000/mkt/searchNoResults">
+                        resultFormat="xml" url="http://localhost:9000/mkt/searchNoResults">
             <s:request xmlns="">
-                <s:bTime>{bTime.text}</s:bTime>
-                <s:eTime>{eTime.text}</s:eTime>
+                <s:bTime>{bTimeRequst}</s:bTime>
+                <s:eTime>{eTimeRequst}</s:eTime>
             </s:request>
         </s:HTTPService>
 
         <s:HTTPService id="search2" method="GET" result="result_tabel(event)" showBusyCursor="true"
-                       url="http://localhost:9000/mkt/searchNoResults">
+                       resultFormat="xml" url="http://localhost:9000/mkt/searchNoResultsPerDay">
             <s:request xmlns="">
-                <s:bTime>{bTime.text}</s:bTime>
-                <s:eTime>{eTime.text}</s:eTime>
+                <s:time>{timeRequst}</s:time>
             </s:request>
         </s:HTTPService>
     </fx:Declarations>
     <mx:ViewStack id="vs">
-        <s:NavigatorContent label="Search1111">
-            <s:Panel title="关键字搜索记录统计" color="0x000000"
-                     borderAlpha="0.15" width="100%" >
+        <s:NavigatorContent>
+            <s:Panel title="关键字搜索记录统计" width="100%" >
                 <s:layout>
                     <s:VerticalLayout/>
                 </s:layout>
                 <s:Form width="100%" color="0x323232">
                       <s:FormItem label="开始时间：">
-                          <s:TextInput id="bTime" width="150"/>
+                          <mx:DateField id="bTime" width="150" yearNavigationEnabled="true"
+                             change="bdateChanged(event)" />
                       </s:FormItem>
                       <s:FormItem label="结束时间：">
-                          <s:TextInput id="eTime" width="150"/>
+                          <mx:DateField id="eTime" width="150"
+                             change="edateChanged(event)" />
                       </s:FormItem>
                           <s:Button label="Submit" click="submit(event)"/>
                 </s:Form>
 
                 <s:HGroup>
-                    <mx:LineChart id="linechart" color="0x323232" height="100%"
-                                  showDataTips="true" dataProvider="{chartData}"
+                    <mx:LineChart id="linechart" height="100%" showDataTips="true" dataProvider="{chartData}"
                              itemDoubleClick="submit2(event)" doubleClickEnabled="true">
                         <mx:horizontalAxis>
-                            <mx:CategoryAxis categoryField="time" title="搜索时间"/>
+                            <mx:CategoryAxis categoryField="@time"/>
                         </mx:horizontalAxis>
                         <mx:series>
-                            <mx:LineSeries yField="noResult" form="curve" displayName="0结果率"/>
+                            <mx:LineSeries yField="@value" form="curve" displayName="0结果率"/>
                         </mx:series>
                     </mx:LineChart>
-                    <mx:Legend dataProvider="{linechart}" color="0x323232"/>
                 </s:HGroup>
             </s:Panel>
         </s:NavigatorContent>
 
         <s:NavigatorContent>
-            <s:Panel title="0记录详细列表">
-                <s:Button label="返回上页" click="vs.selectedIndex = 0"/>
-                <mx:AdvancedDataGrid id="myADG"
-                                     width="100%" height="100%"
-                                     color="0x323232"
-                                     dataProvider="{dpFlat}">
+            <s:Panel title="0记录详细列表" width="100%">
+                <s:layout>
+                    <s:VerticalLayout/>
+                </s:layout>
+                <mx:AdvancedDataGrid id="myADG" width="100%" height="100%"
+                                     color="0x323232" dataProvider="{dpFlat}">
                     <mx:groupedColumns>
-                        <mx:AdvancedDataGridColumn dataField="关键字" />
-                        <mx:AdvancedDataGridColumn dataField="搜索次数" />
-                        <mx:AdvancedDataGridColumn dataField="搜索时间" />
+                        <mx:AdvancedDataGridColumn headerText="关键字" dataField="@keyword" />
+                        <mx:AdvancedDataGridColumn headerText="项目名称" dataField="@pName" />
+                        <mx:AdvancedDataGridColumn headerText="点击时间" dataField="@time" />
                     </mx:groupedColumns>
                 </mx:AdvancedDataGrid>
+                <s:Button label="返回上页" click="vs.selectedIndex = 0"/>
             </s:Panel>
-        </s:NavigatorContent>
+    </s:NavigatorContent>
 
     </mx:ViewStack>
 

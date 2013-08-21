@@ -27,9 +27,9 @@ object KPIService {
     day2.add(Calendar.DATE, -2)
     val begin = sdf.format(day2.getTime()) + " 00:00:00"
     val end = sdf.format(day1.getTime()) + " 23:59:59"
-
-    val sql = "select k.TraceOrderNO_varchar from sea_keywordsTrace k where k.TraceOrderNO_varchar is not null and k.TraceOrderNO_varchar <> '' and" +
-      " k.projectname_varchar like '%dinodirect%' and k.InsertTime_timestamp between '" + begin + "' and '" + end + "'"
+    val sql = "select k.TraceOrderNO_varchar from sea_keywordsTrace k where " +
+      "k.TraceOrderNO_varchar is not null and k.TraceOrderNO_varchar <> '' and k.projectname_varchar like '%dinodirect%'" +
+      "and k.InsertTime_timestamp between '" + begin + "' and '" + end + "'"
     logger.info(sql)
     val conn: Connection = DBMysql.ds.getConnection()
     val stem: Statement = conn.createStatement()
@@ -106,7 +106,7 @@ object KPIService {
     val from: String = sdf.format(day.getTime()) + " 00:00:00"
     val to: String = sdf.format(day.getTime()) + " 23:59:59"
     val sql = "select k.PCCookieID_varchar from sea_keywordsTrace k where" +
-      " k.InsertTime_timestamp between '" + from + "' and '" + to + "' and k.TraceStep_varchar = 'search' and k.projectname_varchar like '%dinodirect%'"
+      " k.InsertTime_timestamp between '" + from + "' and '" + to + "' and k.TraceStep_varchar = 'search' and k.projectname_varchar in('ar.dinodirect.com','au.dinodirect.com','br.dinodirect.com','ca.dinodirect.com','gb.dinodirect.com','il.dinodirect.com','nl.dinodirect.com','nz.dinodirect.com','ru.dinodirect.com','us.dinodirect.com','www.dinodirect.com','www.dinodirect.de','www.dinodirect.es','www.dinodirect.fr','www.dinodirect.nl','www.dinodirect.pt')"
     val conn: Connection = DBMysql.ds.getConnection()
     val stem: Statement = conn.createStatement()
     val rs: ResultSet = stem.executeQuery(sql)

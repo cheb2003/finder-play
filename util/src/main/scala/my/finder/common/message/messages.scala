@@ -24,4 +24,5 @@ case class CloseIndexWriterMessage(name:String,date:Date)
 case class GetIndexesPathMessage()
 case class IncIndexeMessage(name:String,date:Date)
 case class GetIndexesPathMessageReponse(msg:List[String])
+case class ResolutionMessage()
 
