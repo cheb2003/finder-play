@@ -28,7 +28,7 @@ object KPIService {
     val begin = sdf.format(day2.getTime()) + " 00:00:00"
     val end = sdf.format(day1.getTime()) + " 23:59:59"
     val sql = "select k.TraceOrderNO_varchar from sea_keywordsTrace k where " +
-      "k.TraceOrderNO_varchar is not null and k.TraceOrderNO_varchar <> '' and k.projectname_varchar like '%dinodirect%'" +
+      "k.TraceOrderNO_varchar is not null and k.TraceOrderNO_varchar <> '' and k.ProjectName_varchar like '%dinodirect%'" +
       "and k.InsertTime_timestamp between '" + begin + "' and '" + end + "'"
     logger.info(sql)
     val conn: Connection = DBMysql.ds.getConnection()
@@ -106,7 +106,7 @@ object KPIService {
     val from: String = sdf.format(day.getTime()) + " 00:00:00"
     val to: String = sdf.format(day.getTime()) + " 23:59:59"
     val sql = "select k.PCCookieID_varchar from sea_keywordsTrace k where k.InsertTime_timestamp " +
-      "between '" + from + "' and '" + to + "' and k.TraceStep_varchar = 'search' and k.projectname_varchar like '%dinodirect%'"
+      "between '" + from + "' and '" + to + "' and k.TraceStep_varchar = 'search' and k.ProjectName_varchar like '%dinodirect%'"
     val conn: Connection = DBMysql.ds.getConnection()
     val stem: Statement = conn.createStatement()
     val rs: ResultSet = stem.executeQuery(sql)
@@ -129,10 +129,10 @@ object KPIService {
     val sdf2:SimpleDateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss")
     val time: Date = sdf2.parse(sdf.format(day.getTime()) + " 00:30:00")
     val sql = "select count(k.Keyword_varchar) as count from sea_keywordsTrace k where k.InsertTime_timestamp between '" +
-      from + "' and '" + to + "' and k.TraceStep_varchar = 'search' and k.projectname_varchar like '%dinodirect%'"
+      from + "' and '" + to + "' and k.TraceStep_varchar = 'search' and k.ProjectName_varchar like '%dinodirect%'"
 
     val sql2 = "select count(k.Keyword_varchar) as count from sea_keywordsTrace k where k.SearchCount_int = 0 and k.InsertTime_timestamp between '" +
-      from + "' and '" + to + "' and k.TraceStep_varchar = 'search' and k.projectname_varchar like '%dinodirect%'"
+      from + "' and '" + to + "' and k.TraceStep_varchar = 'search' and k.ProjectName_varchar like '%dinodirect%'"
     val jsMysql:JdbcTemplate = new JdbcTemplate(DBMysql.ds)
     val rs: SqlRowSet = jsMysql.queryForRowSet(sql)
     val rs2: SqlRowSet = jsMysql.queryForRowSet(sql2)
@@ -142,7 +142,7 @@ object KPIService {
     }
     var noCount:Int = 0
     while( rs2.next() ){
-      noCount = rs.getInt("count")
+      noCount = rs2.getInt("count")
     }
     var value:Float = 0.0F
     if ( count != 0 ){
