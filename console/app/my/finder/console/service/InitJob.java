@@ -15,5 +15,6 @@ public class InitJob {
         Trigger trigger2 = TriggerBuilder.newTrigger().withSchedule(CronScheduleBuilder.cronSchedule("0 30 0 * * ?")).build();
         scheduler.scheduleJob(jobDetail,trigger);
         scheduler.scheduleJob(jobDetail2,trigger2);
+        111
     }
 }
