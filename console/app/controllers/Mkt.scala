@@ -138,7 +138,6 @@ object Mkt extends Controller {
     val queryParams = form.bindFromRequest.data
     val bTime = Util.getParamString(queryParams, "bTime", "")
     val eTime = Util.getParamString(queryParams, "eTime", "")
-
     val barr:Array[String] = bTime.split("-")
     val earr:Array[String] = eTime.split("-")
     val calend:Calendar = Calendar.getInstance()
@@ -158,9 +157,9 @@ object Mkt extends Controller {
     val items = col.find(query)
     val list = items.toList
     val nodes = new Queue[Node]()
+    val sdf: SimpleDateFormat = new SimpleDateFormat("yyyy-MM-dd")
     for (i <- list) {
       var result = <Result/>
-      val sdf: SimpleDateFormat = new SimpleDateFormat("yyyy-MM-dd")
       result = result % Attribute(None, "time", Text(sdf.format(i.as[Date]("time"))), Null)
       result = result % Attribute(None, "value", Text(i.as[Double]("value").toString), Null)
       nodes += result
