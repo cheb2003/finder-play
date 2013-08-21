@@ -16,7 +16,7 @@ public class GenarateSearchOrderPerDay implements Job {
         calend.setTime(context.getFireTime());
         calend.add(java.util.Calendar.DATE, -1);
         KPIService.paymentOrder(calend);
-        KPIService.SearchNoResult(calend);
+        KPIService.searchNoResult(calend);
     }
 
 }
