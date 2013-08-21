@@ -17,7 +17,7 @@ POST    /searchOldDDIncTest         controllers.Application.searchOldDDInctest
 GET		/searchKeywordGroupByCategory     controllers.Application.searchKeywordGroupByCategory
 POST	/searchKeywordGroupByCategory     controllers.Application.searchKeywordGroupByCategory
 
-
+GET     /search/liftStyle           controllers.SearchLiftStyle.searchLiftStyle
 #POST   /search/product/json		controllers.Dino.productJSON
 #POST   /search/product/xml		    controllers.Dino.productXML
 #POST	/dd/search/product			controllers.Dino.product
