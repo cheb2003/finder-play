@@ -12,7 +12,7 @@ import org.apache.lucene.index.{IndexableField, Term}
 import play.api.data._
 import play.api.data.Forms._
 import my.finder.common.util.Util
-import java.util
+
 import java.util.{List, Calendar, Date}
 import java.text.{DateFormat, SimpleDateFormat}
 import scala.xml.{Null, Text, Attribute, Node}
@@ -20,6 +20,7 @@ import org.apache.lucene.search.grouping.{TopGroups, GroupingSearch}
 import scala.Predef._
 import org.apache.commons.lang.StringUtils
 import my.finder.common.model.{ErrorResult, IdsPageResult}
+import org.apache.lucene.search.BooleanClause.Occur
 
 object Dino extends Controller {
   implicit val ids1PageResultWrites = new Writes[IdsPageResult] {
@@ -95,7 +96,7 @@ object Dino extends Controller {
     val bqAll = new BooleanQuery
     val tIndexCode = new Term("indexCode",indexCode)
     val qIndexCode = new PrefixQuery(tIndexCode)
-    bqAll.add(qIndexCode,BooleanClause.Occur.MUST)
+    bqAll.add(qIndexCode,Occur.MUST)
 
     val attrSplit = attributes.trim.toLowerCase.split(",")
     /*for(attr <- attrSplit if(attr.trim != "")){
@@ -150,7 +151,6 @@ object Dino extends Controller {
     )
     val queryParams = form.bindFromRequest.data
     searchProduct(queryParams,"json")
-
     Ok("productJSON")
   }
 
@@ -177,34 +177,27 @@ object Dino extends Controller {
   }
 
   private def searchProduct(queryParams:Map[String,String],format:String) = {
-
+                 9
     //设置参数
-    var page = Util.getParamInt(queryParams, "page", 1)
-    var size = Util.getParamInt(queryParams, "size", 20)
-    val keyword = Util.getParamString(queryParams, "keyword", "").trim.toLowerCase
+    val page = Util.getPage(queryParams, 1)
+    val size = Util.getSize(queryParams, 20)
+    val keyword = Util.getParamString(queryParams, "keyword", "")
     val sort = Util.getParamString(queryParams, "sort", "").trim
     val tag = Util.getParamString(queryParams, "tag", "").trim
     val indexcode = Util.getParamString(queryParams, "indexcode", "").trim
     val attribute = Util.getParamString(queryParams, "attribute", "").trim
     val country = Util.getParamString(queryParams, "country", "").trim
-    val eliminateid = Util.getParamString(queryParams, "eliminateid", "").trim
+    val excludeId = Util.getParamString(queryParams, "excludeid", "").trim
     val ecProduct001 = Util.getParamString(queryParams, "ecProduct001", "").trim
 
     val bqAll: BooleanQuery = new BooleanQuery()
-    if (page < 0) {
-      page = 1
-    }
-
-    if (size < 1 || size > 100) {
-      size = 20;
-    }
-    bqAll.add(DDSearchService.getKeyWord(keyword), BooleanClause.Occur.MUST)
-    bqAll.add(getTag(tag), BooleanClause.Occur.MUST)
-    bqAll.add(getIndexcode(indexcode), BooleanClause.Occur.MUST)
-    bqAll.add(getAttribute(attribute), BooleanClause.Occur.MUST)
-    bqAll.add(getEliminateid(eliminateid), BooleanClause.Occur.MUST)
-    bqAll.add(getEcProduct001(ecProduct001), BooleanClause.Occur.MUST)
-    println(bqAll)
+    
+    bqAll.add(DDSearchService.getKeyWordQuery(keyword), Occur.MUST)
+    bqAll.add(getTag(tag), Occur.MUST)
+    bqAll.add(getIndexCode(indexcode), Occur.MUST)
+    bqAll.add(getAttributeQuery(attribute), Occur.MUST)
+    bqAll.add(getExcludeIdQuery(excludeId), Occur.MUST_NOT)
+    bqAll.add(getExcludeAreaQuery(ecProduct001), Occur.MUST)
 
     //查询产品
     val sot: Sort = DDSearchService.sorts(sort);
@@ -355,59 +348,61 @@ object Dino extends Controller {
   }
 
   //查类别
-  def getIndexcode(indexcode: String):BooleanQuery = {
-
-    val bqIndex: BooleanQuery = new BooleanQuery()
-    if (indexcode != "") {
-      val indexcodeTerm: Term = new Term("indexcode",indexcode)
-      val indexcodePq: TermQuery = new TermQuery(indexcodeTerm)
-      bqIndex.add(indexcodePq, BooleanClause.Occur.MUST)
-      println(bqIndex)
+  def getIndexCode(indexcode: String):Query = {
+    val q = if (StringUtils.isNotBlank(indexcode)) {
+      val tIndexCode: Term = new Term("indexcode",indexcode)
+      val tqIndexCode: TermQuery = new TermQuery(tIndexCode)
+      tqIndexCode
+    } else {
+      null
     }
-    bqIndex
+    q
   }
 
-  //查产品属性 ###a###b### ###c###d###
-  def getAttribute(attribute: String):BooleanQuery = {
-
-    val bqAttribute: BooleanQuery = new BooleanQuery()
-    if (attribute != "") {
-      val attributeSplit = attribute.split(" ")
+  //查产品属性 ###a###b###,###c###d###
+  def getAttributeQuery(attribute: String):Query = {
+    val q:Query = if(StringUtils.isNotBlank(attribute)) {
+      val bqAttr: BooleanQuery = new BooleanQuery()
+      val attributeSplit = attribute.split(",")
       for(att <- attributeSplit) {
-          val attTerm: Term = new Term("attribute","\""+att+"\"")
-          val attPq: TermQuery = new TermQuery(attTerm)
-          bqAttribute.add(attPq, BooleanClause.Occur.MUST)
+          val tAttr: Term = new Term("attribute","\""+att+"\"")
+          val tqAttr: TermQuery = new TermQuery(tAttr)
+          bqAttr.add(tqAttr, BooleanClause.Occur.MUST)
       }
-      println(bqAttribute)
+      bqAttr
+    } else {
+      null
     }
-    bqAttribute
+    q
   }
 
-  def getEliminateid(eliminateid: String):BooleanQuery = {
-
-    val bqEliminateid: BooleanQuery = new BooleanQuery()
-    if (eliminateid != "") {
-      val eliminateids = eliminateid.split(" ")
-      for(eli <- eliminateids) {
-        val eliminateidTerm: Term = new Term("eliminateid",eli)
-        val eliminateidPq: PrefixQuery = new PrefixQuery(eliminateidTerm)
-        bqEliminateid.add(eliminateidPq, BooleanClause.Occur.MUST)
+  def getExcludeIdQuery(excludeId: String):Query = {
+    val q = if (StringUtils.isNotBlank(excludeId)) {
+      val bqExcludeId: BooleanQuery = new BooleanQuery()
+      val excludeIdSplit = excludeId.split(",")
+      for(eli <- excludeIdSplit) {
+        val tExcludeId: Term = new Term("id",eli)
+        val tqExcludeId: TermQuery = new TermQuery(tExcludeId)
+        bqExcludeId.add(tqExcludeId, Occur.MUST)
       }
-      println(bqEliminateid)
+      bqExcludeId
+    } else {
+      null
     }
-    bqEliminateid
+    q
   }
 
-  def getEcProduct001(ecProduct001: String):BooleanQuery = {
-
-    val bqEcProduct001: BooleanQuery = new BooleanQuery()
-    if(ecProduct001 != null) {
-      val ecProduct001Term: Term = new Term("ecProduct001",ecProduct001)
-      val ecProduct001Pq: PrefixQuery = new PrefixQuery(ecProduct001Term)
-      bqEcProduct001.add(ecProduct001Pq, BooleanClause.Occur.MUST)
-      println(bqEcProduct001)
+  def getExcludeAreaQuery(excludeIds: String):BooleanQuery = {
+    val q = if(StringUtils.isNotBlank(excludeIds)) {
+      val bqExcludeIds: BooleanQuery = new BooleanQuery()
+      val tExcludeId: Term = new Term("id",excludeIds)
+      val tqExcludeId: TermQuery = new TermQuery(tExcludeId)
+      bqExcludeIds.add(tqExcludeId, BooleanClause.Occur.MUST)
+      bqExcludeIds  
+    } else {
+      null
     }
-    bqEcProduct001
+    q
   }
   
 

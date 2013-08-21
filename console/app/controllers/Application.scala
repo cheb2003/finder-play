@@ -118,7 +118,7 @@ object Application extends Controller {
   }
   //TODO:平板电脑分析执行
   def searchResolution = Action { implicit request =>
-    rootActor ! ResolutionMessage()
+    //rootActor ! ResolutionMessage()
     Ok("success")
   }
 
