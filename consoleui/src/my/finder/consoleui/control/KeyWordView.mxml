@@ -94,13 +94,13 @@
               <mx:groupedColumns>
                   <mx:AdvancedDataGridColumn headerText="关键字" dataField="@keyword" />
                   <mx:AdvancedDataGridColumn headerText="操作结果" dataField="@traceStep" />
-                  <mx:AdvancedDataGridColumn headerText="返回结果" dataField="@resultCount" />
-                  <mx:AdvancedDataGridColumn headerText="点击时间" dataField="@time" />
-               </mx:groupedColumns>
-         </mx:AdvancedDataGrid>
-         <s:Button label="返回上页" click="vs.selectedIndex = 0"/>
-     </s:Panel>
-    </s:NavigatorContent>
+     <mx:AdvancedDataGridColumn headerText="返回结果" dataField="@resultCount" />
+<mx:AdvancedDataGridColumn headerText="点击时间" dataField="@time" />
+        </mx:groupedColumns>
+        </mx:AdvancedDataGrid>
+<s:Button label="返回上页" click="vs.selectedIndex = 0"/>
+        </s:Panel>
+        </s:NavigatorContent>
 
-    </mx:ViewStack>
-</s:Group>
+        </mx:ViewStack>
+        </s:Group>
