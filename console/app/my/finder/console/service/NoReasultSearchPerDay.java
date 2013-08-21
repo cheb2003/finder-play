@@ -1,14 +1,11 @@
 package my.finder.console.service;
 
-import org.quartz.DisallowConcurrentExecution;
 import org.quartz.Job;
 import org.quartz.JobExecutionContext;
 import org.quartz.JobExecutionException;
 
-import java.util.Date;
 
-@DisallowConcurrentExecution
-public class GenarateSearchOrderPerDay implements Job {
+public class NoReasultSearchPerDay implements Job {
     public void execute(JobExecutionContext context)
             throws JobExecutionException {
 
@@ -16,8 +13,7 @@ public class GenarateSearchOrderPerDay implements Job {
         calend.setTime(context.getFireTime());
         calend.add(java.util.Calendar.DATE, -1);
 
-        KPIService.paymentOrder(calend);
+        KPIService.searchNoResult(calend);
     }
 
 }
-

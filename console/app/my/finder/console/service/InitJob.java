@@ -17,7 +17,7 @@ public class InitJob {
         Trigger trigger2 = TriggerBuilder.newTrigger().withSchedule(CronScheduleBuilder.cronSchedule("0 1 0 * * ?")).build();
         scheduler.scheduleJob(jobDetail2,trigger2);
 
-        JobDetail jobDetail3 = JobBuilder.newJob(TopKeySearchPerDay.class).build();
+        JobDetail jobDetail3 = JobBuilder.newJob(NoReasultSearchPerDay.class).build();
         Trigger trigger3 = TriggerBuilder.newTrigger().withSchedule(CronScheduleBuilder.cronSchedule("0 1 0 * * ?")).build();
         scheduler.scheduleJob(jobDetail3,trigger3);
     }
