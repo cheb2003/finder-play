@@ -15,7 +15,7 @@ import java.util
  * dd前台搜索接口服务
  */
 
-object DDSearchService {
+object DDSearchService{
   /**
    * 店铺查询接口.
    * 必须传入shopid参数
@@ -36,7 +36,7 @@ object DDSearchService {
       val tqShopId = new TermQuery(tShopId)
       bq.add(tqShopId,Occur.MUST)
 
-      val bqKeyword = getKeyWord(keyword)
+      val bqKeyword = getKeyWordQuery(keyword)
       if (bqKeyword != null) {
         bq.add(bqKeyword,Occur.MUST)
       }
@@ -117,7 +117,7 @@ object DDSearchService {
    * @param pKeyword 关键字
    * @return
    */
-  def getKeyWord(pKeyword: String): BooleanQuery = {
+  def getKeyWordQuery(pKeyword: String): BooleanQuery = {
     if(StringUtils.isNotBlank(pKeyword)){
       val keyword = pKeyword.trim.toLowerCase
       val bq: BooleanQuery = new BooleanQuery()

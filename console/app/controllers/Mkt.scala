@@ -183,7 +183,7 @@ object Mkt extends Controller {
     val form = Form(
         "time" -> text
     )
-    val queryParams = form.bindFromRequest.data
+   /* val queryParams = form.bindFromRequest.data
     val time = Util.getParamString(queryParams, "time", "")
     val times:Array[String] = time.split("-")
     val calend:Calendar = Calendar.getInstance()
@@ -199,7 +199,8 @@ object Mkt extends Controller {
       result = result % Attribute(None, "time", Text(sdf.format(i.as[Date]("time"))), Null)
         nodes += result
     }
-    Ok(<root>{nodes}</root>)
+    Ok(<root>{nodes}</root>)*/
+    Ok("")
   }
 
 }

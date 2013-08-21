@@ -33,8 +33,8 @@ import org.apache.lucene.analysis.Analyzer
 import org.apache.lucene.analysis.en.EnglishAnalyzer
 
 import org.slf4j.LoggerFactory
-import my.finder.console.service.Resolution
-;
+//import my.finder.console.service.Resolution
+
 
 object Application extends Controller {
   val logger = LoggerFactory.getLogger("my")
@@ -104,7 +104,7 @@ object Application extends Controller {
   }
   //TODO:平板电脑分析执行
   def searchResolution = Action { implicit request =>
-    rootActor ! ResolutionMessage()
+    //rootActor ! ResolutionMessage()
     Ok("success")
   }
 
