@@ -1,13 +1,11 @@
 package controllers
 import java.io.File
 import java.util._;
-import scala.concurrent.ExecutionContext.Implicits.global
 
 import my.finder.common.message.{ OldIndexIncremetionalTaskMessage, IndexIncremetionalTaskMessage, CommandParseMessage }
 import my.finder.console.actor.MessageFacade.rootActor
 import my.finder.common.util._
 
-import my.finder.common.model.Doc
 
 import org.apache.lucene.store.{ FSDirectory, Directory }
 import org.apache.lucene.index.DirectoryReader
@@ -34,8 +32,9 @@ import java.util.regex.Pattern
 import org.apache.lucene.analysis.Analyzer
 import org.apache.lucene.analysis.en.EnglishAnalyzer
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.slf4j.LoggerFactory
+import my.finder.console.service.Resolution
+;
 
 object Application extends Controller {
   val logger = LoggerFactory.getLogger("my")
@@ -89,6 +88,11 @@ object Application extends Controller {
     val dir: Directory = FSDirectory.open(new File(wordDir.get + path));
     val reader = DirectoryReader.open(dir);
     Ok("" + Integer.valueOf(reader.numDocs()))
+  }
+  //TODO:平板电脑分析执行
+  def searchResolution = Action { implicit request =>
+    rootActor ! ResolutionMessage()
+    Ok("success")
   }
 
   def queryKeyword = Action { implicit request =>
