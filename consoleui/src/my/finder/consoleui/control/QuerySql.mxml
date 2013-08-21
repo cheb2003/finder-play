@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="utf-8"?>
+<s:Group xmlns:fx="http://ns.adobe.com/mxml/2009"
+               xmlns:s="library://ns.adobe.com/flex/spark"
+              >
+
+    <fx:Script>
+        <![CDATA[
+        import mx.controls.Alert;
+        import mx.rpc.events.ResultEvent;
+        import mx.utils.StringUtil;
+
+        private function getData(event:ResultEvent):void {
+
+            var products:XML = new XML(event.result)
+            rsTextArea.text = products.toXMLString()
+        }
+
+        private function submit():void {
+            var sql = sqlTextArea.text
+            if (StringUtil.trim(sql) != "")
+                search.send();
+            else
+                Alert.show("查询语句不能为空！")
+        }
+        ]]>
+    </fx:Script>
+
+    <!--<s:layout>
+        <s:HorizontalLayout horizontalAlign="center" />
+    </s:layout>-->
+
+
+    <fx:Declarations>
+     <!--   <fx:XMLList id="products">
+            <product>
+                <pid>{pid}</pid>
+                <pname>{pname}</pname>
+                <pprice>{pprice}</pprice>>
+            </product>
+        </fx:XMLList>-->
+
+        <s:HTTPService id="search" method="GET" result="getData(event)" showBusyCursor="true"
+                       url="http://localhost:9000/queryTest/query" resultFormat="xml">
+            <s:request xmlns="">
+                <s:q>{sqlTextArea.text}</s:q>
+            </s:request>
+        </s:HTTPService>
+    </fx:Declarations>
+
+    <s:VGroup>
+        <s:Panel width="100%" height="100%"
+                 title="查询窗口"
+                 >
+
+
+            <s:HGroup left="5" top="5" width="100%" height="100%">
+
+                <s:VGroup right="10" bottom="5" width="100%" height="100%" horizontalAlign="center">
+                    <s:TextArea id="sqlTextArea"  top="5" right="50" width="100%" height="100%" text="请输入查询sql" />
+
+                    <s:Button id="qb" label="查询"  top="10" bottom="10" emphasized="true"
+                              click="submit()"
+                              fontWeight="normal"/>
+                </s:VGroup>
+            </s:HGroup>
+        </s:Panel>
+
+
+        <s:Panel title="结果窗口"
+             color="0x000000"
+             borderAlpha="0.15"
+             width="600"
+             height="400">
+
+            <s:HGroup left="5" top="5" width="100%" height="100%">
+                <s:VGroup width="100%" height="100%">
+                    <!--<mx:DataGrid id="dataGrid" color="0x323232" width="100%" height="100%" rowCount="3" resizableColumns="true">
+                        &lt;!&ndash;<mx:columns>
+                            <mx:DataGridColumn id="ProductID_int" headerText="pid"/>
+                            <mx:DataGridColumn dataField="ProductAliasName_nvarchar" headerText="pname"/>
+                            <mx:DataGridColumn dataField="ProductPrice_money" headerText="pprice"/>
+                            <mx:DataGridColumn dataField="count" headerText="count"/>
+                        </mx:columns>&ndash;&gt;
+                    </mx:DataGrid>-->
+                    <s:TextArea id="rsTextArea" top="5" right="5" width="100%" height="100%" />
+                </s:VGroup>
+            </s:HGroup>
+        </s:Panel>
+    </s:VGroup>
+
+</s:Group>

@@ -65,6 +65,51 @@ class PartitionIndexTaskActor extends Actor with ActorLogging {
     case msg:PartitionIndexAttributesTaskMessage => {
       partitionAttributes(msg)
     }
+
+    case msg:PartitionIndexLiftStyleTaskMessage => {
+      partitionLiftStyle(msg)
+    }
+  }
+
+  def partitionLiftStyle(msg:PartitionIndexLiftStyleTaskMessage) = {
+    val now = new Date()
+    var conn: Connection = null
+    var stmt: Statement = null
+    var rs: ResultSet = null
+    try {
+      conn = DBMssql.ds.getConnection
+      val sql = "SELECT min(SeqID_int) as min,max(SeqID_int) as max from EC_IndexLifeProduct"
+      stmt = conn.createStatement()
+      rs = stmt.executeQuery(sql)
+      rs.next
+      var minId = rs.getInt("min")
+      val maxId = rs.getInt("max")
+      if(current.configuration.getBoolean("debugIndex").get) {
+        minId = maxId - current.configuration.getInt("debugItemCount").get
+      }
+
+      val totalCount: Long = maxId - minId + 1
+      val total: Long = totalCount / ddProductIndexSize + 1
+
+      var id = minId
+      var j = 0
+      breakable {
+        while(true){
+          if(id >= maxId){
+            break
+          }
+          j += 1
+          sendLift(Constants.DD_PRODUCT_LIFTSTYLE, now, j, id, id + ddProductIndexSize - 1, total, ddProductIndexSize,msg.ddProductIndex)
+          id += ddProductIndexSize
+        }
+      }
+    } catch {
+      case e: Exception => e.printStackTrace()
+    } finally {
+      DBMssql.colseConn(conn,stmt,rs)
+    }
+
+
   }
 
   def partitionAttributes(msg:PartitionIndexAttributesTaskMessage) = {
@@ -126,6 +171,10 @@ class PartitionIndexTaskActor extends Actor with ActorLogging {
     indexRootManager ! CreateSubTask(name, runId, total)
   }
 
+  private def sendLift(name: String, runId: Date, seq: Long,minId:Int, maxId:Int, total: Long, batchSize:Int,ddProductIndex:String) {
+    indexRootActor ! IndexUnitLiftStyleTaskMessage(name, runId, seq, minId, maxId,batchSize,ddProductIndex)
+    indexRootManager ! CreateSubTask(name, runId, total)
+  }
 
   private def sendMsgDD(name: String, runId: Date, seq: Long, ids:ListBuffer[Int], total: Long, batchSize:Int) {
     indexRootActor ! IndexTaskMessageDD(name, runId, seq, ids,total,batchSize)
@@ -232,9 +281,7 @@ class PartitionIndexTaskActor extends Actor with ActorLogging {
     } catch {
       case e: Exception => e.printStackTrace()
     } finally {
-      if (rs != null) rs.close()
-      if (stmt != null) stmt.close()
-      if (conn != null) conn.close()
+      DBMssql.colseConn(conn,stmt,rs)
     }
 
   }

@@ -24,5 +24,8 @@ GET         /keyword/deletePerDay             controllers.KeyWord.deletePerDay
 GET         /keyword/searchKeyWord            controllers.KeyWord.searchKeyWord
 GET         /keyword/expatiationKeyWord       controllers.KeyWord.expatiationKeyWord
 GET         /heartbeat                        controllers.Application.heartbeat
+
+GET         /liftStyle                        controllers.Application.indexDDLiftStyle
+GET         /queryTest/query                  controllers.QueryTest.query
 # Map static resources from the /public folder to the /assets URL path
 GET     /assets/*file               controllers.Assets.at(path="/public", file)
