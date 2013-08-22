@@ -15,9 +15,11 @@ import scala.concurrent.ExecutionContext.Implicits.global
 object SearcherManager {
   val wordDir = current.configuration.getString("indexDir")
   val ddIndexDir = current.configuration.getString("ddIndexDir")
+  val attrIndexDir = current.configuration.getString("attrIndexDir")
   val oldDir = current.configuration.getString("oldDir")
   var searcher:IndexSearcher = null
   var ddSearcher:IndexSearcher = null
+  var attrSearcher:IndexSearcher = null
   var oldIncSearcher:IndexSearcher = null
   var oldReader:DirectoryReader = null
   def init = {
@@ -28,6 +30,10 @@ object SearcherManager {
     val ddDir:Directory = FSDirectory.open(new File(ddIndexDir.get));
     val ddReader = DirectoryReader.open(ddDir);
     ddSearcher  = new IndexSearcher(ddReader);
+
+    val attrDir:Directory = FSDirectory.open(new File(attrIndexDir.get));
+    val attrReader = DirectoryReader.open(attrDir);
+    attrSearcher  = new IndexSearcher(attrReader);
 
     val oldDirectory:Directory = FSDirectory.open(new File(oldDir.get))
     oldReader = DirectoryReader.open(oldDirectory)
