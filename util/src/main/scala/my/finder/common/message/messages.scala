@@ -2,6 +2,7 @@ package my.finder.common.message
 
 import java.util.Date
 import scala.collection.mutable.ListBuffer
+import java.util
 
 case class IndexTaskMessage(name:String,date:Date,seq:Long,minId:Int,maxId:Int,batchSize:Int);
 case class IndexAttributeTaskMessage(name:String,date:Date,seq:Long,minId:Int,maxId:Int,batchSize:Int,ddProductIndex:String)
@@ -25,7 +26,5 @@ case class CloseIndexWriterMessage(name:String,date:Date)
 case class GetIndexesPathMessage()
 case class IncIndexeMessage(name:String,date:Date)
 case class GetIndexesPathMessageReponse(msg:List[String])
-case class ResolutionMessage()
-case class IndexResolutionMessage(msg:List[Int])
-case class SearchResolutionMessage()
-
+case class ResolutionMessage(name:String,date:Date)
+case class IndexResolutionMessage(name:String, date:Date, productSize:Int,ids:ListBuffer[Int])

@@ -20,7 +20,7 @@ class ConsoleRootActor extends Actor with ActorLogging {
   val mergeIndex = context.actorOf(Props[MergeIndexActor], "mergeIndex")
   val search = context.actorFor("akka://search@127.0.0.1:2555/user/root")
 
-  val resolutionActor = context.actorOf(Props[ResolutionActor])
+  val resolutionActor = context.actorOf(Props[ResolutionActor],"resolution")
   def receive = {
     case msg:IndexIncremetionalTaskMessage => partitionActor ! msg
 

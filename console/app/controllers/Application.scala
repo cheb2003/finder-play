@@ -84,6 +84,17 @@ object Application extends Controller {
     Ok("hello attr")
   }
 
+  def indexDDLiftStyle() = Action { implicit request =>
+    val form = Form(
+      "lift" -> text
+    )
+    val queryParams = form.bindFromRequest.data
+    val lift = Util.getParamString(queryParams, "lift", "")
+    val key = Util.getKey(Constants.DD_PRODUCT_LIFTSTYLE,new Date())
+    rootActor ! PartitionIndexLiftStyleTaskMessage(key,lift)
+    Ok("hello liftStyle")
+  }
+
   def inc = Action { implicit request =>
     rootActor ! IndexIncremetionalTaskMessage(Constants.DD_PRODUCT, null)
     Ok("inc")
@@ -107,7 +118,7 @@ object Application extends Controller {
   }
   //TODO:平板电脑分析执行
   def searchResolution = Action { implicit request =>
-    //rootActor ! ResolutionMessage()
+    rootActor ! ResolutionMessage(Constants.DD_PRODUCT_RESOLUTION,null)
     Ok("success")
   }
 

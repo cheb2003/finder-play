@@ -4,6 +4,7 @@ import akka.actor.{Props, Actor}
 import my.finder.common.message._
 import akka.routing.RoundRobinRouter
 import my.finder.index.service.IndexWriteManager
+import my.finder.console.actor.IndexResolutionActor
 
 /**
  *
@@ -14,6 +15,8 @@ class IndexRootActor extends Actor{
   val attrUnits = context.actorOf(Props[IndexUnitAttributesActor].withDispatcher("my-pinned-dispatcher").withRouter(RoundRobinRouter(nrOfInstances = 32)),"indexAttrUnit")
   val liftStyleUnits = context.actorOf(Props[IndexUnitLiftStyleActor].withDispatcher("my-pinned-dispatcher").withRouter(RoundRobinRouter(nrOfInstances = 32)),"indexLiftStyleUnit")
   val indexWriterManager = context.actorOf(Props[IndexWriteManager],"indexWriterManager")
+
+  val resolutionUints = context.actorOf(Props[IndexResolutionActor].withDispatcher("my-pinned-dispatcher").withRouter(RoundRobinRouter(nrOfInstances = 32)),"resolutionUint")
   def receive = {
     case msg:IndexUnitLiftStyleTaskMessage => {
       liftStyleUnits ! msg
@@ -35,6 +38,9 @@ class IndexRootActor extends Actor{
     }
     case msg:CloseIndexWriterMessage => {
       indexWriterManager ! msg
+    }
+    case msg:IndexResolutionMessage => {
+      resolutionUints ! msg
     }
   }
 }
