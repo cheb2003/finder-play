@@ -41,6 +41,7 @@ object SearchLiftStyle extends Controller {
     var page = Util.getParamInt(queryParams, "page", 1)
     val q = Util.getParamString(queryParams, "q", "").trim
     val i = Util.getParamString(queryParams, "i", "").trim
+
     //排序
     val sortField = sort match {
       case "sortno-" => new SortField("sortno", SortField.Type.INT, true)
@@ -62,14 +63,14 @@ object SearchLiftStyle extends Controller {
     var parse: QueryParser = null
     if (q != "") {
       //skuTerm = new Term("sku",sku)
-      parse = new QueryParser(Version.LUCENE_43, "q", new KeywordAnalyzer())
+      parse = new QueryParser(Version.LUCENE_43, "sku", new KeywordAnalyzer())
       qy = parse.parse(q)
       //skuPq = new TermQuery(skuTerm)
     }
     //分页
     val tsdc: TopFieldCollector = TopFieldCollector.create(sot, start + size, false, false, false, false)
-    val wordDir = current.configuration.getString("indexDir")
-    val dir: Directory = FSDirectory.open(new File(wordDir.get + i));
+    //val workdir = current.configuration.getString("indexDir")
+    val dir: Directory = FSDirectory.open(new File(current.configuration.getString("indexDir").get + i))
     val reader = DirectoryReader.open(dir)
     val searcher  = new IndexSearcher(reader)
     searcher.search(qy, tsdc)
@@ -86,7 +87,6 @@ object SearchLiftStyle extends Controller {
     }
     reader.close()
     Ok(<root>{ nodes }</root>)
-
   }
 
   def docToXML(nodes: Queue[Node], document: org.apache.lucene.document.Document) = {

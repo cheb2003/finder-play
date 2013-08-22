@@ -74,22 +74,79 @@ object DDSearchService{
   }
 
   /**
+   * 品牌搜索接口
+   * 必须传入brandId参数
+   * @param queryParams
+   */
+  def brand(queryParams: Map[String, String]):PageResult = {
+    val sort = Util.getParamString(queryParams, "sort", "")
+    val size = Util.getSize(queryParams, 20)
+    val page = Util.getPage(queryParams, 1)
+    val country = Util.getParamString(queryParams, "country", "")
+    val indexCode = Util.getParamString(queryParams, "indexcode", "")
+    val brandId = Util.getParamString(queryParams, "brandId", "")
+    val keyword = Util.getParamString(queryParams, "keyword", "")
+    def searchBrand:IdsPageResult = {
+      val bq = new BooleanQuery
+
+      val tBrandId:Term = new Term("brandId",brandId)
+      val tQBrandId = new TermQuery(tBrandId)
+      bq.add(tQBrandId,Occur.MUST)
+
+      val bqKeyword = getKeyWordQuery(keyword)
+      if (bqKeyword != null) {
+        bq.add(bqKeyword,Occur.MUST)
+      }
+
+      if(StringUtils.isNotBlank(indexCode)){
+        val tIndexCode = new Term("pIdCategorys",indexCode)
+        val tqIndexCode = new TermQuery(tIndexCode)
+        bq.add(tqIndexCode,Occur.MUST)
+      }
+
+      val sot: Sort = sorts(sort);
+      val searcher: IndexSearcher = service.SearcherManager.ddSearcher
+      val start = (page - 1) * size + 1;
+      val tsdc: TopFieldCollector = TopFieldCollector.create(sot, start + size, false, false, false, false);
+
+      searcher.search(bq, tsdc);
+
+
+      val topDocs: TopDocs = tsdc.topDocs(start - 1, size);
+      val ids = readIds(searcher,topDocs.scoreDocs)
+      val total = tsdc.getTotalHits()
+
+      new IdsPageResult(ids,page,size,total,bq.toString)
+    }
+
+
+
+    if(StringUtils.isNotBlank(brandId)){
+      searchBrand
+    } else {
+      new ErrorResult("require brandId")
+    }
+
+
+  }
+
+  /**
    * NewArrival搜索接口
-   * 必须传入shopid参数
+   * 必须传入pId参数
    * @param queryParams
    */
   def newarrival(queryParams: Map[String, String]):PageResult = {
     val sort = Util.getParamString(queryParams, "sort", "")
     val size = Util.getSize(queryParams, 20)
     val page = Util.getPage(queryParams, 1)
-    //val country = Util.getParamString(queryParams, "country", "")
+    val country = Util.getParamString(queryParams, "country", "")
     val indexCode = Util.getParamString(queryParams, "indexcode", "")
     val pId = Util.getParamString(queryParams, "pId", "")
     val keyword = Util.getParamString(queryParams, "keyword", "")
     def searchNewArrival:IdsPageResult = {
       val bq = new BooleanQuery
 
-      val tPId:Term = new Term("pIds",pId)
+      val tPId:Term = new Term("id",pId)
       val tQpId = new TermQuery(tPId)
       bq.add(tQpId,Occur.MUST)
 
@@ -127,6 +184,114 @@ object DDSearchService{
       new ErrorResult("require pId")
     }
 
+
+  }
+
+  /**
+   * under999搜索接口
+   * 必须传入pId参数
+   * @param queryParams
+   */
+  def under999(queryParams: Map[String, String]):PageResult = {
+    val sort = Util.getParamString(queryParams, "sort", "")
+    val size = Util.getSize(queryParams, 20)
+    val page = Util.getPage(queryParams, 1)
+    val country = Util.getParamString(queryParams, "country", "")
+    val indexCode = Util.getParamString(queryParams, "indexcode", "")
+    val pId = Util.getParamString(queryParams, "pId", "")
+    val keyword = Util.getParamString(queryParams, "keyword", "")
+    def searchUnder999:IdsPageResult = {
+      val bq = new BooleanQuery
+
+      val tPId:Term = new Term("id",pId)
+      val tQpId = new TermQuery(tPId)
+      bq.add(tQpId,Occur.MUST)
+
+      val bqKeyword = getKeyWordQuery(keyword)
+      if (bqKeyword != null) {
+        bq.add(bqKeyword,Occur.MUST)
+      }
+
+      if(StringUtils.isNotBlank(indexCode)){
+        val tIndexCode = new Term("pIdCategorys",indexCode)
+        val tqIndexCode = new TermQuery(tIndexCode)
+        bq.add(tqIndexCode,Occur.MUST)
+      }
+
+      val sot: Sort = sorts(sort);
+      val searcher: IndexSearcher = service.SearcherManager.ddSearcher
+      val start = (page - 1) * size + 1;
+      val tsdc: TopFieldCollector = TopFieldCollector.create(sot, start + size, false, false, false, false);
+
+      searcher.search(bq, tsdc);
+
+
+      val topDocs: TopDocs = tsdc.topDocs(start - 1, size);
+      val ids = readIds(searcher,topDocs.scoreDocs)
+      val total = tsdc.getTotalHits()
+
+      new IdsPageResult(ids,page,size,total,bq.toString)
+    }
+
+    if(StringUtils.isNotBlank(pId)){
+      searchUnder999
+    } else {
+      new ErrorResult("require pId")
+    }
+
+  }
+
+  /**
+   * 清仓搜索接口
+   * 必须传入pId参数
+   * @param queryParams
+   */
+  def clearance(queryParams: Map[String, String]):PageResult = {
+    val sort = Util.getParamString(queryParams, "sort", "")
+    val size = Util.getSize(queryParams, 20)
+    val page = Util.getPage(queryParams, 1)
+    val country = Util.getParamString(queryParams, "country", "")
+    val indexCode = Util.getParamString(queryParams, "indexcode", "")
+    val pId = Util.getParamString(queryParams, "pId", "")
+    val keyword = Util.getParamString(queryParams, "keyword", "")
+    def searchClearance:IdsPageResult = {
+      val bq = new BooleanQuery
+
+      val tPId:Term = new Term("id",pId)
+      val tQpId = new TermQuery(tPId)
+      bq.add(tQpId,Occur.MUST)
+
+      val bqKeyword = getKeyWordQuery(keyword)
+      if (bqKeyword != null) {
+        bq.add(bqKeyword,Occur.MUST)
+      }
+
+      if(StringUtils.isNotBlank(indexCode)){
+        val tIndexCode = new Term("pIdCategorys",indexCode)
+        val tqIndexCode = new TermQuery(tIndexCode)
+        bq.add(tqIndexCode,Occur.MUST)
+      }
+
+      val sot: Sort = sorts(sort);
+      val searcher: IndexSearcher = service.SearcherManager.ddSearcher
+      val start = (page - 1) * size + 1;
+      val tsdc: TopFieldCollector = TopFieldCollector.create(sot, start + size, false, false, false, false);
+
+      searcher.search(bq, tsdc);
+
+
+      val topDocs: TopDocs = tsdc.topDocs(start - 1, size);
+      val ids = readIds(searcher,topDocs.scoreDocs)
+      val total = tsdc.getTotalHits()
+
+      new IdsPageResult(ids,page,size,total,bq.toString)
+    }
+
+    if(StringUtils.isNotBlank(pId)){
+      searchClearance
+    } else {
+      new ErrorResult("require pId")
+    }
 
   }
 

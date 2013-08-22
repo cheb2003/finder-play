@@ -1,17 +1,16 @@
 package my.finder.index.actor
 
 import akka.actor.{ActorLogging, Actor}
-import my.finder.common.util.{Util, Config}
+import my.finder.common.util.Util
 import org.apache.lucene.document._
 import my.finder.common.message.{CompleteSubTask, IndexTaskMessageDD}
 import my.finder.index.service.{DBService, IndexWriteManager}
 import java.sql.{ResultSet, Statement, Connection}
 import org.apache.lucene.index.IndexWriter
-import scala.collection.mutable.{ListBuffer}
+import scala.collection.mutable.ListBuffer
 import scala.collection.mutable.HashMap
 import scala.util.control.Breaks._
 import java.util.Date
-import java.lang.String
 import scala.Predef.String
 import org.apache.commons.lang.StringUtils
 import scala.collection.mutable
@@ -45,8 +44,6 @@ class Product(val id:String,
   var excludeAreas:String)
 
 class IndexUnitActorDD extends Actor with ActorLogging {
-  val workDir = Config.get("workDir")
-  //val indexBatchSize = Integer.valueOf(Config.get("indexBatchSize"))
 
   private val pIdField = new StringField("id", "", Field.Store.YES)
   private val pNameField = new TextField("name", "", Field.Store.YES)
@@ -67,7 +64,6 @@ class IndexUnitActorDD extends Actor with ActorLogging {
   //private val pProductTypeNameField = new TextField("typeName", "", Field.Store.YES)
   private val skuOrderField = new StringField("skuOrder", "", Field.Store.YES)
 
-
   private val pAttributeValueField =  new TextField("attribute", "", Field.Store.YES)
   private val pIsEventField =  new StringField("isEvent", "", Field.Store.YES)
   private val pSearchKeywordField =  new TextField("searchKeyword", "", Field.Store.YES)
@@ -80,10 +76,8 @@ class IndexUnitActorDD extends Actor with ActorLogging {
   private val shopCategorysField =  new TextField("shopCategorys", "", Field.Store.YES)
   private val fitTypeField = new TextField("fitType","",Field.Store.YES)
   private val indexCodeTypeShowField =  new TextField("indexCodeTypeShow", "", Field.Store.YES)
-  private val showPositionTypeShowField =  new StringField("showPositionTypeShow", "", Field.Store.YES)
+  //private val showPositionTypeShowField =  new StringField("showPositionTypeShow", "", Field.Store.YES)
   private val excludeAreasField = new TextField("excludeAreas","",Field.Store.YES)
-
-
 
   private var doc: Document = null
 
@@ -97,7 +91,6 @@ class IndexUnitActorDD extends Actor with ActorLogging {
       var stmt: Statement = null
       var rs: ResultSet = null
 
-      //val buffer1:StringBuffer = new StringBuffer()
       val buffer2:StringBuffer = new StringBuffer()
       val buffer3:StringBuffer = new StringBuffer()
 
@@ -113,8 +106,6 @@ class IndexUnitActorDD extends Actor with ActorLogging {
         var failCount: Int = 0
         var skipCount: Int = 0
         val ids = msg.ids.mkString(",")
-        /*val minId = msg.ids(0)
-        val maxId = msg.ids(msg.ids.length - 1)*/
 
         conn = DBService.dataSource.getConnection()
         stmt = conn.createStatement()
@@ -192,7 +183,7 @@ class IndexUnitActorDD extends Actor with ActorLogging {
           log.info("sql:{};time:{}",sql,eSql - bSql)
         }
         //读取EC_SearchKeywordConfig
-        sql = String.format("select ProductTypeID_int,SearchKeyword_nvarchar from EC_SearchKeywordConfig with(nolock) where ProductTypeID_int in(%s)",stypeid)
+        sql = s"select ProductTypeID_int,SearchKeyword_nvarchar from EC_SearchKeywordConfig with(nolock) where ProductTypeID_int in ($stypeid)"
 
         bSql = System.currentTimeMillis()
         rs = stmt.executeQuery(sql)
@@ -223,7 +214,7 @@ class IndexUnitActorDD extends Actor with ActorLogging {
         }
 
         //读取rs_dd_prod_score_area
-        sql = String.format("select ProductKeyID_nvarchar,countryid_int,score_float from rs_dd_prod_score_area with(nolock) where ProductKeyID_nvarchar in(%s) ",skus)
+        sql = s"select ProductKeyID_nvarchar,countryid_int,score_float from rs_dd_prod_score_area with(nolock) where ProductKeyID_nvarchar in ($skus)"
 
         bSql = System.currentTimeMillis()
         rs = stmt.executeQuery(sql)
@@ -254,7 +245,7 @@ class IndexUnitActorDD extends Actor with ActorLogging {
           log.info("sql:{};time:{}",sql,eSql - bSql)
         }
         //read www product score
-        sql = String.format("select ProductKeyID_nvarchar,score_float from RS_DD_PROD_SCORE with(nolock) where ProductKeyID_nvarchar in(%s) ",skus)
+        sql = s"select ProductKeyID_nvarchar,score_float from RS_DD_PROD_SCORE with(nolock) where ProductKeyID_nvarchar in ($skus)"
         bSql = System.currentTimeMillis()
         rs = stmt.executeQuery(sql)
 
@@ -274,8 +265,8 @@ class IndexUnitActorDD extends Actor with ActorLogging {
           log.info("sql:{};time:{}",sql,eSql - bSql)
         }
         //读取EC_eventProduct
-        sql = String.format("select ProductKeyID_nvarchar,COUNT(ProductKeyID_nvarchar) as count from EC_eventProduct with(nolock) " +
-          "where ProductKeyID_nvarchar in(%s) group by ProductKeyID_nvarchar ",skus)
+        sql = s"""select ProductKeyID_nvarchar,COUNT(ProductKeyID_nvarchar) as count from EC_eventProduct with(nolock)
+                 where ProductKeyID_nvarchar in ($skus) group by ProductKeyID_nvarchar"""
 
         bSql = System.currentTimeMillis()
         rs = stmt.executeQuery(sql)
@@ -294,7 +285,7 @@ class IndexUnitActorDD extends Actor with ActorLogging {
           log.info("sql:{};time:{}",sql,eSql - bSql)
         }
         //读取ec_indexproduct
-        sql = String.format("select productid_int,starttime_datetime,endtime_datetime from ec_indexproduct with(nolock) where productid_int in(%s) ",ids)
+        sql = s"select productid_int,starttime_datetime,endtime_datetime from ec_indexproduct with(nolock) where productid_int in ($ids)"
 
         bSql = System.currentTimeMillis()
         rs = stmt.executeQuery(sql)
@@ -315,7 +306,7 @@ class IndexUnitActorDD extends Actor with ActorLogging {
           log.info("sql:{};time:{}",sql,eSql - bSql)
         }
         //读取ec_indexlifeproduct
-        sql = String.format("select productid_int,count(productid_int) count from ec_indexlifeproduct with(nolock) where productid_int in(%s) group by productid_int ",ids)
+        sql = s"select productid_int,count(productid_int) count from ec_indexlifeproduct with(nolock) where productid_int in($ids) group by productid_int"
 
         bSql = System.currentTimeMillis()
         rs = stmt.executeQuery(sql)
@@ -335,7 +326,7 @@ class IndexUnitActorDD extends Actor with ActorLogging {
           log.info("sql:{};time:{}",sql,eSql - bSql)
         }
         //读取店铺信息
-        sql = String.format("select ShopID_bigint,ProductKeyID_nvarchar from SRM_Plat_ShopAndProductRelation with(nolock) where ProductKeyID_nvarchar in (%s)",skus)
+        sql = s"select ShopID_bigint,ProductKeyID_nvarchar from SRM_Plat_ShopAndProductRelation with(nolock) where ProductKeyID_nvarchar in ($skus)"
         bSql = System.currentTimeMillis()
         rs = stmt.executeQuery(sql)
 
@@ -350,7 +341,7 @@ class IndexUnitActorDD extends Actor with ActorLogging {
         }
 
         //读取店铺品类信息
-        sql = String.format("select CategoryID_int,ProductKeyID_nvarchar from SRM_Plat_ShopCategoryProductRelations with(nolock) where ProductKeyID_nvarchar in (%s)",skus)
+        sql = s"select CategoryID_int,ProductKeyID_nvarchar from SRM_Plat_ShopCategoryProductRelations with(nolock) where ProductKeyID_nvarchar in ($skus)"
         bSql = System.currentTimeMillis()
         rs = stmt.executeQuery(sql)
 
@@ -364,7 +355,7 @@ class IndexUnitActorDD extends Actor with ActorLogging {
           log.info("sql:{};time:{}",sql,eSql - bSql)
         }
         //read fitproducttype
-        sql = String.format("select productid_int,IndexCode_nvarchar from ec_fitproducttype with(nolock) where productid_int in (%s)",ids)
+        sql = s"select productid_int,IndexCode_nvarchar from ec_fitproducttype with(nolock) where productid_int in ($ids)"
         bSql = System.currentTimeMillis()
         rs = stmt.executeQuery(sql)
 
@@ -379,7 +370,7 @@ class IndexUnitActorDD extends Actor with ActorLogging {
         }
 
         //typeshow
-        sql = s"""select ProductKeyID_nvarchar,IndexCode_nvarchar from EC_TypeShow with(nolock) where ProductKeyID_nvarchar in ($skus)"""
+        sql = s"select ProductKeyID_nvarchar,IndexCode_nvarchar from EC_TypeShow with(nolock) where ProductKeyID_nvarchar in ($skus)"
         bSql = System.currentTimeMillis()
         rs = stmt.executeQuery(sql)
 
@@ -396,7 +387,7 @@ class IndexUnitActorDD extends Actor with ActorLogging {
 
 
         //ec_product001
-        sql = s"""select productid_int as id,ProductCountryInfoForCreator_nvarchar as area from EC_product001 with(nolock) where productid_int in ($ids)"""
+        sql = s"select productid_int as id,ProductCountryInfoForCreator_nvarchar as area from EC_product001 with(nolock) where productid_int in ($ids)"
         bSql = System.currentTimeMillis()
         rs = stmt.executeQuery(sql)
         while(rs.next){

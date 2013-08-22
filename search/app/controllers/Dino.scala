@@ -64,13 +64,38 @@ object Dino extends Controller {
     Ok(json)
   }
 
+  def brand = Action { implicit request =>
+    val form = Form(
+      tuple(
+        "sort" -> text,
+        "size" -> number,
+        "page" -> number,
+        "country" -> text,
+        "indexcode" -> text,
+        "brandId" -> text,
+        "keyword" -> text
+      )
+    )
+    val queryParams = form.bindFromRequest.data
+    val result = DDSearchService.brand(queryParams)
+    val json = if (result.isInstanceOf[IdsPageResult]) {
+      toJson(result.asInstanceOf[IdsPageResult])
+    } else if (result.isInstanceOf[ErrorResult]){
+      Json.parse("{}")
+    } else {
+      Json.parse("{}")
+    }
+
+    Ok(json)
+  }
+
   def newarrival = Action { implicit request =>
     val form = Form(
       tuple(
         "sort" -> text,
         "size" -> number,
         "page" -> number,
-        //"country" -> text,
+        "country" -> text,
         "indexcode" -> text,
         "pId" -> text,
         "keyword" -> text
@@ -95,14 +120,37 @@ object Dino extends Controller {
         "sort" -> text,
         "size" -> number,
         "page" -> number,
-        //"country" -> text,
-        "indexcode" -> text,
+        "country" -> text,
         "pId" -> text,
         "keyword" -> text
       )
     )
     val queryParams = form.bindFromRequest.data
     val result = DDSearchService.newarrival(queryParams)
+    val json = if (result.isInstanceOf[IdsPageResult]) {
+      toJson(result.asInstanceOf[IdsPageResult])
+    } else if (result.isInstanceOf[ErrorResult]){
+      Json.parse("{}")
+    } else {
+      Json.parse("{}")
+    }
+
+    Ok(json)
+  }
+
+  def clearance = Action { implicit request =>
+    val form = Form(
+      tuple(
+        "sort" -> text,
+        "size" -> number,
+        "page" -> number,
+        "country" -> text,
+        "pId" -> text,
+        "keyword" -> text
+      )
+    )
+    val queryParams = form.bindFromRequest.data
+    val result = DDSearchService.clearance(queryParams)
     val json = if (result.isInstanceOf[IdsPageResult]) {
       toJson(result.asInstanceOf[IdsPageResult])
     } else if (result.isInstanceOf[ErrorResult]){

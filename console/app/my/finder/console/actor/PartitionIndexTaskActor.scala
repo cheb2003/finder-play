@@ -76,33 +76,43 @@ class PartitionIndexTaskActor extends Actor with ActorLogging {
     var conn: Connection = null
     var stmt: Statement = null
     var rs: ResultSet = null
+
+    var minId = 0
+    var count = 0
     try {
       conn = DBMssql.ds.getConnection
-      val sql = "SELECT min(SeqID_int) as min,max(SeqID_int) as max from EC_IndexLifeProduct"
+      var sql = "SELECT min(SeqID_int) as min,count(SeqID_int) as count from EC_IndexLifeProduct with(nolock)"
       stmt = conn.createStatement()
       rs = stmt.executeQuery(sql)
-      rs.next
-      var minId = rs.getInt("min")
-      val maxId = rs.getInt("max")
-      if(current.configuration.getBoolean("debugIndex").get) {
-        minId = maxId - current.configuration.getInt("debugItemCount").get
+      while(rs.next()){
+        minId = rs.getInt("min")
+        count = rs.getInt("count")
+      }
+      if(current.configuration.getBoolean("debugIndex").get && current.configuration.getInt("debugIndex").get > minId) {
+        minId = current.configuration.getInt("debugItemCount").get
       }
 
-      val totalCount: Long = maxId - minId + 1
-      val total: Long = totalCount / ddProductIndexSize + 1
+      sql = s"select SeqID_int from EC_IndexLifeProduct with(nolock) where SeqID_int >= $minId and IsEnabled_int = 1"
+      rs.setFetchSize(1000)
+      rs = stmt.executeQuery(sql)
+      val total: Long = count / ddProductIndexSize + 1
 
-      var id = minId
+      val ids:ListBuffer[Int] = new ListBuffer[Int]
       var j = 0
-      breakable {
-        while(true){
-          if(id >= maxId){
-            break
-          }
+      while(rs.next()){
+        ids += rs.getInt(1)
+        if(ids.length % ddProductIndexSize == 0){
+          //记录批次
           j += 1
-          sendLift(Constants.DD_PRODUCT_LIFTSTYLE, now, j, id, id + ddProductIndexSize - 1, total, ddProductIndexSize,msg.ddProductIndex)
-          id += ddProductIndexSize
+          sendLift(Constants.DD_PRODUCT_LIFTSTYLE, now, j, ids, total, ddProductIndexSize,msg.ddProductIndex)
+          log.info("send dd liftstyle msg {}",j)
         }
       }
+      if (ids.length % ddProductIndexSize > 0) {
+        j += 1
+        sendLift(Constants.DD_PRODUCT_LIFTSTYLE, now, j, ids, total, ddProductIndexSize,msg.ddProductIndex)
+      }
+
     } catch {
       case e: Exception => e.printStackTrace()
     } finally {
@@ -119,35 +129,37 @@ class PartitionIndexTaskActor extends Actor with ActorLogging {
     var rs: ResultSet = null
     try { 
       conn = DBMssql.ds.getConnection
-      val sql = "SELECT min(keyid_int) as min,max(keyid_int) as max from QDW_AttributeAndValueDictionary"
+      var sql = "SELECT min(keyid_int) as min,count(keyid_int) as count from QDW_AttributeAndValueDictionary with(nolock)"
       stmt = conn.createStatement()
       rs = stmt.executeQuery(sql)
       var minId:Int = 0
-      var maxId:Int = 0
+      var count:Int = 0
       while(rs.next){
         minId = rs.getInt("min")
-        maxId = rs.getInt("max")
-        if(current.configuration.getBoolean("debugIndex").get) {
-          minId = maxId - current.configuration.getInt("debugItemCount").get
-        }
+        count = rs.getInt("count")
+      }
+      if(current.configuration.getBoolean("debugIndex").get && current.configuration.getInt("debugIndex").get > minId) {
+        minId = current.configuration.getInt("debugItemCount").get
       }
 
+      sql = s"SELECT keyid_int from QDW_AttributeAndValueDictionary with(nolock) where keyid_int >= $minId"
+      rs.setFetchSize(1000)
+      val total: Long = count / ddProductIndexSize + 1
 
-      val totalCount: Long = maxId - minId + 1
-      val total: Long = totalCount / ddProductIndexSize + 1
-
-      var i = 0
-      var id = minId
+      val ids:ListBuffer[Int] = new ListBuffer[Int]
       var j = 0
-      breakable {
-        while(true){
-          if(id > maxId){
-            break
-          }
+      while(rs.next()){
+        ids += rs.getInt(1)
+        if(ids.length % ddProductIndexSize == 0){
+          //记录批次
           j += 1
-          sendAttr(Constants.DD_PRODUCT_ATTRIBUTE, now, j, id, id + ddProductIndexSize - 1, total, ddProductIndexSize,msg.ddProductIndex)
-          id += ddProductIndexSize
+          sendAttr(Constants.DD_PRODUCT_ATTRIBUTE, now, j, ids, total, ddProductIndexSize,msg.ddProductIndex)
+          log.info("send dd attribute msg {}",j)
         }
+      }
+      if (ids.length % ddProductIndexSize > 0) {
+        j += 1
+        sendAttr(Constants.DD_PRODUCT_ATTRIBUTE, now, j, ids, total, ddProductIndexSize,msg.ddProductIndex)
       }
     } catch {
       case e: Exception => //logger.error("{}",e)
@@ -165,14 +177,14 @@ class PartitionIndexTaskActor extends Actor with ActorLogging {
     indexRootManager ! CreateSubTask(name, runId, total)
   }
 
-  private def sendAttr(name: String, runId: Date, seq: Long,minId:Int, maxId:Int, total: Long, batchSize:Int,ddProductIndex:String) {
+  private def sendAttr(name: String, runId: Date, seq: Long, ids:ListBuffer[Int],total: Long, batchSize:Int,ddProductIndex:String) {
     //println("----------------send message " + seq)
-    indexRootActor ! IndexAttributeTaskMessage(name, runId, seq, minId, maxId,batchSize,ddProductIndex)
+    indexRootActor ! IndexAttributeTaskMessage(name, runId,seq,ids,batchSize,ddProductIndex)
     indexRootManager ! CreateSubTask(name, runId, total)
   }
 
-  private def sendLift(name: String, runId: Date, seq: Long,minId:Int, maxId:Int, total: Long, batchSize:Int,ddProductIndex:String) {
-    indexRootActor ! IndexUnitLiftStyleTaskMessage(name, runId, seq, minId, maxId,batchSize,ddProductIndex)
+  private def sendLift(name: String, runId: Date, seq: Long, ids:ListBuffer[Int],total: Long, batchSize:Int,ddProductIndex:String) {
+    indexRootActor ! IndexUnitLiftStyleTaskMessage(name, runId,seq,ids,batchSize,ddProductIndex)
     indexRootManager ! CreateSubTask(name, runId, total)
   }
 
@@ -215,69 +227,54 @@ class PartitionIndexTaskActor extends Actor with ActorLogging {
   }
 
   def partitionDDProductForDB() = {
-    log.info("执行到这里partitionDDProductForDB来了")
+
     val now = new Date()
     log.info("create index {}",now)
     var conn: Connection = null
     var stmt: Statement = null
     var rs: ResultSet = null
-    var maxId:Int = 0
-    var minId:Int = 0
+    var minId: Int = 0
     var totalCount:Int = 0
     try {
       conn = DDService.dataSource.getConnection()
       stmt = conn.createStatement()
-      var sql = "select max(ProductID_int),min(ProductID_int),count(productid_int) from EC_Product ec with(nolock) where " +
+      var sql = "select min(productid_int),count(productid_int) from EC_Product ec with(nolock) where " +
                 "ec.VentureStatus_tinyint <> 3 and ec.ProductPrice_money > 0 and isnull(ec.VentureLevelNew_tinyint,0) = 0 " +
                 "and ec.QDWProductStatus_int = 0 and ec.VentureStatus_tinyint <> 4 "
       rs = stmt.executeQuery(sql)
       if (rs.next()) {
-        maxId = rs.getInt(1)
-        minId = rs.getInt(2)
-        totalCount = rs.getInt(3)
+        minId = rs.getInt(1)
+        totalCount = rs.getInt(2)
       }
+
+      if(current.configuration.getBoolean("debugIndex").get && current.configuration.getInt("debugItemCount").get > minId) {
+        minId = current.configuration.getInt("debugItemCount").get
+      }
+
       sql = s"""select productid_int from EC_Product ec with(nolock) where
                 ec.VentureStatus_tinyint <> 3 and ec.ProductPrice_money > 0
                 and isnull(ec.VentureLevelNew_tinyint,0) = 0
-                and ec.QDWProductStatus_int = 0 and ec.VentureStatus_tinyint <> 4
-                and productid_int between $minId and $maxId"""
+                and ec.QDWProductStatus_int = 0 and ec.VentureStatus_tinyint <> 4 and productid_int >= $minId"""
+      rs.setFetchSize(1000)
       rs = stmt.executeQuery(sql)
-      /*if(current.configuration.getBoolean("debugIndex").get) {
-        minId = maxId - current.configuration.getInt("debugItemCount").get
-      }*/
-
-
       val total: Long = totalCount / ddProductIndexSize + 1
-      log.info("minId=========={}",minId)
-      log.info("maxId=========={}",maxId)
       log.info("totalCount====={}",totalCount)
+
       val ids:ListBuffer[Int] = new ListBuffer[Int]
       var j = 0
       while(rs.next()){
         ids += rs.getInt(1)
-        if(ids.length == 200){
+        if(ids.length % ddProductIndexSize == 0){
+          //记录批次
           j += 1
           sendMsgDD(Constants.DD_PRODUCT_FORDB, now, j, ids, total, ddProductIndexSize)
-          ids.clear()
           log.info("send dd index msg {}",j)
         }
       }
-      if (ids.length > 0) {
+      if (ids.length % ddProductIndexSize> 0) {
         j += 1
         sendMsgDD(Constants.DD_PRODUCT_FORDB, now, j, ids, total, ddProductIndexSize)
       }
-      /*var id = minId
-      var j = 0
-      breakable {
-        while(true){
-          if(id >= maxId){
-            break
-          }
-          j += 1
-          sendMsgDD(Constants.DD_PRODUCT_FORDB, now, j, id, id + ddProductIndexSize - 1, total, ddProductIndexSize)
-          id += ddProductIndexSize
-        }
-      }*/
     } catch {
       case e: Exception => e.printStackTrace()
     } finally {
