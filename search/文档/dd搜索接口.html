@@ -5,7 +5,7 @@
 	</head>
 	<body>
 		<b>站内搜索接口</b>
-		<form action="http://localhost:9999/dd/search/product">
+		<form action="http://localhost:9000/dd/search/product/json" method="POST">
 			<table>
 				<tr>
 					<td>关键字keyword：</td>
@@ -29,8 +29,13 @@
 				</tr>
 				<tr>
 					<td>排序sort</td>
-					<td><input type="text" name="size"> </td>
+					<td><input type="text" name="sort"> </td>
 					<td>价格降序price-,升序price+;发布日期降序releasedate-；相关度降序popularity-；回复降序reviews-；diggs-；视频降序videos-</td>
+				</tr>
+				<tr>
+					<td>区间ranges</td>
+					<td><input type="text" name="ranges"> </td>
+					<td>价格price:1:99</td>
 				</tr>
 				<tr>
 					<td>品类indexcode</td>

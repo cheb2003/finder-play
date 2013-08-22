@@ -71,6 +71,10 @@ class IndexUnitAttributesActor extends Actor with ActorLogging{
           successCount += 1
         } catch {
           case e:Exception => log.info("{}",e);failCount += 1
+        } finally {
+          if (rs != null) rs.close()
+          if (stmt != null) stmt.close()
+          if (conn != null) conn.close()
         }
       }
       val consoleRoot = context.actorFor(Util.getConsoleRootAkkaURLFromMyConfig)
