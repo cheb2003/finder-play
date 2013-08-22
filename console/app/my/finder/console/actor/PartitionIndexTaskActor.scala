@@ -189,8 +189,14 @@ class PartitionIndexTaskActor extends Actor with ActorLogging {
   }
 
   private def sendMsgDD(name: String, runId: Date, seq: Long, ids:ListBuffer[Int], total: Long, batchSize:Int) {
-    indexRootActor ! IndexTaskMessageDD(name, runId, seq, ids,total,batchSize)
-    indexRootManager ! CreateSubTask(name, runId, total)
+    if(current.configuration.getBoolean("debugIndex").get && seq < current.configuration.getInt("debugTaskCount").get) {
+      indexRootActor ! IndexTaskMessageDD(name, runId, seq, ids,current.configuration.getInt("debugTaskCount").get,batchSize)
+      indexRootManager ! CreateSubTask(name, runId, current.configuration.getInt("debugTaskCount").get)
+    } else {
+      indexRootActor ! IndexTaskMessageDD(name, runId, seq, ids,total,batchSize)
+      indexRootManager ! CreateSubTask(name, runId, total)
+    }
+    
   }
   def partitionDDProduct() = {
     val now = new Date()

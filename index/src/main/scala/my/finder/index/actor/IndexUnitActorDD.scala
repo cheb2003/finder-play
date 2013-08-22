@@ -41,7 +41,8 @@ class Product(val id:String,
   var shopCategorys:String,
   var fitType:String,
   var indexCodeOfTypeShow:String,
-  var excludeAreas:String)
+  var excludeAreas:String,
+  val price:Double)
 
 class IndexUnitActorDD extends Actor with ActorLogging {
 
@@ -69,6 +70,8 @@ class IndexUnitActorDD extends Actor with ActorLogging {
   private val pSearchKeywordField =  new TextField("searchKeyword", "", Field.Store.YES)
   //www score
   private val wwwScoreField = new DoubleField("wwwScore", 0d, Field.Store.YES)
+
+  private val priceField = new DoubleField("price", 0d, Field.Store.YES)
 
   private val pIsDailyDealField =  new StringField("isDailyDeal", "", Field.Store.YES)
   private val pIsLifeStyleField =  new StringField("isLifeStyle", "", Field.Store.YES)
@@ -126,7 +129,7 @@ class IndexUnitActorDD extends Actor with ActorLogging {
             rs.getString("ProductID_int"),rs.getString("productaliasname_nvarchar"),rs.getString("ProductKeyID_nvarchar"),rs.getString("IndexCode_nvarchar"),rs.getString("IsOneSale_tinyint"),rs.getString("IsAliExpress_tinyint"),
             rs.getString("BusinessName_nvarchar"),rs.getString("CreateTime_datetime"),rs.getString("ProductTypeID_int"),rs.getString("IsQualityProduct_tinyint"),rs.getString("VentureStatus_tinyint"),rs.getString("VentureLevelNew_tinyint"),
             rs.getString("IsTaoBao_tinyint"),rs.getString("ProductBrandID_int"),rs.getString("productbrand_nvarchar"),"","","",
-            "","","",Float.NaN,"","","","",""
+            "","","",Float.NaN,"","","","","",rs.getDouble("ProductPrice_money")
           )
           lst += product
           //buffer1.append(rs.getInt("ProductID_int")).append(',')
@@ -465,6 +468,7 @@ class IndexUnitActorDD extends Actor with ActorLogging {
       pProductBrandIdField.setStringValue("")
       pProductBrandNameField.setStringValue("")
       wwwScoreField.setDoubleValue(0d)
+      priceField.setDoubleValue(0d)
 
       pAttributeValueField.setStringValue("")
       pIsEventField.setStringValue("")
@@ -512,6 +516,11 @@ class IndexUnitActorDD extends Actor with ActorLogging {
       if (StringUtils.isNotBlank(p.shopIds)){
         shopIdsField.setStringValue(p.shopIds)
         doc.add(shopIdsField)
+      }
+
+      if(p.price != Double.NaN){
+        priceField.setDoubleValue(p.price)
+        doc.add(priceField)
       }
 
       if(p.wwwScore != Float.NaN){
