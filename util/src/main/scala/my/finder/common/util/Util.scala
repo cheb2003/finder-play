@@ -7,7 +7,7 @@ import play.api.Play.current
  *
  */
 object Util {
-  private val sdf: SimpleDateFormat = new SimpleDateFormat("yyyy-MM-dd-HH-mm-ss")
+  private val sdf: SimpleDateFormat = new SimpleDateFormat("yyyy-MM-dd HH-mm-ss")
   def getKey(name: String, date: Date) = {
     name + "_" + sdf.format(date)
   }

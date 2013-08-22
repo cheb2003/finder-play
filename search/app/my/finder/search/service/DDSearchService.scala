@@ -84,22 +84,22 @@ object DDSearchService{
     val page = Util.getPage(queryParams, 1)
     //val country = Util.getParamString(queryParams, "country", "")
     val indexCode = Util.getParamString(queryParams, "indexcode", "")
-    val shopId = Util.getParamString(queryParams, "shopid", "")
+    val pId = Util.getParamString(queryParams, "pId", "")
     val keyword = Util.getParamString(queryParams, "keyword", "")
     def searchNewArrival:IdsPageResult = {
       val bq = new BooleanQuery
 
-      val tShopId:Term = new Term("shopIds",shopId)
-      val tqShopId = new TermQuery(tShopId)
-      bq.add(tqShopId,Occur.MUST)
+      val tPId:Term = new Term("pIds",pId)
+      val tQpId = new TermQuery(tPId)
+      bq.add(tQpId,Occur.MUST)
 
-      val bqKeyword = getKeyWord(keyword)
+      val bqKeyword = getKeyWordQuery(keyword)
       if (bqKeyword != null) {
         bq.add(bqKeyword,Occur.MUST)
       }
 
       if(StringUtils.isNotBlank(indexCode)){
-        val tIndexCode = new Term("shopCategorys",indexCode)
+        val tIndexCode = new Term("pIdCategorys",indexCode)
         val tqIndexCode = new TermQuery(tIndexCode)
         bq.add(tqIndexCode,Occur.MUST)
       }
@@ -121,10 +121,10 @@ object DDSearchService{
 
 
 
-    if(StringUtils.isNotBlank(shopId)){
+    if(StringUtils.isNotBlank(pId)){
       searchNewArrival
     } else {
-      new ErrorResult("require shopid")
+      new ErrorResult("require pId")
     }
 
 

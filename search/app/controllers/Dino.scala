@@ -2,12 +2,12 @@ package controllers
 
 import org.apache.lucene.util.BytesRef
 import play.api.mvc._
-import play.api.libs.json.{JsArray, Writes, JsValue, Json}
+import play.api.libs.json.{Writes, JsValue, Json}
 import play.api.libs.json.Json._
 import scala.collection.mutable.{HashMap, Queue, ListBuffer}
 import java.lang.Long
 import org.apache.lucene.search._
-import my.finder.search.service.{DDSearchService, Helper, SearcherManager}
+import my.finder.search.service.{DDSearchService, SearcherManager}
 import org.apache.lucene.index.{IndexableField, Term}
 import play.api.data._
 import play.api.data.Forms._
@@ -63,6 +63,57 @@ object Dino extends Controller {
     }*/
     Ok(json)
   }
+
+  def newarrival = Action { implicit request =>
+    val form = Form(
+      tuple(
+        "sort" -> text,
+        "size" -> number,
+        "page" -> number,
+        //"country" -> text,
+        "indexcode" -> text,
+        "pId" -> text,
+        "keyword" -> text
+      )
+    )
+    val queryParams = form.bindFromRequest.data
+    val result = DDSearchService.newarrival(queryParams)
+    val json = if (result.isInstanceOf[IdsPageResult]) {
+      toJson(result.asInstanceOf[IdsPageResult])
+    } else if (result.isInstanceOf[ErrorResult]){
+      Json.parse("{}")
+    } else {
+      Json.parse("{}")
+    }
+
+    Ok(json)
+  }
+
+  def under999 = Action { implicit request =>
+    val form = Form(
+      tuple(
+        "sort" -> text,
+        "size" -> number,
+        "page" -> number,
+        //"country" -> text,
+        "indexcode" -> text,
+        "pId" -> text,
+        "keyword" -> text
+      )
+    )
+    val queryParams = form.bindFromRequest.data
+    val result = DDSearchService.newarrival(queryParams)
+    val json = if (result.isInstanceOf[IdsPageResult]) {
+      toJson(result.asInstanceOf[IdsPageResult])
+    } else if (result.isInstanceOf[ErrorResult]){
+      Json.parse("{}")
+    } else {
+      Json.parse("{}")
+    }
+
+    Ok(json)
+  }
+
   def category = Action { implicit request =>
     val form = Form(
       tuple(
@@ -177,7 +228,7 @@ object Dino extends Controller {
   }
 
   private def searchProduct(queryParams:Map[String,String],format:String) = {
-                 9
+
     //设置参数
     val page = Util.getPage(queryParams, 1)
     val size = Util.getSize(queryParams, 20)
