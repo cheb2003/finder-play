@@ -344,7 +344,7 @@ class IndexUnitActorDD extends Actor with ActorLogging {
 
         while(rs.next){
           for(p <- lst if(p.sku == rs.getString("ProductKeyID_nvarchar"))) {
-            p.shopIds += p.shopIds + " " + rs.getString("ShopID_bigint")
+            p.shopIds += (" " + rs.getString("ShopID_bigint"))
           }
         }
         eSql = System.currentTimeMillis()
@@ -359,7 +359,7 @@ class IndexUnitActorDD extends Actor with ActorLogging {
 
         while(rs.next){
           for(p <- lst if(p.sku == rs.getString("ProductKeyID_nvarchar"))) {
-            p.shopCategorys += p.shopCategorys + " " + rs.getString("CategoryID_int")
+            p.shopCategorys += (" " + rs.getString("CategoryID_int"))
           }
         }
         eSql = System.currentTimeMillis()
@@ -373,7 +373,7 @@ class IndexUnitActorDD extends Actor with ActorLogging {
 
         while(rs.next){
           for(p <- lst if(p.id == rs.getString("productid_int"))) {
-            p.fitType += p.fitType + " " + rs.getString("IndexCode_nvarchar")
+            p.fitType += (" " + rs.getString("IndexCode_nvarchar"))
           }
         }
         eSql = System.currentTimeMillis()
@@ -388,7 +388,7 @@ class IndexUnitActorDD extends Actor with ActorLogging {
 
         while(rs.next){
           for(p <- lst if(p.sku == rs.getString("ProductKeyID_nvarchar"))) {
-            p.indexCodeOfTypeShow += p.indexCodeOfTypeShow + " " + rs.getString("IndexCode_nvarchar")
+            p.indexCodeOfTypeShow += (" " + rs.getString("IndexCode_nvarchar"))
           }
         }
         eSql = System.currentTimeMillis()
