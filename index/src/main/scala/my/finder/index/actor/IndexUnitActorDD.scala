@@ -44,7 +44,8 @@ class Product(val id:String,
   var indexCodeOfTypeShow:String,
   var excludeAreas:String,
   val price:Double,
-  var reviews:Int)
+  var reviews:Int,
+  val isClearance:String)
 
 class IndexUnitActorDD extends Actor with ActorLogging {
   val workDir = Config.get("workDir")
@@ -87,6 +88,7 @@ class IndexUnitActorDD extends Actor with ActorLogging {
   private val showPositionTypeShowField =  new StringField("showPositionTypeShow", "", Field.Store.YES)
   private val excludeAreasField = new TextField("excludeAreas","",Field.Store.YES)
   private val reviewsField = new IntField("reviews",0,Field.Store.YES)
+  private val isClearanceField = new StringField("isClearance","",Field.Store.YES)
 
 
 
@@ -129,7 +131,7 @@ class IndexUnitActorDD extends Actor with ActorLogging {
                 IndexCode_nvarchar,IsOneSale_tinyint,IsAliExpress_tinyint,BusinessName_nvarchar,CreateTime_datetime,
                 ProductTypeID_int,IsQualityProduct_tinyint,VentureStatus_tinyint,VentureLevelNew_tinyint,
                 IsTaoBao_tinyint,ProductBrandID_int,productbrand_nvarchar,BusinessBrand_nvarchar,
-                ProductPrice_money,QDWProductStatus_int from ec_product with(nolock) where ProductID_int in ($ids)"""
+                ProductPrice_money,QDWProductStatus_int,isClearance_tinyint from ec_product with(nolock) where ProductID_int in ($ids)"""
         stmt.setFetchSize(msg.batchSize)
         bSql = System.currentTimeMillis()
         rs = stmt.executeQuery(sql)
@@ -140,7 +142,7 @@ class IndexUnitActorDD extends Actor with ActorLogging {
             rs.getString("ProductID_int"),rs.getString("productaliasname_nvarchar"),rs.getString("ProductKeyID_nvarchar"),rs.getString("IndexCode_nvarchar"),rs.getString("IsOneSale_tinyint"),rs.getString("IsAliExpress_tinyint"),
             rs.getString("BusinessName_nvarchar"),rs.getString("CreateTime_datetime"),rs.getString("ProductTypeID_int"),rs.getString("IsQualityProduct_tinyint"),rs.getString("VentureStatus_tinyint"),rs.getString("VentureLevelNew_tinyint"),
             rs.getString("IsTaoBao_tinyint"),rs.getString("ProductBrandID_int"),rs.getString("productbrand_nvarchar"),"","","",
-            "","","",Float.NaN,"","","","","",rs.getDouble("ProductPrice_money"),0
+            "","","",Float.NaN,"","","","","",rs.getDouble("ProductPrice_money"),0,rs.getString("isClearance_tinyint")
           )
           lst += product
           //buffer1.append(rs.getInt("ProductID_int")).append(',')
@@ -428,7 +430,7 @@ class IndexUnitActorDD extends Actor with ActorLogging {
 
 
         //reviews
-        sql = s"""SELECT ProductID_int as id,COUNT(ProductID_int) as count FROM EC_ProductComment_QDW where productid_int in ($ids) GROUP BY ProductID_int"""
+        sql = s"""SELECT ProductID_int as id,COUNT(ProductID_int) as count FROM EC_ProductComment_QDW with(nolock) where productid_int in ($ids) GROUP BY ProductID_int"""
         bSql = System.currentTimeMillis()
         rs = stmt.executeQuery(sql)
 
@@ -442,7 +444,7 @@ class IndexUnitActorDD extends Actor with ActorLogging {
           log.info("sql:{};time:{}",sql,eSql - bSql)
         }
 
-        sql = s"""SELECT ProductID_int as id,COUNT(ProductID_int) as count FROM EC_ProductComment where productid_int in ($ids) GROUP BY ProductID_int"""
+        sql = s"""SELECT ProductID_int as id,COUNT(ProductID_int) as count FROM EC_ProductComment with(nolock) where productid_int in ($ids) GROUP BY ProductID_int"""
         bSql = System.currentTimeMillis()
         rs = stmt.executeQuery(sql)
 
@@ -521,6 +523,7 @@ class IndexUnitActorDD extends Actor with ActorLogging {
       indexCodeTypeShowField.setStringValue("")
       excludeAreasField.setStringValue("")
       reviewsField.setIntValue(0)
+      isClearanceField.setStringValue("")
 
 
 
@@ -529,6 +532,11 @@ class IndexUnitActorDD extends Actor with ActorLogging {
 
       reviewsField.setIntValue(p.reviews)
       doc.add(reviewsField)
+
+      if(StringUtils.isNotBlank(p.isClearance)){
+        isClearanceField.setStringValue(p.isClearance)
+        doc.add(isClearanceField)
+      }
 
       if(StringUtils.isNotBlank(p.excludeAreas)){
         excludeAreasField.setStringValue(p.excludeAreas)
