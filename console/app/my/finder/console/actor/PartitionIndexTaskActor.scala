@@ -189,14 +189,8 @@ class PartitionIndexTaskActor extends Actor with ActorLogging {
   }
 
   private def sendMsgDD(name: String, runId: Date, seq: Long, ids:ListBuffer[Int], total: Long, batchSize:Int) {
-    if(current.configuration.getBoolean("debugIndex").get && seq < current.configuration.getInt("debugTaskCount").get) {
-      indexRootActor ! IndexTaskMessageDD(name, runId, seq, ids,current.configuration.getInt("debugTaskCount").get,batchSize)
-      indexRootManager ! CreateSubTask(name, runId, current.configuration.getInt("debugTaskCount").get)
-    } else {
-      indexRootActor ! IndexTaskMessageDD(name, runId, seq, ids,total,batchSize)
-      indexRootManager ! CreateSubTask(name, runId, total)
-    }
-    
+    indexRootActor ! IndexTaskMessageDD(name, runId, seq, ids,total,batchSize)
+    indexRootManager ! CreateSubTask(name, runId, total)
   }
   def partitionDDProduct() = {
     val now = new Date()
@@ -263,7 +257,19 @@ class PartitionIndexTaskActor extends Actor with ActorLogging {
                 and ec.QDWProductStatus_int = 0 and ec.VentureStatus_tinyint <> 4 and productid_int >= $minId"""
       rs.setFetchSize(1000)
       rs = stmt.executeQuery(sql)
-      val total: Long = totalCount / ddProductIndexSize + 1
+      /*if(current.configuration.getBoolean("debugIndex").get) {
+        minId = maxId - current.configuration.getInt("debugItemCount").get
+      }*/
+
+
+      
+      var total: Long = totalCount / ddProductIndexSize + 1
+
+      if(current.configuration.getBoolean("debugIndex").get && total > current.configuration.getInt("debugTaskCount").get){
+        total = current.configuration.getInt("debugTaskCount").get
+      }
+
+      log.info("minId=========={}",minId)
       log.info("totalCount====={}",totalCount)
 
       val ids:ListBuffer[Int] = new ListBuffer[Int]
@@ -274,6 +280,7 @@ class PartitionIndexTaskActor extends Actor with ActorLogging {
           //记录批次
           j += 1
           sendMsgDD(Constants.DD_PRODUCT_FORDB, now, j, ids, total, ddProductIndexSize)
+          ids.clear()
           log.info("send dd index msg {}",j)
         }
       }
