@@ -43,7 +43,8 @@ class Product(val id:String,
   var fitType:String,
   var indexCodeOfTypeShow:String,
   var excludeAreas:String,
-  val price:Double)
+  val price:Double,
+  var reviews:Int)
 
 class IndexUnitActorDD extends Actor with ActorLogging {
   val workDir = Config.get("workDir")
@@ -85,6 +86,7 @@ class IndexUnitActorDD extends Actor with ActorLogging {
   private val indexCodeTypeShowField =  new TextField("indexCodeTypeShow", "", Field.Store.YES)
   private val showPositionTypeShowField =  new StringField("showPositionTypeShow", "", Field.Store.YES)
   private val excludeAreasField = new TextField("excludeAreas","",Field.Store.YES)
+  private val reviewsField = new IntField("reviews",0,Field.Store.YES)
 
 
 
@@ -138,7 +140,7 @@ class IndexUnitActorDD extends Actor with ActorLogging {
             rs.getString("ProductID_int"),rs.getString("productaliasname_nvarchar"),rs.getString("ProductKeyID_nvarchar"),rs.getString("IndexCode_nvarchar"),rs.getString("IsOneSale_tinyint"),rs.getString("IsAliExpress_tinyint"),
             rs.getString("BusinessName_nvarchar"),rs.getString("CreateTime_datetime"),rs.getString("ProductTypeID_int"),rs.getString("IsQualityProduct_tinyint"),rs.getString("VentureStatus_tinyint"),rs.getString("VentureLevelNew_tinyint"),
             rs.getString("IsTaoBao_tinyint"),rs.getString("ProductBrandID_int"),rs.getString("productbrand_nvarchar"),"","","",
-            "","","",Float.NaN,"","","","","",rs.getDouble("ProductPrice_money")
+            "","","",Float.NaN,"","","","","",rs.getDouble("ProductPrice_money"),0
           )
           lst += product
           //buffer1.append(rs.getInt("ProductID_int")).append(',')
@@ -425,6 +427,34 @@ class IndexUnitActorDD extends Actor with ActorLogging {
         }
 
 
+        //reviews
+        sql = s"""SELECT ProductID_int as id,COUNT(ProductID_int) as count FROM EC_ProductComment_QDW where productid_int in ($ids) GROUP BY ProductID_int"""
+        bSql = System.currentTimeMillis()
+        rs = stmt.executeQuery(sql)
+
+        while(rs.next){
+          for(p <- lst if(p.id == rs.getString("id"))) {
+            p.reviews = rs.getInt("count")
+          }
+        }
+        eSql = System.currentTimeMillis()
+        if(eSql - bSql > 1000){
+          log.info("sql:{};time:{}",sql,eSql - bSql)
+        }
+
+        sql = s"""SELECT ProductID_int as id,COUNT(ProductID_int) as count FROM EC_ProductComment where productid_int in ($ids) GROUP BY ProductID_int"""
+        bSql = System.currentTimeMillis()
+        rs = stmt.executeQuery(sql)
+
+        while(rs.next){
+          for(p <- lst if(p.id == rs.getString("id"))) {
+            p.reviews += rs.getInt("count")
+          }
+        }
+        eSql = System.currentTimeMillis()
+        if(eSql - bSql > 1000){
+          log.info("sql:{};time:{}",sql,eSql - bSql)
+        }
 
         bSql = System.currentTimeMillis()
         for (pro <- lst) {
@@ -490,11 +520,15 @@ class IndexUnitActorDD extends Actor with ActorLogging {
       skuOrderField.setStringValue("")
       indexCodeTypeShowField.setStringValue("")
       excludeAreasField.setStringValue("")
+      reviewsField.setIntValue(0)
 
 
 
       //设置本次结果集的值
       doc = new Document()
+
+      reviewsField.setIntValue(p.reviews)
+      doc.add(reviewsField)
 
       if(StringUtils.isNotBlank(p.excludeAreas)){
         excludeAreasField.setStringValue(p.excludeAreas)
