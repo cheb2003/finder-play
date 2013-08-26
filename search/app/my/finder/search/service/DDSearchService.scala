@@ -4,11 +4,14 @@ import my.finder.common.util.Util
 import org.apache.lucene.search._
 import org.apache.lucene.index.Term
 import org.apache.commons.lang.StringUtils
-import my.finder.common.model.{PageResult, ErrorResult, IdsPageResult}
+import my.finder.common.model.{IdsPageResult, PageResult, ErrorResult}
 import org.apache.lucene.search.BooleanClause.Occur
 import scala.collection.mutable.ListBuffer
 import my.finder.search.service
 import java.util
+import java.util.{Calendar, Date}
+import java.text.SimpleDateFormat
+import org.apache.lucene.util.BytesRef
 
 
 /**
@@ -25,7 +28,7 @@ object DDSearchService{
     val sort = Util.getParamString(queryParams, "sort", "")
     val size = Util.getSize(queryParams, 20)
     val page = Util.getPage(queryParams, 1)
-    //val country = Util.getParamString(queryParams, "country", "")
+    val countrycode = Util.getParamString(queryParams, "country", "")
     val indexCode = Util.getParamString(queryParams, "indexcode", "")
     val shopId = Util.getParamString(queryParams, "shopid", "")
     val keyword = Util.getParamString(queryParams, "keyword", "")
@@ -46,8 +49,8 @@ object DDSearchService{
 	      val tqIndexCode = new TermQuery(tIndexCode)
 	      bq.add(tqIndexCode,Occur.MUST)
       }
-      
-      val sot: Sort = sorts(sort);
+
+      val sot: Sort = sorts(sort,"country" + countrycode.toUpperCase);
       val searcher: IndexSearcher = service.SearcherManager.ddSearcher
       val start = (page - 1) * size + 1;
       val tsdc: TopFieldCollector = TopFieldCollector.create(sot, start + size, false, false, false, false);
@@ -82,7 +85,7 @@ object DDSearchService{
     val sort = Util.getParamString(queryParams, "sort", "")
     val size = Util.getSize(queryParams, 20)
     val page = Util.getPage(queryParams, 1)
-    val country = Util.getParamString(queryParams, "country", "")
+    val countrycode = Util.getParamString(queryParams, "country", "")
     val indexCode = Util.getParamString(queryParams, "indexcode", "")
     val brandId = Util.getParamString(queryParams, "brandId", "")
     val keyword = Util.getParamString(queryParams, "keyword", "")
@@ -104,7 +107,7 @@ object DDSearchService{
         bq.add(tqIndexCode,Occur.MUST)
       }
 
-      val sot: Sort = sorts(sort);
+      val sot: Sort = sorts(sort,"country" + countrycode.toUpperCase);
       val searcher: IndexSearcher = service.SearcherManager.ddSearcher
       val start = (page - 1) * size + 1;
       val tsdc: TopFieldCollector = TopFieldCollector.create(sot, start + size, false, false, false, false);
@@ -118,8 +121,6 @@ object DDSearchService{
 
       new IdsPageResult(ids,page,size,total,bq.toString)
     }
-
-
 
     if(StringUtils.isNotBlank(brandId)){
       searchBrand
@@ -127,32 +128,43 @@ object DDSearchService{
       new ErrorResult("require brandId")
     }
 
-
   }
 
   /**
    * NewArrival搜索接口
-   * 必须传入pId参数
    * @param queryParams
    */
   def newarrival(queryParams: Map[String, String]):PageResult = {
     val sort = Util.getParamString(queryParams, "sort", "")
     val size = Util.getSize(queryParams, 20)
     val page = Util.getPage(queryParams, 1)
-    val country = Util.getParamString(queryParams, "country", "")
+    val countrycode = Util.getParamString(queryParams, "country", "")
     val indexCode = Util.getParamString(queryParams, "indexcode", "")
-    val pId = Util.getParamString(queryParams, "pId", "")
+    val price = Util.getParamString(queryParams, "price", "")
     val keyword = Util.getParamString(queryParams, "keyword", "")
-    def searchNewArrival:IdsPageResult = {
+
+    val s = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss")
+    val idsPageResult = {
       val bq = new BooleanQuery
 
-      val tPId:Term = new Term("id",pId)
-      val tQpId = new TermQuery(tPId)
-      bq.add(tQpId,Occur.MUST)
+      val now = new Date()
+      val snow = s.format(now)
+
+      val calbefore7 = Calendar.getInstance()
+      calbefore7.setTime(now)
+      calbefore7.add(Calendar.DATE, -7)
+      val scalbefore7 = s.format(calbefore7.getTime)
+      val trq = new TermRangeQuery("createTime",new BytesRef(scalbefore7),new BytesRef(snow),true,true);
+      bq.add(trq,Occur.MUST)
 
       val bqKeyword = getKeyWordQuery(keyword)
       if (bqKeyword != null) {
         bq.add(bqKeyword,Occur.MUST)
+      }
+
+      if(StringUtils.isNotBlank(price)){
+        val nrq = NumericRangeQuery.newDoubleRange("price", 0, price.toDouble, true, true);
+        bq.add(nrq,Occur.MUST)
       }
 
       if(StringUtils.isNotBlank(indexCode)){
@@ -161,13 +173,12 @@ object DDSearchService{
         bq.add(tqIndexCode,Occur.MUST)
       }
 
-      val sot: Sort = sorts(sort);
+      val sot: Sort = sorts(sort,"country" + countrycode.toUpperCase);
       val searcher: IndexSearcher = service.SearcherManager.ddSearcher
       val start = (page - 1) * size + 1;
       val tsdc: TopFieldCollector = TopFieldCollector.create(sot, start + size, false, false, false, false);
 
       searcher.search(bq, tsdc);
-
 
       val topDocs: TopDocs = tsdc.topDocs(start - 1, size);
       val ids = readIds(searcher,topDocs.scoreDocs)
@@ -175,37 +186,26 @@ object DDSearchService{
 
       new IdsPageResult(ids,page,size,total,bq.toString)
     }
-
-
-
-    if(StringUtils.isNotBlank(pId)){
-      searchNewArrival
-    } else {
-      new ErrorResult("require pId")
-    }
-
+    idsPageResult
 
   }
 
   /**
    * under999搜索接口
-   * 必须传入pId参数
    * @param queryParams
    */
   def under999(queryParams: Map[String, String]):PageResult = {
     val sort = Util.getParamString(queryParams, "sort", "")
     val size = Util.getSize(queryParams, 20)
     val page = Util.getPage(queryParams, 1)
-    val country = Util.getParamString(queryParams, "country", "")
+    val countrycode = Util.getParamString(queryParams, "country", "")
     val indexCode = Util.getParamString(queryParams, "indexcode", "")
-    val pId = Util.getParamString(queryParams, "pId", "")
     val keyword = Util.getParamString(queryParams, "keyword", "")
-    def searchUnder999:IdsPageResult = {
+    val idsPageResult = {
       val bq = new BooleanQuery
 
-      val tPId:Term = new Term("id",pId)
-      val tQpId = new TermQuery(tPId)
-      bq.add(tQpId,Occur.MUST)
+      val nrq = NumericRangeQuery.newDoubleRange("price", 0, 9.99d, true, true);
+      bq.add(nrq,Occur.MUST)
 
       val bqKeyword = getKeyWordQuery(keyword)
       if (bqKeyword != null) {
@@ -218,7 +218,7 @@ object DDSearchService{
         bq.add(tqIndexCode,Occur.MUST)
       }
 
-      val sot: Sort = sorts(sort);
+      val sot: Sort = sorts(sort,"country" + countrycode.toUpperCase);
       val searcher: IndexSearcher = service.SearcherManager.ddSearcher
       val start = (page - 1) * size + 1;
       val tsdc: TopFieldCollector = TopFieldCollector.create(sot, start + size, false, false, false, false);
@@ -232,38 +232,36 @@ object DDSearchService{
 
       new IdsPageResult(ids,page,size,total,bq.toString)
     }
-
-    if(StringUtils.isNotBlank(pId)){
-      searchUnder999
-    } else {
-      new ErrorResult("require pId")
-    }
-
+    idsPageResult
   }
 
   /**
    * 清仓搜索接口
-   * 必须传入pId参数
    * @param queryParams
    */
   def clearance(queryParams: Map[String, String]):PageResult = {
     val sort = Util.getParamString(queryParams, "sort", "")
     val size = Util.getSize(queryParams, 20)
     val page = Util.getPage(queryParams, 1)
-    val country = Util.getParamString(queryParams, "country", "")
+    val countrycode = Util.getParamString(queryParams, "country", "")
     val indexCode = Util.getParamString(queryParams, "indexcode", "")
-    val pId = Util.getParamString(queryParams, "pId", "")
+    val price = Util.getParamString(queryParams, "price", "")
     val keyword = Util.getParamString(queryParams, "keyword", "")
     def searchClearance:IdsPageResult = {
       val bq = new BooleanQuery
 
-      val tPId:Term = new Term("id",pId)
-      val tQpId = new TermQuery(tPId)
-      bq.add(tQpId,Occur.MUST)
+      val tIsClearance:Term = new Term("isClearance","1")
+      val tQisClearance = new TermQuery(tIsClearance)
+      bq.add(tQisClearance,Occur.MUST)
 
       val bqKeyword = getKeyWordQuery(keyword)
       if (bqKeyword != null) {
         bq.add(bqKeyword,Occur.MUST)
+      }
+
+      if(StringUtils.isNotBlank(price)){
+        val nrq = NumericRangeQuery.newDoubleRange("price", 0, price.toDouble, true, true);
+        bq.add(nrq,Occur.MUST)
       }
 
       if(StringUtils.isNotBlank(indexCode)){
@@ -272,13 +270,11 @@ object DDSearchService{
         bq.add(tqIndexCode,Occur.MUST)
       }
 
-      val sot: Sort = sorts(sort);
+      val sot: Sort = sorts(sort,"country" + countrycode.toUpperCase);
       val searcher: IndexSearcher = service.SearcherManager.ddSearcher
       val start = (page - 1) * size + 1;
       val tsdc: TopFieldCollector = TopFieldCollector.create(sot, start + size, false, false, false, false);
-
       searcher.search(bq, tsdc);
-
 
       val topDocs: TopDocs = tsdc.topDocs(start - 1, size);
       val ids = readIds(searcher,topDocs.scoreDocs)
@@ -286,12 +282,7 @@ object DDSearchService{
 
       new IdsPageResult(ids,page,size,total,bq.toString)
     }
-
-    if(StringUtils.isNotBlank(pId)){
-      searchClearance
-    } else {
-      new ErrorResult("require pId")
-    }
+    searchClearance
 
   }
 
@@ -313,7 +304,7 @@ object DDSearchService{
    */
   def sorts(sort: String): Sort = {
     val lst = ListBuffer[SortField]()
-    
+
     val sortField = sort match {
       case "price-" => new SortField("unitPrice", SortField.Type.DOUBLE, true)
       case "price+" => new SortField("unitPrice", SortField.Type.DOUBLE, false)
@@ -333,7 +324,37 @@ object DDSearchService{
     sot
 
   }
-  
+
+  /**
+   * 传入国家id的排序
+   * @param sort
+   * @return
+   */
+  def sorts(sort: String,country: String): Sort = {
+    val sot = sort match {
+      case "price-" => new Sort(new SortField("unitPrice", SortField.Type.DOUBLE, true))
+      case "price+" => new Sort(new SortField("unitPrice", SortField.Type.DOUBLE, false))
+      case "releasedate-" => new Sort(new SortField("createTime", SortField.Type.DOUBLE, true))
+      case "releasedate+" => new Sort(new SortField("createTime", SortField.Type.DOUBLE, false))
+      case "reviews-" => new Sort(new SortField("reviews", SortField.Type.INT, true))
+      case "reviews+" => new Sort(new SortField("reviews", SortField.Type.INT, false))
+      case "diggs-" => new Sort(new SortField("diggs", SortField.Type.INT, true))
+      case "diggs+" => new Sort(new SortField("diggs", SortField.Type.INT, false))
+      case "videos-" => new Sort(new SortField("videos", SortField.Type.INT, true))
+      case "videos+" => new Sort(new SortField("videos", SortField.Type.INT, false))
+      case _ => {
+        val sort = if(country != "")
+        //默认排序,先排相关度,在排国家分数
+          new Sort(SortField.FIELD_SCORE,new SortField(country, SortField.Type.STRING, true));
+        else
+          new Sort(SortField.FIELD_SCORE);
+        sort
+      }
+    }
+    sot
+    //var sot: Sort = new Sort(new SortField("unitPrice", SortField.Type.DOUBLE, true))
+  }
+
   /**
    * 获取关键字查询条件.
    * @param pKeyword 关键字

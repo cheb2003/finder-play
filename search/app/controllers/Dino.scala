@@ -5,7 +5,6 @@ import play.api.mvc._
 import play.api.libs.json.{JsArray, Writes, JsValue, Json}
 import play.api.libs.json.Json._
 import scala.collection.mutable.{HashMap, Queue, ListBuffer}
-import java.lang.Long
 import org.apache.lucene.search._
 import my.finder.search.service.{DDSearchService, SearcherManager}
 import org.apache.lucene.index.{IndexableField, Term}
@@ -175,7 +174,7 @@ object Dino extends Controller {
         "page" -> number,
         "country" -> text,
         "indexcode" -> text,
-        "pId" -> text,
+        "price" -> text,
         "keyword" -> text
       )
     )
@@ -199,12 +198,12 @@ object Dino extends Controller {
         "size" -> number,
         "page" -> number,
         "country" -> text,
-        "pId" -> text,
+        "indexcode" -> text,
         "keyword" -> text
       )
     )
     val queryParams = form.bindFromRequest.data
-    val result = DDSearchService.newarrival(queryParams)
+    val result = DDSearchService.under999(queryParams)
     val json = if (result.isInstanceOf[IdsPageResult]) {
       toJson(result.asInstanceOf[IdsPageResult])
     } else if (result.isInstanceOf[ErrorResult]){
@@ -223,7 +222,8 @@ object Dino extends Controller {
         "size" -> number,
         "page" -> number,
         "country" -> text,
-        "pId" -> text,
+        "indexcode" -> text,
+        "price" -> text,
         "keyword" -> text
       )
     )
