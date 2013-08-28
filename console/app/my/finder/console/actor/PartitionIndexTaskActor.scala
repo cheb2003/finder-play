@@ -189,8 +189,11 @@ class PartitionIndexTaskActor extends Actor with ActorLogging {
   }
 
   private def sendMsgDD(name: String, runId: Date, seq: Long, ids:ListBuffer[Int], total: Long, batchSize:Int) {
-    indexRootActor ! IndexTaskMessageDD(name, runId, seq, ids,total,batchSize)
-    indexRootManager ! CreateSubTask(name, runId, total)
+    if(seq <= total){
+      indexRootActor ! IndexTaskMessageDD(name, runId, seq, ids,total,batchSize)
+      indexRootManager ! CreateSubTask(name, runId, total)  
+      log.info("send dd index msg {}",seq)
+    }
   }
   def partitionDDProduct() = {
     val now = new Date()
@@ -281,7 +284,6 @@ class PartitionIndexTaskActor extends Actor with ActorLogging {
           j += 1
           sendMsgDD(Constants.DD_PRODUCT_FORDB, now, j, ids, total, ddProductIndexSize)
           ids.clear()
-          log.info("send dd index msg {}",j)
         }
       }
       if (ids.length % ddProductIndexSize> 0) {
