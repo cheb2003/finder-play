@@ -5,15 +5,15 @@ import my.finder.common.util.Util
 import org.apache.lucene.document._
 import my.finder.common.message.{CompleteSubTask, IndexTaskMessageDD}
 import my.finder.index.service.{DBService, IndexWriteManager}
-import java.sql.{ResultSet, Statement, Connection}
+import java.sql.{Timestamp, ResultSet, Statement, Connection}
 import org.apache.lucene.index.IndexWriter
 import scala.collection.mutable.ListBuffer
 import scala.collection.mutable.HashMap
 import scala.util.control.Breaks._
 import java.util.Date
-import scala.Predef.String
 import org.apache.commons.lang.StringUtils
 import scala.collection.mutable
+import java.text.SimpleDateFormat
 
 class Product(val id:String,
   val name:String,
@@ -22,7 +22,7 @@ class Product(val id:String,
   var isOneSale:String,
   var isAliExpress:String,
   var businessName:String,
-  var createTime:String,
+  var createTime:Timestamp,
   var typeId:String,
   var isQuality:String,
   var ventureStatus:String,
@@ -30,7 +30,8 @@ class Product(val id:String,
   var isTaobao:String,
   var brandId:String,
   var brandName:String,
-  var attribute:String,
+  var attributeFromProduct:String,
+  var attributeFromFND:String,
   var isEvent:String,
   var searchKeyword:String,
   var areaScore:String,
@@ -92,7 +93,7 @@ class IndexUnitActorDD extends Actor with ActorLogging {
   }
 
   def receive = {
-    
+
     case msg: IndexTaskMessageDD => {
       var conn: Connection = null
       var stmt: Statement = null
@@ -131,8 +132,8 @@ class IndexUnitActorDD extends Actor with ActorLogging {
         while (rs.next()) {
           product = new Product(
             rs.getString("ProductID_int"),rs.getString("productaliasname_nvarchar"),rs.getString("ProductKeyID_nvarchar"),rs.getString("IndexCode_nvarchar"),rs.getString("IsOneSale_tinyint"),rs.getString("IsAliExpress_tinyint"),
-            rs.getString("BusinessName_nvarchar"),rs.getString("CreateTime_datetime"),rs.getString("ProductTypeID_int"),rs.getString("IsQualityProduct_tinyint"),rs.getString("VentureStatus_tinyint"),rs.getString("VentureLevelNew_tinyint"),
-            rs.getString("IsTaoBao_tinyint"),rs.getString("ProductBrandID_int"),rs.getString("productbrand_nvarchar"),"","","",
+            rs.getString("BusinessName_nvarchar"),rs.getTimestamp("CreateTime_datetime"),rs.getString("ProductTypeID_int"),rs.getString("IsQualityProduct_tinyint"),rs.getString("VentureStatus_tinyint"),rs.getString("VentureLevelNew_tinyint"),
+            rs.getString("IsTaoBao_tinyint"),rs.getString("ProductBrandID_int"),rs.getString("productbrand_nvarchar"),"","","","",
             "","","",Float.NaN,"","","","","",rs.getDouble("ProductPrice_money"),0,rs.getString("isClearance_tinyint")
           )
           lst += product
@@ -148,7 +149,7 @@ class IndexUnitActorDD extends Actor with ActorLogging {
         val skus = buffer2.substring(0,buffer2.length() - 1)
         val stypeid = buffer3.substring(0,buffer3.length() - 1)
 
-        //读取EC_ProductExtendItem
+        //产品属性来源1、读取EC_ExtendsForProductId
         //sql = String.format("select productid_int,itemvalueeng_nvarchar,itemnameeng_nvarchar from EC_ProductExtendItem with(nolock) where ProductID_int in(%s) and WebSiteID_smallint = 61 and AttributeInputType_int = 1 ",ids)
         sql = s"""select ProductId_int as id,AttributeValue_nvarchar as attr from EC_ExtendsForProductId with(nolock)
                 where ProductId_int in ($ids)"""
@@ -160,35 +161,48 @@ class IndexUnitActorDD extends Actor with ActorLogging {
           breakable {
             for (p <- lst) {
               if(p.id == rs.getString("id")){
-                p.attribute = rs.getString("attr")
+                p.attributeFromProduct = rs.getString("attr")
                 break
               }
             }
           }
         }
-        val map = new HashMap[String,String]()
-        /*while (rs.next()) {
-          var s = map.getOrElse(rs.getString("productid_int"),"")
-          val v = rs.getString("itemvalueeng_nvarchar")
-          val vv = v.split(",")
-          val sb = new StringBuffer()
-          var i = 0
-          while(i < vv.length){
-            sb.append("###").append(rs.getString("itemnameeng_nvarchar")).append("###").append(vv(i)).append("###").append(' ')
-            i += 1
-          }
-          s = s + sb.toString
-          map.put(rs.getString("productid_int"),s)
-        }
-        var ite = map.iterator //元组
-        for (i <- ite;p <- lst;if i._1 == p.id) {
-          p.attribute = i._2
-        }
-        map.clear()*/
+
         eSql = System.currentTimeMillis()
         if(eSql - bSql > 1000){
           log.info("sql:{};time:{}",sql,eSql - bSql)
         }
+
+        //产品属性来源2、读取FND_RELA_PRODUCT_ATTR,FND_ATTRVALUE,FND_ATTR
+        sql = s"select frpa.ProductID_int,fr.Name_nvarchar,fa.VALUE_nvarchar from FND_RELA_PRODUCT_ATTR frpa with(nolock),FND_ATTRVALUE fa with(nolock),FND_ATTR fr with(nolock) where frpa.AttrID_int = fa.ID_int and fa.ID_int = fr.ID_int and ProductId_int in ($ids)"
+        bSql = System.currentTimeMillis()
+        rs = stmt.executeQuery(sql)
+        val map1 = new HashMap[Int,String]()
+        while (rs.next()) {
+          var s = map1.getOrElse(rs.getInt("productid_int"),"")
+          val sb = new StringBuffer()
+          sb.append("###").append(rs.getString("Name_nvarchar")).append("###").append(rs.getString("VALUE_nvarchar")).append("###").append(' ')
+          s = s + sb.toString
+          map1.put(rs.getInt("productid_int"),s)
+        }
+        val ite = map1.iterator //元组
+        for (i <- ite) {
+          breakable {
+            for (p <- lst) {
+              if(i._1 == p.id.toInt){
+                p.attributeFromFND = i._2
+                break
+              }
+            }
+          }
+        }
+        map1.clear()
+        eSql = System.currentTimeMillis()
+        if(eSql - bSql > 1000){
+          log.info("sql:{};time:{}",sql,eSql - bSql)
+        }
+
+        val map = new HashMap[String,String]()
         //读取EC_SearchKeywordConfig
         sql = s"select ProductTypeID_int,SearchKeyword_nvarchar from EC_SearchKeywordConfig with(nolock) where ProductTypeID_int in ($stypeid)"
 
@@ -204,7 +218,6 @@ class IndexUnitActorDD extends Actor with ActorLogging {
           s = s + sb.toString
           map.put(rs.getString("ProductTypeID_int"),s)
         }
-
         var ite1 = map.iterator
         for (i1 <- ite1) {
           for (p1 <- lst) {
@@ -411,7 +424,7 @@ class IndexUnitActorDD extends Actor with ActorLogging {
               }
               p.excludeAreas = sb.toString
             }
-            
+
           }
         }
         eSql = System.currentTimeMillis()
@@ -483,6 +496,7 @@ class IndexUnitActorDD extends Actor with ActorLogging {
 
   def writeDocNew(p:Product,writer: IndexWriter): Boolean = {
     try {
+      val s = new SimpleDateFormat("yyyyMMddHHmm")
       //先清空上一个结果集的数据
       pIdField.setStringValue("")
       pNameField.setStringValue("")
@@ -605,10 +619,8 @@ class IndexUnitActorDD extends Actor with ActorLogging {
         doc.add(pBusinessNameField)
       }
 
-      if(StringUtils.isNotBlank(p.createTime)) {
-        //将数据库中存的时间戳转换成索引格式yyyyMMddHHmm,注意用[]确定范围
-        val lastCreateTime = p.createTime.replaceAll("[[ ][-][:][.]]","").substring(0,12)
-        pCreateTimeField.setStringValue(lastCreateTime)
+      if(StringUtils.isNotBlank(p.createTime.toString)) {
+        pCreateTimeField.setStringValue(s.format(p.createTime))
         doc.add(pCreateTimeField)
       }
 
@@ -647,8 +659,14 @@ class IndexUnitActorDD extends Actor with ActorLogging {
         doc.add(pProductBrandNameField)
       }
 
-      if(StringUtils.isNotBlank(p.attribute)) {
-        pAttributeValueField.setStringValue(p.attribute.toLowerCase)
+      if(StringUtils.isNotBlank(p.attributeFromFND) || StringUtils.isNotBlank(p.attributeFromProduct)) {
+        var attribute = ""
+        if(!StringUtils.isNotBlank(p.attributeFromProduct)) {
+          attribute += p.attributeFromFND + "hasAttributes"
+        } else {
+          attribute += p.attributeFromFND + p.attributeFromProduct
+        }
+        pAttributeValueField.setStringValue(attribute.toLowerCase)
         doc.add(pAttributeValueField)
       }
 

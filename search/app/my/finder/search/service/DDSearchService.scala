@@ -9,7 +9,7 @@ import org.apache.lucene.search.BooleanClause.Occur
 import scala.collection.mutable.ListBuffer
 import my.finder.search.service
 import java.util
-import java.util.{Calendar, Date}
+import java.util.Calendar
 import java.text.SimpleDateFormat
 import org.apache.lucene.util.BytesRef
 import java.lang.Double
@@ -148,11 +148,10 @@ object DDSearchService{
     val idsPageResult = {
       val bq = new BooleanQuery
 
-      val now = new Date()
-      val snow = s.format(now)
+      val now = Calendar.getInstance()
+      val snow = s.format(now.getTime)
 
-      val calbefore7 = Calendar.getInstance()
-      calbefore7.setTime(now)
+      val calbefore7 = now
       calbefore7.add(Calendar.DATE, -7)
       val scalbefore7 = s.format(calbefore7.getTime)
       val trq = new TermRangeQuery("createTime",new BytesRef(scalbefore7),new BytesRef(snow),true,true);
@@ -164,7 +163,7 @@ object DDSearchService{
       }
 
       if(StringUtils.isNotBlank(price)){
-        ranges(price,bq)
+        bq.add(ranges(price),Occur.SHOULD)
       }
 
       if(StringUtils.isNotBlank(indexCode)){
@@ -260,7 +259,7 @@ object DDSearchService{
       }
 
       if(StringUtils.isNotBlank(price)){
-        ranges(price,bq)
+        bq.add(ranges(price),Occur.SHOULD)
       }
 
       if(StringUtils.isNotBlank(indexCode)){
@@ -388,17 +387,17 @@ object DDSearchService{
         bqSeokeyword.add(seokeywordPq, BooleanClause.Occur.MUST)
 
         //品类 3
-        val typeTerm: Term = new Term("type", k)
+        val typeTerm: Term = new Term("indexCode", k)
         val typePq: TermQuery = new TermQuery(typeTerm)
         bqType.add(typePq, BooleanClause.Occur.MUST)
 
         //短描述2
-        val shortdesTerm: Term = new Term("shortdes", k)
+        /*val shortdesTerm: Term = new Term("shortdes", k)
         val shortdesPq: TermQuery = new TermQuery(shortdesTerm)
-        bqShortDes.add(shortdesPq, BooleanClause.Occur.MUST)
+        bqShortDes.add(shortdesPq, BooleanClause.Occur.MUST)*/
 
         //品牌 18
-        val brandTerm: Term = new Term("brand", k)
+        val brandTerm: Term = new Term("brandName", k)
         val brandPq: TermQuery = new TermQuery(brandTerm)
         bqBrand.add(brandPq, BooleanClause.Occur.MUST)
       }
@@ -422,19 +421,21 @@ object DDSearchService{
   }
 
 
-  def ranges(range: String, bq: BooleanQuery) {
+  def ranges(range: String):BooleanQuery = {
     //范围查询
+    val bqRanges: BooleanQuery = new BooleanQuery()
     val parts = range.split(":");
     if (parts.length == 3) {
       if (parts(0).equals("price")) {
         val nrq = NumericRangeQuery.newDoubleRange("price", Double.valueOf(parts(1)), Double.valueOf(parts(2)), true, true);
-        bq.add(nrq, BooleanClause.Occur.MUST);
+        bqRanges.add(nrq, BooleanClause.Occur.MUST);
       }
       if (parts(0).equals("createtime")) {
         val query: TermRangeQuery = new TermRangeQuery("createTime", new BytesRef(parts(1)), new BytesRef(parts(2)), true, true);
-        bq.add(query, BooleanClause.Occur.MUST);
+        bqRanges.add(query, BooleanClause.Occur.MUST);
       }
-    } else throw new RuntimeException("输入范围的格式不对！")
+      bqRanges
+    } else null
   }
 }
 
