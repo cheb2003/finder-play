@@ -22,7 +22,11 @@ GET     /search/liftStyle           controllers.SearchLiftStyle.searchLiftStyle
 #POST   /search/product/xml		    controllers.Dino.productXML
 POST	/dd/search/product/json		controllers.Dino.productJSON
 #POST	/dd/search/categories		controllers.Dino.categories
-#POST	/dd/search/shop		        controllers.Dino.shop
+POST	/dd/search/shop		        controllers.Dino.shop
+POST 	/dd/search/brand			controllers.Dino.brand
+POST	/dd/search/newarrival		controllers.Dino.newarrival
+POST    /dd/search/under999			controllers.Dino.under999
+POST	/dd/search/clearance		controllers.Dino.clearance
 GET		/dd/search/shop		        controllers.Dino.shop
 GET 	/dd/search/brand			controllers.Dino.brand
 GET	    /dd/search/newarrival		controllers.Dino.newarrival

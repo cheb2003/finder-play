@@ -606,7 +606,9 @@ class IndexUnitActorDD extends Actor with ActorLogging {
       }
 
       if(StringUtils.isNotBlank(p.createTime)) {
-        pCreateTimeField.setStringValue(p.createTime)
+        //将数据库中存的时间戳转换成索引格式yyyyMMddHHmm,注意用[]确定范围
+        val lastCreateTime = p.createTime.replaceAll("[[ ][-][:][.]]","").substring(0,12)
+        pCreateTimeField.setStringValue(lastCreateTime)
         doc.add(pCreateTimeField)
       }
 
