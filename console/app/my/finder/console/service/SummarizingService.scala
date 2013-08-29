@@ -211,7 +211,7 @@ object SummarizingService {
     val begin: String = sdf.format(day.getTime()) + " 00:00:00"
     val end: String = sdf.format(day.getTime()) + " 23:59:59"
     val sql = "select k.Keyword_varchar,k.TraceStep_varchar,k.SearchCount_int,k.InsertTime_timestamp from sea_keywordsTrace k " +
-      "where k.Keyword_varchar ='"+ keyword + "' and k.InsertTime_timestamp between '" + begin + "' and '" + end + "' and "
+      "where k.Keyword_varchar ='"+ keyword + "' and k.InsertTime_timestamp between '" + begin + "' and '" + end + "' and " +
       "k.ProjectName_varchar like '%dinodirect%'"
     val jsMysql:JdbcTemplate = new JdbcTemplate(DBMysql.ds)
     val rs: SqlRowSet = jsMysql.queryForRowSet(sql)
