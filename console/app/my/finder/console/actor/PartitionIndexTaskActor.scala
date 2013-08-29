@@ -48,8 +48,7 @@ class PartitionIndexTaskActor extends Actor with ActorLogging {
 
   def receive = {
     case msg: IndexIncremetionalTaskMessage => {
-      val i = IndexManage.get(Constants.DD_PRODUCT)
-      indexRootActor ! IndexIncremetionalTaskMessage(i.name, i.using)
+      indexRootActor ! IndexIncremetionalTaskMessage(msg.name, msg.date)
     }
 
     case msg: OldIndexIncremetionalTaskMessage => {

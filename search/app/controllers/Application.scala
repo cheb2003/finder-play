@@ -57,7 +57,7 @@ object Application extends Controller {
     bqWord.add(q, BooleanClause.Occur.SHOULD)
     bqWord.add(qBrandName, BooleanClause.Occur.SHOULD)
     bq.add(bqWord, BooleanClause.Occur.MUST)
-    val searcher: IndexSearcher = SearcherManager.searcher
+    val searcher: IndexSearcher = SearcherManager.dbSearcher
     val size = 1000
     val start = (page - 1) * size + 1;
 
@@ -262,7 +262,7 @@ object Application extends Controller {
       val sot: Sort = sorts(sort);
       val ids = ListBuffer[Long]()
 
-      val searcher: IndexSearcher = SearcherManager.searcher
+      val searcher: IndexSearcher = SearcherManager.dbSearcher
 
       val start = (page - 1) * size + 1;
       //分页
@@ -642,7 +642,7 @@ object Application extends Controller {
     bqSearch.add(bqBrand, BooleanClause.Occur.SHOULD)*/
 
     
-    val searcher: IndexSearcher = SearcherManager.searcher
+    val searcher: IndexSearcher = SearcherManager.dbSearcher
     val start = (page - 1) * size + 1;
     val sot: Sort = sorts(sort);
     val tsdc: TopFieldCollector = TopFieldCollector.create(sot, start + size, false, false, false, false);

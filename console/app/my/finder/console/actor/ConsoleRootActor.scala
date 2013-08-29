@@ -32,11 +32,10 @@ class ConsoleRootActor extends Actor with ActorLogging {
     }
 
     case msg: CompleteIncIndexTask => {
-      if(msg.successCount > 0) search ! IncIndexeMessage(msg.name, msg.date)
-
-      context.system.scheduler.scheduleOnce(10 seconds){
+      //if(msg.successCount > 0) search ! IncIndexeMessage(msg.name, msg.date)
+      context.system.scheduler.scheduleOnce(300 seconds){
         log.info("send incremetional message")
-        self ! IndexIncremetionalTaskMessage("",null)
+        self ! IndexIncremetionalTaskMessage(msg.name,msg.date)
       }
     }
     case msg: CompleteSubTask => indexManagerActor ! msg

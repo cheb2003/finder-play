@@ -1,6 +1,5 @@
 package my.finder.index.actor
 
-
 import akka.actor.{ ActorLogging, Actor }
 import com.mongodb.casbah.Imports._
 import org.apache.lucene.document._
@@ -11,6 +10,7 @@ import my.finder.common.util._
 import org.apache.commons.lang.StringUtils
 import java.util.Date
 import org.apache.lucene.index.IndexWriter
+import org.apache.lucene.index.Term
 import scala.concurrent.duration._
 import scala.concurrent.ExecutionContext.Implicits.global
 import java.io.File
@@ -94,7 +94,7 @@ class IndexUnitActor extends Actor with ActorLogging with MongoUtil {
     productColl = mongo(dinobuydb)("ec_productinformation")
     productInactiveColl = mongo(dinobuydb)("ec_productinactiveinfo")
   }
-  def writeDoc(x: DBObject, words: List[SegmentWord], writer: IndexWriter): Boolean = {
+  def writeDoc(x: DBObject, words: List[SegmentWord], writer: IndexWriter, update: Boolean): Boolean = {
     var list: MongoDBList = null
     try {
       if (mvp[Int](x, "qdwproductstatus_int") < 2 && mvp[Boolean](x, "isstopsale_bit") == false
@@ -355,8 +355,12 @@ class IndexUnitActor extends Actor with ActorLogging with MongoUtil {
         doc.add(indexCodeField)
 
         doc.add(skuField)
+        if (update) {
+          writer.updateDocument(new Term("sku", sku), doc)
+        } else {
+          writer.addDocument(doc)
+        }
 
-        writer.addDocument(doc)
         true
         //successCount += 1
       } else {
@@ -455,7 +459,7 @@ class IndexUnitActor extends Actor with ActorLogging with MongoUtil {
       log.info("receive incrementional index message")
       val time1 = System.currentTimeMillis();
 
-      val incPath = Util.getIncrementalPath(msg.name, msg.date)
+      val incPath = Util.getKey(msg.name, msg.date)
       val timeFile = new File(workDir + "/" + incPath + "/time")
       //val lastId:Int = Integer.valueOf(Source.fromFile(timeFile).getLines().next())
       val from = new Date(timeFile.lastModified())
@@ -464,89 +468,60 @@ class IndexUnitActor extends Actor with ActorLogging with MongoUtil {
       var failCount = 0
       var skipCount = 0
       //val q = "ec_product.createtime_datetime" $gte from $lt to
-      val q = "ec_product.createtime_datetime" $gte from
+      val q = "ec_product.lastupdate_datetime" $gte from
 
       //val q = "productid_int" $gte from $lt to
-      val writer = IndexWriteManager.getIncIndexWriter(msg.name, msg.date)
-      log.info("reading data")
+      val writer = IndexWriteManager.getIndexWriter(msg.name, msg.date)
       val items: MongoCursor = productColl.find(q, fields).limit(2000)
       val lst = items.toList
-      log.info("readed data")
-      //val words = getSegmentWords(lst)
+      val words = getSegmentWords(lst)
       //log.info("readed data1")
       log.info("index inc item {}", items.size)
       var maxDate: Date = from
       for (x <- lst) {
         try {
-          if (writeDoc(x, List(), writer)) successCount += 1 else skipCount += 1
-          if (mvp[Date](x, "createtime_datetime").after(maxDate)) {
-            maxDate = mvp[Date](x, "createtime_datetime")
+          if (writeDoc(x, words, writer, true)) successCount += 1 else skipCount += 1
+          if (mvp[Date](x, "lastupdate_datetime").after(maxDate)) {
+            maxDate = mvp[Date](x, "lastupdate_datetime")
           }
         } catch {
           case e: Exception => failCount += 1
         }
 
       }
-      log.info("readed data2")
-      /*for (x <- 1 to 100) {
-        writeDoc(null, writer)
-      }*/
-      writer.commit();
-      //TODO 应该时间排序取最后一个记录的时间，作为lastupdatetime
+      writer.commit
       timeFile.delete()
       timeFile.createNewFile()
       timeFile.setLastModified(maxDate.getTime)
-      /*val wf:FileWriter = new FileWriter(timeFile)
-      wf.write(maxId.toString)
-      wf.close()*/
       val time2 = System.currentTimeMillis();
       log.info("index incremental spent {}", time2 - time1)
-      val consoleRoot = context.actorFor(Util.getConsoleRootAkkaURL)
+      val consoleRoot = context.actorFor(Util.getConsoleRootAkkaURLFromConfig)
       log.info("index incremental {}/{}", successCount, items.size)
       consoleRoot ! CompleteIncIndexTask(msg.name, msg.date, successCount, failCount, skipCount)
     }
     case msg: IndexTaskMessage => {
       try {
-        //log.info("recevie indextaskmessage {}",msg.date)
         val time1 = System.currentTimeMillis()
         val writer = IndexWriteManager.getIndexWriter(msg.name, msg.date)
-        //val now:Date = msg.date
         var successCount: Int = 0
         var failCount: Int = 0
         var skipCount: Int = 0
         //read mongo data
-        //var time3 = System.currentTimeMillis()
-        //val items: MongoCursor = productColl.find("ec_product.createtime_datetime" $lt now, fields).skip(Integer.valueOf((msg.seq * 2).toString())).limit(2000)
         var q: DBObject = MongoDBObject("ec_product.isstopsale_bit" -> false) ++ ("productid_int" $gte msg.minId $lte msg.maxId) ++ ("ec_product.qdwproductstatus_int" $lt 2) ++ ("ec_productprice.unitprice_money" $gt 0)
         val items: MongoCursor = productColl.find(q, fields, 0, msg.batchSize)
         val lst = items.toList
-        //var time4 = System.currentTimeMillis()
-        //log.info("load items {}", time4 - time3)
 
         //read segmentWord
-        //time3 = System.currentTimeMillis()
         val words = getSegmentWords(lst)
-        //time4 = System.currentTimeMillis()
-        //log.info("load words {}", time4 - time3)
 
-        //log.info("find items {}",time4 - time3)
-
-        //log.info("spent {} millisecond in finding items {}",time2 - time1,items.size)
         for (x <- lst) {
-          /*if(!b) b = true else log.info("load item {}",time3 -time4)
-          time3 = System.currentTimeMillis()*/
           try {
-            if (writeDoc(x, words, writer)) successCount += 1 else skipCount += 1
-            //if(writeDoc(x,List(), writer)) successCount += 1 else skipCount += 1
+            if (writeDoc(x, words, writer, false)) successCount += 1 else skipCount += 1
           } catch {
             case e: Exception => failCount + 1
           }
-          //time4 = System.currentTimeMillis()
-        }
-        /*for (x <- 1 to 100) {
-          writeDoc(null, pNameField)
-        }*/
 
+        }
         val consoleRoot = context.actorFor(Util.getConsoleRootAkkaURLFromMyConfig)
         consoleRoot ! CompleteSubTask(msg.name, msg.date, msg.seq, successCount, failCount, skipCount)
         val time2 = System.currentTimeMillis()
@@ -557,7 +532,7 @@ class IndexUnitActor extends Actor with ActorLogging with MongoUtil {
         arr(2) = failCount
         arr(3) = skipCount
         arr(4) = items.size
-        //log.info("index time {} success {} fail {} skip {} total {}", arr);
+        log.info("index time {} success {} fail {} skip {} total {}", arr);
       } catch {
 
         case e: Exception => log.error("{}", e); e.printStackTrace()

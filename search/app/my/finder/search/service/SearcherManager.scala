@@ -8,6 +8,7 @@ import org.apache.lucene.search.IndexSearcher
 import play.api.libs.concurrent.Akka
 import scala.concurrent.duration._
 import scala.concurrent.ExecutionContext.Implicits.global
+import scala.collection.mutable._
 
 /**
  *
@@ -17,15 +18,21 @@ object SearcherManager {
   val ddIndexDir = current.configuration.getString("ddIndexDir")
   val attrIndexDir = current.configuration.getString("attrIndexDir")
   val oldDir = current.configuration.getString("oldDir")
-  var searcher:IndexSearcher = null
+  private val dbQueue = Queue[IndexSearcher]()
   var ddSearcher:IndexSearcher = null
   var attrSearcher:IndexSearcher = null
   var oldIncSearcher:IndexSearcher = null
   var oldReader:DirectoryReader = null
+  def dbSearcher = {
+    dbQueue.last
+  }
   def init = {
-    val dir:Directory = FSDirectory.open(new File(wordDir.get));
-    val reader = DirectoryReader.open(dir);
-    searcher  = new IndexSearcher(reader);
+    val dir:Directory = FSDirectory.open(new File(wordDir.get))
+    val reader = DirectoryReader.open(dir)
+    val s = new IndexSearcher(reader)
+    oldReader = reader
+    dbQueue += s
+
 
     val ddDir:Directory = FSDirectory.open(new File(ddIndexDir.get));
     val ddReader = DirectoryReader.open(ddDir);
@@ -35,25 +42,22 @@ object SearcherManager {
     val attrReader = DirectoryReader.open(attrDir);
     attrSearcher  = new IndexSearcher(attrReader);
 
-    val oldDirectory:Directory = FSDirectory.open(new File(oldDir.get))
-    oldReader = DirectoryReader.open(oldDirectory)
-
-    oldIncSearcher = new IndexSearcher(oldReader)
     fn
   }
   def changeIncDD = {
-    println("changing inc dd")
-    val newReader = DirectoryReader.openIfChanged(oldReader);
+    val newReader = DirectoryReader.openIfChanged(oldReader)
     if(newReader != null){
-      oldIncSearcher = new IndexSearcher(newReader)
-      oldReader.close()
+      val newSearcher = new IndexSearcher(newReader)
+      dbQueue += newSearcher
       oldReader = newReader
-      println("has change inc dd")
+      if(dbQueue.size > 3) {
+        val old = dbQueue.dequeue
+        old.getIndexReader.close
+      }
     }
-    println("changed inc dd")
   }
   def fn = {
-    Akka.system.scheduler.schedule(0 second,10 second) {
+    Akka.system.scheduler.schedule(0 second,300 second) {
       changeIncDD
     }
   }
