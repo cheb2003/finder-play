@@ -4,7 +4,7 @@ import akka.actor.{Props, Actor}
 import my.finder.common.message._
 import akka.routing.RoundRobinRouter
 import my.finder.index.service.IndexWriteManager
-import my.finder.console.actor.IndexResolutionActor
+
 
 /**
  *
