@@ -297,7 +297,7 @@ class PartitionIndexTaskActor extends Actor with ActorLogging {
   def resolutionMessage() = {
     val dbMssql:JdbcTemplate = new JdbcTemplate(DBMssql.ds)
     dbMssql.setFetchSize(1000)
-    val sql:String = "select k.ProductID_int from EC_Product k where k.IndexCode_nvarchar in ('1001','1005')"
+    val sql:String = "select k.ProductID_int from EC_Product k where k.IndexCode_nvarchar = '00220009'"
     val rs:SqlRowSet = dbMssql.queryForRowSet(sql)
     val pIds:ListBuffer[Int] = new ListBuffer[Int]()
     while ( rs.next() ){
