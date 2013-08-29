@@ -89,7 +89,7 @@ class PartitionIndexTaskActor extends Actor with ActorLogging {
         count = rs.getInt("count")
       }
 
-      sql = s"select SeqID_int from EC_IndexLifeProduct with(nolock) where SeqID_int <= $maxId"
+      sql = s"select SeqID_int from EC_IndexLifeProduct with(nolock) where SeqID_int <= $maxId and IsEnabled_int =1"
       rs.setFetchSize(1000)
       rs = stmt.executeQuery(sql)
       val total: Long = count / ddProductIndexSize + 1
@@ -102,6 +102,7 @@ class PartitionIndexTaskActor extends Actor with ActorLogging {
           //记录批次
           j += 1
           sendLift(Constants.DD_PRODUCT_LIFTSTYLE, now, j, ids, total, ddProductIndexSize,msg.ddProductIndex)
+          ids.clear()
           log.info("send dd liftstyle msg {}",j)
         }
       }
@@ -148,6 +149,7 @@ class PartitionIndexTaskActor extends Actor with ActorLogging {
           //记录批次
           j += 1
           sendAttr(Constants.DD_PRODUCT_ATTRIBUTE, now, j, ids, total, ddProductIndexSize,msg.ddProductIndex)
+          ids.clear()
           log.info("send dd attribute msg {}",j)
         }
       }
