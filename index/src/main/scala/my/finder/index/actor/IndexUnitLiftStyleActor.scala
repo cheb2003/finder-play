@@ -20,12 +20,12 @@ class IndexUnitLiftStyleActor extends Actor with ActorLogging{
       val writer = IndexWriteManager.getIndexWriter(msg.name,msg.date)
       val conn = DBService.dataSource.getConnection()
       val stmt = conn.createStatement()
-      val minId = msg.minId
-      val maxId = msg.maxId
       var skipCount = 0
       var failCount = 0
       var successCount = 0
-      val rs = stmt.executeQuery(s"select ProductID_int,ProductKeyID_nvarchar,IndexCode_nvarchar,SortOrder_int From  EC_IndexLifeProduct where SeqID_int between $minId and $maxId")
+      val ids = msg.ids.mkString(",")
+      val sql = s"select ProductID_int,ProductKeyID_nvarchar,IndexCode_nvarchar,SortOrder_int From  EC_IndexLifeProduct with(nolock) where SeqID_int in ($ids)"
+      val rs = stmt.executeQuery(sql)
       var doc: Document = null
       while(rs.next()){
         try{

@@ -5,7 +5,7 @@
 	</head>
 	<body>
 		<b>站内搜索接口</b>
-		<form action="http://localhost:9999/dd/search/product">
+		<form action="http://localhost:9000/dd/search/product/json" method="POST">
 			<table>
 				<tr>
 					<td>关键字keyword：</td>
@@ -28,9 +28,14 @@
 					<td>多个值用英文逗号分隔：###a###b###,###c###d###</td>
 				</tr>
 				<tr>
-					<td>排序sort</td>
-					<td><input type="text" name="size"> </td>
+					<td>排序sorts</td>
+					<td><input type="text" name="sorts"> </td>
 					<td>价格降序price-,升序price+;发布日期降序releasedate-；相关度降序popularity-；回复降序reviews-；diggs-；视频降序videos-</td>
+				</tr>
+				<tr>
+					<td>区间ranges</td>
+					<td><input type="text" name="ranges"> </td>
+					<td>价格price:1:99</td>
 				</tr>
 				<tr>
 					<td>品类indexcode</td>
@@ -63,7 +68,7 @@
 			</table>
 		</form>
 		<b>品类搜索接口</b>
-		<form action="http://localhost:9999/dd/search/categories">
+		<form action="http://localhost:9999/dd/search/categories" method="POST">
 			<table>
 				<tr>
 					<td>页数page：</td>
@@ -81,8 +86,8 @@
 					<td>多个值用英文逗号分隔：###a###b###,###c###d###</td>
 				</tr>
 				<tr>
-					<td>排序sort</td>
-					<td><input type="text" name="size"> </td>
+					<td>排序sorts</td>
+					<td><input type="text" name="sorts"> </td>
 					<td>价格降序price-,升序price+;发布日期降序releasedate-；相关度降序popularity-；回复降序reviews-；diggs-；视频降序videos-</td>
 				</tr>
 				<tr>
@@ -111,8 +116,13 @@
 			</table>
 		</form>
 		<b>店铺搜索接口</b>
-		<form action="http://localhost:9999/dd/search/shop">
+		<form action="http://localhost:9001/dd/search/shop" method="POST">
 			<table>
+				<tr>
+					<td>关键字shopid：</td>
+					<td><input type="text" name="shopid"> </td>
+					<td></td>
+				</tr>
 				<tr>
 					<td>关键字keyword：</td>
 					<td><input type="text" name="keyword"> </td>
@@ -129,8 +139,8 @@
 					<td>最大值100</td>
 				</tr>
 				<tr>
-					<td>排序sort</td>
-					<td><input type="text" name="size"> </td>
+					<td>排序sorts</td>
+					<td><input type="text" name="sorts"> </td>
 					<td>价格降序price-,升序price+;发布日期降序releasedate-；相关度降序popularity-；回复降序reviews-；diggs-；视频降序videos-</td>
 				</tr>
 				<tr>
@@ -159,7 +169,7 @@
 			</table>
 		</form>
 		<b>品牌搜索接口</b>
-		<form action="http://localhost:9999/dd/search/brand">
+		<form action="http://localhost:9001/dd/search/brand" method="POST">
 			<table>
 				<tr>
 					<td>关键字keyword：</td>
@@ -177,8 +187,8 @@
 					<td>最大值100</td>
 				</tr>
 				<tr>
-					<td>排序sort</td>
-					<td><input type="text" name="size"> </td>
+					<td>排序sorts</td>
+					<td><input type="text" name="sorts"> </td>
 					<td>价格降序price-,升序price+;发布日期降序releasedate-；相关度降序popularity-；回复降序reviews-；diggs-；视频降序videos-</td>
 				</tr>
 				<tr>
@@ -207,7 +217,7 @@
 			</table>
 		</form>
 		<b>NewArrival搜索接口</b>
-		<form action="http://localhost:9999/dd/search/newarrival">
+		<form action="http://localhost:9001/dd/search/newarrival" method="POST">
 			<table>
 				<tr>
 					<td>关键字keyword：</td>
@@ -225,12 +235,12 @@
 					<td>最大值100</td>
 				</tr>
 				<tr>
-					<td>排序sort</td>
-					<td><input type="text" name="size"> </td>
+					<td>排序sorts</td>
+					<td><input type="text" name="sorts"> </td>
 					<td>价格降序price-,升序price+;发布日期降序releasedate-；相关度降序popularity-；回复降序reviews-；diggs-；视频降序videos-</td>
 				</tr>
 				<tr>
-					<td>区间</td>
+					<td>区间ranges</td>
 					<td><input type="text" name="ranges"> </td>
 					<td>价格区间price:0.99:100</td>
 				</tr>
@@ -256,7 +266,7 @@
 		</form>	
 			
 		<b>Under $9.99搜索接口</b>
-		<form action="http://localhost:9999/dd/search/under999">
+		<form action="http://localhost:9001/dd/search/under999" method="POST">
 			<table>
 				<tr>
 					<td>关键字keyword：</td>
@@ -274,8 +284,8 @@
 					<td>最大值100</td>
 				</tr>
 				<tr>
-					<td>排序sort</td>
-					<td><input type="text" name="size"> </td>
+					<td>排序sorts</td>
+					<td><input type="text" name="sorts"> </td>
 					<td>价格降序price-,升序price+;发布日期降序releasedate-；相关度降序popularity-；回复降序reviews-；diggs-；视频降序videos-</td>
 				</tr>
 				<tr>
@@ -299,7 +309,7 @@
 			</table>
 		</form>	
 		<b>清仓搜索接口</b>
-		<form action="http://localhost:9999/dd/search/clearance">
+		<form action="http://localhost:9001/dd/search/clearance" method="POST">
 			<table>
 				<tr>
 					<td>关键字keyword：</td>
@@ -317,12 +327,12 @@
 					<td>最大值100</td>
 				</tr>
 				<tr>
-					<td>排序sort</td>
-					<td><input type="text" name="size"> </td>
+					<td>排序sorts</td>
+					<td><input type="text" name="sorts"> </td>
 					<td>价格降序price-,升序price+;发布日期降序releasedate-；相关度降序popularity-；回复降序reviews-；diggs-；视频降序videos-</td>
 				</tr>
 				<tr>
-					<td>区间</td>
+					<td>区间ranges</td>
 					<td><input type="text" name="ranges"> </td>
 					<td>价格区间price:0.99:100</td>
 				</tr>

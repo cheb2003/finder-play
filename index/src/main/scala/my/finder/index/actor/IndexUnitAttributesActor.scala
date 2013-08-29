@@ -5,12 +5,11 @@ import my.finder.common.message.{CompleteSubTask, IndexAttributeTaskMessage}
 import my.finder.index.service.{SearcherManager, DBService, IndexWriteManager}
 import org.apache.lucene.queryparser.classic.{QueryParser, QueryParserBase}
 import org.apache.lucene.util.Version
-import my.finder.common.util.{Util, MyAnalyzer}
+import my.finder.common.util.Util
 import scala.collection.mutable.ListBuffer
 import org.apache.lucene.document.{Field, StringField, Document}
 import org.apache.lucene.index.Term
 import org.apache.lucene.search.TermQuery
-import org.apache.lucene.analysis.standard.StandardAnalyzer
 import org.apache.lucene.analysis.core.WhitespaceAnalyzer
 
 
@@ -28,12 +27,11 @@ class IndexUnitAttributesActor extends Actor with ActorLogging{
       val searcher = SearcherManager.getSearcher(msg.ddProductIndex)
       val conn = DBService.dataSource.getConnection()
       val stmt = conn.createStatement()
-      val minId = msg.minId
-      val maxId = msg.maxId
+      val ids = msg.ids.mkString(",")
       var skipCount = 0
       var failCount = 0
       var successCount = 0
-      val rs = stmt.executeQuery(s"SELECT a.keyid_int as id, a.attributevalue_nvarchar as aValue,c.AttributeName_nvarchar aName FROM dbo.QDW_AttributeAndValueDictionary a,dbo.QDW_CategoryAttributeDictionary c where a.attributeid_bigint = c.keyid_int and a.keyid_int between $minId and $maxId")
+      val rs = stmt.executeQuery(s"SELECT a.keyid_int as id, a.attributevalue_nvarchar as aValue,c.AttributeName_nvarchar aName FROM dbo.QDW_AttributeAndValueDictionary a,dbo.QDW_CategoryAttributeDictionary c where a.attributeid_bigint = c.keyid_int and a.keyid_int in ($ids)")
 
       while(rs.next()){
         try{
@@ -73,6 +71,10 @@ class IndexUnitAttributesActor extends Actor with ActorLogging{
           successCount += 1
         } catch {
           case e:Exception => log.info("{}",e);failCount += 1
+        } finally {
+          if (rs != null) rs.close()
+          if (stmt != null) stmt.close()
+          if (conn != null) conn.close()
         }
       }
       val consoleRoot = context.actorFor(Util.getConsoleRootAkkaURLFromMyConfig)

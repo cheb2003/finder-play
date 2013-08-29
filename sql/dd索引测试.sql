@@ -3,9 +3,7 @@ CREATE TABLE EC_Product(
 	ProductAliasName_nvarchar nvarchar(100) NULL,
 	QDWProductStatus_int int NULL,
 	VentureStatus_tinyint tinyint NULL,
-	
 	ProductPrice_money money NULL,
-	
 	ProductBrand_nvarchar nvarchar(50) NULL,
 	IndexCode_nvarchar nvarchar(50) NULL,
 	IsOneSale_tinyint tinyint NULL,
@@ -18,7 +16,8 @@ CREATE TABLE EC_Product(
 	VentureLevelNew_tinyint tinyint NULL,
 	IsTaoBao_tinyint tinyint NULL,
 	ProductBrandID_int int NULL,
-	BusinessBrand_nvarchar nvarchar(50) NULL
+	BusinessBrand_nvarchar nvarchar(50) NULL,
+	isClearance_tinyint int null
 )
 insert into EC_Product values(1003,'iphone',0,1,45.5,'s1','0001',3,4,'s3','s4','2013-07-07 13:00:00',1003,1,0,3,1,'s5')
 insert into EC_Product values(1004,'iphone',0,1,45.5,'s1','s2',3,4,'s3','s4','2013-07-07 13:00:00',3,1,0,3,1,'s5')
@@ -168,6 +167,23 @@ create TABLE EC_TypeShow(
 	ProductKeyID_nvarchar varchar(20),
 	IndexCode_nvarchar varchar(100),
 	ShowPosition_int int
-)
+);
 
 insert into EC_TypeShow('s3','0001',12)
+
+create TABLE EC_ProductComment_QDW(
+	productid_int int not null
+);
+
+insert into EC_ProductComment_QDW values(1003);
+insert into EC_ProductComment_QDW values(1003);
+
+create TABLE EC_ProductComment(
+	productid_int int not null
+);
+
+insert into EC_ProductComment values(1003);
+insert into EC_ProductComment values(1003);
+insert into EC_ProductComment values(1003);
+
+update ec_product set isClearance_tinyint = 1 where productid_int = 1003

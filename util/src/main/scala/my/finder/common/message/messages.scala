@@ -5,8 +5,8 @@ import scala.collection.mutable.ListBuffer
 import java.util
 
 case class IndexTaskMessage(name:String,date:Date,seq:Long,minId:Int,maxId:Int,batchSize:Int);
-case class IndexAttributeTaskMessage(name:String,date:Date,seq:Long,minId:Int,maxId:Int,batchSize:Int,ddProductIndex:String)
-case class IndexUnitLiftStyleTaskMessage(name:String,date:Date,seq:Long,minId:Int,maxId:Int,batchSize:Int,ddProductIndex:String)
+case class IndexAttributeTaskMessage(name:String,date:Date,seq: Long,ids:ListBuffer[Int],batchSize:Int,ddProductIndex:String)
+case class IndexUnitLiftStyleTaskMessage(name:String,date:Date,seq: Long,ids:ListBuffer[Int],batchSize:Int,ddProductIndex:String)
 case class IndexTaskMessageDD(name:String,date:Date,seq:Long,ids:ListBuffer[Int],total:Long,batchSize:Int);
 case class IndexIncremetionalTaskMessage(name:String,date:Date);
 case class OldIndexIncremetionalTaskMessage(name:String,date:Date);

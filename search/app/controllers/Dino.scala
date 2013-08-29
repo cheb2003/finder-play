@@ -5,9 +5,8 @@ import play.api.mvc._
 import play.api.libs.json.{JsArray, Writes, JsValue, Json}
 import play.api.libs.json.Json._
 import scala.collection.mutable.{HashMap, Queue, ListBuffer}
-import java.lang.Long
 import org.apache.lucene.search._
-import my.finder.search.service.{DDSearchService, Helper, SearcherManager}
+import my.finder.search.service.{DDSearchService, SearcherManager}
 import org.apache.lucene.index.{IndexableField, Term}
 import play.api.data._
 import play.api.data.Forms._
@@ -31,17 +30,7 @@ case class CategoryGroup(indexCode:String,var count:Int,parent:CategoryGroup,chi
 class ProductSearchPageResult(data:ListBuffer[Int],val attrGroups:ListBuffer[AttrGroup],val categoryGroups:ListBuffer[CategoryGroup],page:Int,size:Int,total:Int,query:String) extends IdsPageResult(data,page,size,total,query)
 
 object Dino extends Controller {
-  implicit val idsPageResultWrites = new Writes[IdsPageResult] {
-    def writes(c: IdsPageResult): JsValue = {
-      Json.obj(
-        "page" -> c.page,
-        "size" -> c.size,
-        "total" -> c.total,
-        "ids" -> c.data,
-        "query" -> c.query
-      )
-    }
-  }
+
   implicit val attrGroupWrites = new Writes[AttrGroup] {
     def writes(c: AttrGroup): JsValue = {
       Json.obj(
@@ -72,7 +61,7 @@ object Dino extends Controller {
     }
     lst
   }
-  implicit val productSearchPageResultWrites = new Writes[ProductSearchPageResult] {
+  /*implicit val productSearchPageResultWrites = new Writes[ProductSearchPageResult] {
     def writes(c: ProductSearchPageResult): JsValue = {
       Json.obj(
         "page" -> c.page,
@@ -84,8 +73,44 @@ object Dino extends Controller {
         "categories" -> JsArray(c.categoryGroups.map(toJson(_)))
       )
     }
+  }*/
+
+  implicit val idsPageResultWrites = new Writes[IdsPageResult] {
+    def writes(c: IdsPageResult): JsValue = {
+      val v = if(c.isInstanceOf[ProductSearchPageResult]){
+        val t = c.asInstanceOf[ProductSearchPageResult]
+        val jsAttrGroup = if(t.attrGroups != null){
+          JsArray(t.attrGroups.map(toJson(_)))
+        } else {
+          JsArray()
+        }
+        val jsCategoryGroup = if(t.categoryGroups != null){
+          JsArray(t.categoryGroups.map(toJson(_)))
+        } else {
+          JsArray()
+        }
+        Json.obj(
+          "page" -> t.page,
+          "size" -> t.size,
+          "total" -> t.total,
+          "ids" -> t.data,
+          "query" -> t.query,
+          "attributes" -> jsAttrGroup,
+          "categories" -> jsCategoryGroup
+        )
+      } else {
+        Json.obj(
+          "page" -> c.page,
+          "size" -> c.size,
+          "total" -> c.total,
+          "ids" -> c.data,
+          "query" -> c.query
+        )
+      }
+      v
+    }
   }
-  
+
   def shop = Action { implicit request =>
     val form = Form(
       tuple(
@@ -115,6 +140,106 @@ object Dino extends Controller {
     }*/
     Ok(json)
   }
+
+  def brand = Action { implicit request =>
+    val form = Form(
+      tuple(
+        "sort" -> text,
+        "size" -> number,
+        "page" -> number,
+        "country" -> text,
+        "indexcode" -> text,
+        "brandId" -> text,
+        "keyword" -> text
+      )
+    )
+    val queryParams = form.bindFromRequest.data
+    val result = DDSearchService.brand(queryParams)
+    val json = if (result.isInstanceOf[IdsPageResult]) {
+      toJson(result.asInstanceOf[IdsPageResult])
+    } else if (result.isInstanceOf[ErrorResult]){
+      Json.parse("{}")
+    } else {
+      Json.parse("{}")
+    }
+
+    Ok(json)
+  }
+
+  def newarrival = Action { implicit request =>
+    val form = Form(
+      tuple(
+        "sort" -> text,
+        "size" -> number,
+        "page" -> number,
+        "country" -> text,
+        "indexcode" -> text,
+        "price" -> text,
+        "keyword" -> text
+      )
+    )
+    val queryParams = form.bindFromRequest.data
+    val result = DDSearchService.newarrival(queryParams)
+    val json = if (result.isInstanceOf[IdsPageResult]) {
+      toJson(result.asInstanceOf[IdsPageResult])
+    } else if (result.isInstanceOf[ErrorResult]){
+      Json.parse("{}")
+    } else {
+      Json.parse("{}")
+    }
+
+    Ok(json)
+  }
+
+  def under999 = Action { implicit request =>
+    val form = Form(
+      tuple(
+        "sort" -> text,
+        "size" -> number,
+        "page" -> number,
+        "country" -> text,
+        "indexcode" -> text,
+        "keyword" -> text
+      )
+    )
+    val queryParams = form.bindFromRequest.data
+    val result = DDSearchService.under999(queryParams)
+    val json = if (result.isInstanceOf[IdsPageResult]) {
+      toJson(result.asInstanceOf[IdsPageResult])
+    } else if (result.isInstanceOf[ErrorResult]){
+      Json.parse("{}")
+    } else {
+      Json.parse("{}")
+    }
+
+    Ok(json)
+  }
+
+  def clearance = Action { implicit request =>
+    val form = Form(
+      tuple(
+        "sort" -> text,
+        "size" -> number,
+        "page" -> number,
+        "country" -> text,
+        "indexcode" -> text,
+        "price" -> text,
+        "keyword" -> text
+      )
+    )
+    val queryParams = form.bindFromRequest.data
+    val result = DDSearchService.clearance(queryParams)
+    val json = if (result.isInstanceOf[IdsPageResult]) {
+      toJson(result.asInstanceOf[IdsPageResult])
+    } else if (result.isInstanceOf[ErrorResult]){
+      Json.parse("{}")
+    } else {
+      Json.parse("{}")
+    }
+
+    Ok(json)
+  }
+
   def category = Action { implicit request =>
     val form = Form(
       tuple(
@@ -205,7 +330,7 @@ object Dino extends Controller {
     )
     val queryParams = form.bindFromRequest.data
     searchProduct(queryParams,"json")
-    Ok("productJSON")
+    
   }
 
   def productXML = Action { implicit request =>
@@ -283,7 +408,7 @@ object Dino extends Controller {
     //search attributes query
     val bqAttr = bqAll.clone()
 
-    val tHasAttr = new Term("attribute","hasAttributes")
+    val tHasAttr = new Term("attribute","hasattributes")
     val tqHasAttr = new TermQuery(tHasAttr)
     bqAttr.add(tqHasAttr, Occur.MUST)
 
@@ -406,11 +531,11 @@ object Dino extends Controller {
   //+(isLifeStyle:true isDailyDeal:true isEventProduct:true)
   //+isClearanceTinyint:1
   //-ecProduct001.productCountryInfoForCreatorNvarchar:344_0
-  def getTag(tag: String):BooleanQuery = {
+  def getTag(tag: String):Query = {
 
-    val bqTagSub: BooleanQuery = new BooleanQuery()
-    val bqTag: BooleanQuery = new BooleanQuery()
-    if(tag != null) {
+    
+    val q = if(StringUtils.isNotBlank(tag)){
+      val bqTag: BooleanQuery = new BooleanQuery()
       if("new".equals(tag)) {
         val c: Calendar = Calendar.getInstance()
         val date = new Date()
@@ -422,8 +547,9 @@ object Dino extends Controller {
 
         val createTimePq: TermRangeQuery = new TermRangeQuery("createTime", new BytesRef(before7day), new BytesRef(today), true, true);
         bqTag.add(createTimePq, BooleanClause.Occur.MUST)
-
+        bqTag
       }else if("event".equals(tag)) {
+        val bqTagSub: BooleanQuery = new BooleanQuery()
         val isLifeStyleTerm: Term = new Term("isLifeStyle","true")
         val isLifeStylePq: TermQuery = new TermQuery(isLifeStyleTerm)
         bqTagSub.add(isLifeStylePq, BooleanClause.Occur.SHOULD)
@@ -435,16 +561,16 @@ object Dino extends Controller {
         val isEventProductTerm: Term = new Term("isEventProduct","true")
         val isEventProductPq: TermQuery = new TermQuery(isEventProductTerm)
         bqTagSub.add(isEventProductPq, BooleanClause.Occur.SHOULD)
-
         bqTag.add(bqTagSub, BooleanClause.Occur.MUST)
+        bqTag
       }else if("clear".equals(tag)) {
         val isClearanceTinyintTerm: Term = new Term("isClearanceTinyint","1")
         val isClearanceTinyintPq: TermQuery = new TermQuery(isClearanceTinyintTerm)
         bqTag.add(isClearanceTinyintPq, BooleanClause.Occur.MUST)
-      }
-      println(bqTag)
-    }
-    bqTag
+        bqTag
+      } else null
+    } else null
+    q
   }
 
   //查类别
@@ -531,7 +657,7 @@ object Dino extends Controller {
         attrScoreDocs.map{ s =>
           val doc = attrSearcher.getIndexReader.document(s.doc,set)
           val name = doc.get("name")
-          if (data(name) == null) {
+          if (data.getOrElse(name,null) == null) {
             data += (name -> AttrGroup(name,mutable.HashSet[String]()))
           } 
           data(name).values += doc.get("value")
@@ -540,10 +666,11 @@ object Dino extends Controller {
       } else null
       map
     } else null
-    val ite = result.iterator
+    
     val lst = if(result != null) {
+      val ite = result.iterator
       val l = ListBuffer[AttrGroup]()
-      ite.map{ x=>
+      ite.foreach{ x=>
         l += x._2
       }
       l
