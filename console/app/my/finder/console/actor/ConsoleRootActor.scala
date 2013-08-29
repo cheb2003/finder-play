@@ -25,6 +25,7 @@ class ConsoleRootActor extends Actor with ActorLogging {
 
     case msg:OldIndexIncremetionalTaskMessage => partitionActor ! msg
 
+    case msg: ResolutionMessage => partitionActor ! msg
 
     case msg: GetIndexesPathMessage => {
 
@@ -54,6 +55,7 @@ class ConsoleRootActor extends Actor with ActorLogging {
     case msg: MergeIndexMessage => {
 
     }
+
     case msg:PartitionIndexAttributesTaskMessage => {
       partitionActor ! msg
     }

@@ -1,6 +1,6 @@
 package controllers
 import java.io.File
-import java.util._;
+import java.util._
 
 import my.finder.common.message._
 import my.finder.console.actor.MessageFacade.rootActor
@@ -32,12 +32,12 @@ import java.util.regex.Pattern
 import org.apache.lucene.analysis.Analyzer
 import org.apache.lucene.analysis.en.EnglishAnalyzer
 
-
 import org.slf4j.LoggerFactory
 import my.finder.common.message.PartitionIndexAttributesTaskMessage
 import my.finder.common.message.OldIndexIncremetionalTaskMessage
 import my.finder.common.message.IndexIncremetionalTaskMessage
 import my.finder.common.message.CommandParseMessage
+;
 
 object Application extends Controller {
   val logger = LoggerFactory.getLogger("my")
@@ -124,7 +124,7 @@ object Application extends Controller {
   }
   //TODO:平板电脑分析执行
   def searchResolution = Action { implicit request =>
-    //rootActor ! ResolutionMessage()
+    rootActor ! ResolutionMessage(Constants.DD_PRODUCT_RESOLUTION,null)
     Ok("success")
   }
 
