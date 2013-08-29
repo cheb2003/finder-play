@@ -84,7 +84,7 @@ class IndexWriteManager extends Actor{
       writer.forceMerge(1)
       writer.close(true)
       val console = context.actorFor(Util.getConsoleRootAkkaURLFromMyConfig)
-      val incPath = Util.getIncrementalPath(msg.name,msg.date)
+      val incPath = Util.getKey(msg.name,msg.date)
       val workDir = Config.get("workDir")
       val file = new File(workDir + "/" + incPath)
       val timeFile = new File(workDir + "/" + incPath + "/time")

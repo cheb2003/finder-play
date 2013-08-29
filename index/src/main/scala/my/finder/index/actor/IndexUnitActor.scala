@@ -491,7 +491,7 @@ class IndexUnitActor extends Actor with ActorLogging with MongoUtil {
       /*for (x <- 1 to 100) {
         writeDoc(null, writer)
       }*/
-      writer.commit();
+      writer.close()
       //TODO 应该时间排序取最后一个记录的时间，作为lastupdatetime
       timeFile.delete()
       timeFile.createNewFile()
