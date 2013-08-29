@@ -82,7 +82,7 @@ class IndexWriteManager extends Actor{
     case msg:CloseIndexWriterMessage => {
       val writer = IndexWriteManager.getIndexWriter(msg.name,msg.date)
       writer.forceMerge(1)
-      writer.close(true)
+      writer.commit
       val console = context.actorFor(Util.getConsoleRootAkkaURLFromMyConfig)
       val incPath = Util.getKey(msg.name,msg.date)
       val workDir = Config.get("workDir")

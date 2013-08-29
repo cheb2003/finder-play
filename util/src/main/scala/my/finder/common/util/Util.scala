@@ -8,6 +8,16 @@ import play.api.Play.current
  */
 object Util {
   private val sdf: SimpleDateFormat = new SimpleDateFormat("yyyy-MM-dd-HH-mm-ss")
+  def parseIndexPath(s:String) = {
+    val split = s.split("_")
+    if(split.length == 2){
+      val name = split(0)
+      val date = sdf.parse(split(1))
+      (name,date)
+    } else {
+      null
+    }
+  }
   def getKey(name: String, date: Date) = {
     name + "_" + sdf.format(date)
   }
@@ -78,6 +88,15 @@ object Util {
     if(getProfile == Constants.PROFILE_PRODUCTION) 
       "akka://console@127.0.0.1:2552/user/root"
     else if(getProfile == Constants.PROFILE_TEST)
+      "akka://console@127.0.0.1:3552/user/root"
+    else
+      null
+  }
+
+  def getConsoleRootAkkaURLFromConfig:String = {
+    if(Config.get("profile") == Constants.PROFILE_PRODUCTION)
+      "akka://console@127.0.0.1:2552/user/root"
+    else if(Config.get("profile") == Constants.PROFILE_TEST)
       "akka://console@127.0.0.1:3552/user/root"
     else
       null

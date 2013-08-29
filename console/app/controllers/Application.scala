@@ -96,7 +96,13 @@ object Application extends Controller {
   }
 
   def inc = Action { implicit request =>
-    rootActor ! IndexIncremetionalTaskMessage(Constants.DD_PRODUCT, null)
+    val form = Form(
+      "i" -> text
+    )
+    val queryParams = form.bindFromRequest.data
+    val i = Util.getParamString(queryParams, "i", "")
+    val (name,date) = Util.parseIndexPath(i)
+    rootActor ! IndexIncremetionalTaskMessage(name, date)
     Ok("inc")
   }
 
