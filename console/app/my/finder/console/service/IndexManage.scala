@@ -4,9 +4,9 @@ import my.finder.common.util.{Util, Constants}
 import java.io.File
 import scala.collection.mutable.ListBuffer
 import java.util.Date
-import play.api.Play._
-import scala.collection.mutable
 
+import scala.collection.mutable
+import my.finder.common.util.Config
 /**
  *
  */
@@ -33,7 +33,7 @@ object IndexManage {
       Index(name,ListBuffer[String](),"")*/
       ddIndex
     }
-    val dir = current.configuration.getString("workDir").get
+    val dir = Config[String]("workDir")
 
     //val files: util.Collection[File] = FileUtils.listFilesAndDirs(file,null,new PrefixFileFilter(Constants.DD_PRODUCT))
     var max:String = ""

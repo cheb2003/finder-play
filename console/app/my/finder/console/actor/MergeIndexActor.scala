@@ -9,12 +9,12 @@ import org.apache.lucene.analysis.standard.StandardAnalyzer
 import org.apache.lucene.util.Version
 import org.apache.lucene.index.{IndexWriter, IndexWriterConfig}
 
-
+import my.finder.common.util.Config
 /**
  *
  */
 class MergeIndexActor extends Actor with ActorLogging{
-  val workDir = Config.get("workDir")
+  val workDir = Config[String]("workDir")
   def receive = {
     case msg:MergeIndexMessage => {
       val key = Util.getKey(msg.name,msg.date)

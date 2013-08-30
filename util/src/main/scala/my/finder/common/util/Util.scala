@@ -2,7 +2,7 @@ package my.finder.common.util
 
 import java.text.SimpleDateFormat
 import java.util.Date
-import play.api.Play.current
+
 /**
  *
  */
@@ -49,11 +49,11 @@ object Util {
   }
 
   def getProfile:String = {
-    current.configuration.getString("profile").get
+    Config[String]("profile")
   }
 
   def getProfileFromMyConfig:String = {
-    Config.get("profile")
+    Config[String]("profile")
   }
 
   def getConsoleRootAkkaURLFromMyConfig:String = {
@@ -94,9 +94,9 @@ object Util {
   }
 
   def getConsoleRootAkkaURLFromConfig:String = {
-    if(Config.get("profile") == Constants.PROFILE_PRODUCTION)
+    if(Config[String]("profile") == Constants.PROFILE_PRODUCTION)
       "akka://console@127.0.0.1:2552/user/root"
-    else if(Config.get("profile") == Constants.PROFILE_TEST)
+    else if(Config[String]("profile") == Constants.PROFILE_TEST)
       "akka://console@127.0.0.1:3552/user/root"
     else
       null

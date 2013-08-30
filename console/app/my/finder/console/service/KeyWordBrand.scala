@@ -45,7 +45,8 @@ class KeyWordBrand {
        bqpKeyWord.add(pq, BooleanClause.Occur.MUST)
        bq.add(bqpKeyWord, BooleanClause.Occur.SHOULD)
     }
-    val searcher: IndexSearcher = SearcherManager.searcher
+    //val searcher: IndexSearcher = SearcherManager.searcher
+    val searcher = null
     val groupingSearch = new GroupingSearch("indexCode")
     groupingSearch.setAllGroups(true)
     val result: TopGroups[BytesRef] = groupingSearch.search(searcher, bq, 0, 10000)

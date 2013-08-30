@@ -30,11 +30,11 @@ case class SegmentWord(sku: String, word: String, lang: String, cn: String, titl
 
 class IndexUnitActor extends Actor with ActorLogging with MongoUtil {
   //implicit val getSegmentWordResult = GetResult(r => SegmentWord(r.<<, r.<<,r.<<,r.<<,r.<<))
-  val workDir = Config.get("workDir")
-  val oldDir = Config.get("oldDir")
-  val dinobuydb = Config.get("dinobuydb")
+  val workDir = Config[String]("workDir")
+  val oldDir = Config[String]("oldDir")
+  val dinobuydb = Config[String]("dinobuydb")
   val englishAnalyzer = new EnglishAnalyzer(Version.LUCENE_43)
-  val indexBatchSize = Integer.valueOf(Config.get("indexBatchSize"))
+  val indexBatchSize = Config[Int]("indexBatchSize")
   var productColl: MongoCollection = null
   var productInactiveColl: MongoCollection = null
 
