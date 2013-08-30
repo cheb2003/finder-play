@@ -24,6 +24,7 @@ import org.apache.lucene.queryparser.classic.QueryParser
 import org.apache.lucene.analysis.core.WhitespaceAnalyzer
 import java.util
 import scala.collection.mutable
+import scala.util.control.Breaks._
 
 case class AttrGroup(name:String,values:mutable.HashSet[String])
 case class CategoryGroup(indexCode:String,var count:Int,parent:CategoryGroup,children:ListBuffer[CategoryGroup])
@@ -369,6 +370,9 @@ object Dino extends Controller {
     val excludeAreas = Util.getParamString(queryParams, "excludeAreas", "")
     val ranges = Util.getParamString(queryParams, "ranges", "")
 
+    val AXTPage = Util.getPage(queryParams, 1)
+    val AXTSize = Util.getSize(queryParams, 15)
+    val ddSearcher: IndexSearcher = SearcherManager.ddSearcher
     val bqAll: BooleanQuery = new BooleanQuery()
     val qKeyword = DDSearchService.getKeyWordQuery(keyword)
     if(qKeyword != null){
@@ -414,14 +418,27 @@ object Dino extends Controller {
 
     //search attributes 
     val attrData = getAttributes(bqAttr)
-    
+    //AXT
+    val bqA = bqAll.clone()
+    val tA = new Term("skuOrder","0")
+    val tqA = new TermQuery(tA)
+    bqA.add(tqA, Occur.MUST)
 
+    val bqX = bqAll.clone()
+    val tX = new Term("skuOrder","1")
+    val tqX = new TermQuery(tX)
+    bqX.add(tqX, Occur.MUST)
 
+    val bqT = bqAll.clone()
+    val tT = new Term("skuOrder","2")
+    val tqT = new TermQuery(tT)
+    bqT.add(tqT, Occur.MUST)
+
+    val AXTData = getAXT(ddSearcher,bqA,bqX,bqT,AXTPage,AXTSize)
 
     //查询产品
     val sot: Sort = DDSearchService.sorts(sort);
     val ids = ListBuffer[Int]()
-    val ddSearcher: IndexSearcher = SearcherManager.ddSearcher
 
     val start = (page - 1) * size + 1
 
@@ -677,4 +694,133 @@ object Dino extends Controller {
     } else null
     lst 
   }
+
+  private def getAXT(searcher: IndexSearcher,bqA: BooleanQuery,bqX: BooleanQuery,bqT: BooleanQuery,pageNow: Int,pageSize: Int):ListBuffer[ListBuffer[Int]] = {
+
+    val ids = new ListBuffer[ListBuffer[Int]]
+    val a = searcher.search(bqA, Integer.MAX_VALUE)
+    val aTotal = a.totalHits
+    val b = searcher.search(bqX, Integer.MAX_VALUE)
+    val xTotal = b.totalHits
+    val c = searcher.search(bqT, Integer.MAX_VALUE)
+    val tTotal = c.totalHits
+    if(aTotal == 0 && xTotal == 0 && tTotal == 0) {
+      ids
+    }
+    //各产品总数计数
+    var aCount = 0
+    var xCount = 0
+    var tCount = 0
+    //各产品每页显示的个数计数
+    var aPageRatioCount = 0
+    var xPageRatioCount = 0
+    var tPageRatioCount = 0
+    //每页占比
+    if(pageSize == 30) {
+      aPageRatioCount = 15
+      xPageRatioCount = 9
+      tPageRatioCount = 6
+    }else if(pageSize == 60) {
+      aPageRatioCount = 30
+      xPageRatioCount = 18
+      tPageRatioCount = 12
+    }else {
+      aPageRatioCount = 7
+      xPageRatioCount = 5
+      tPageRatioCount = 3
+    }
+    var perPageCount = 0 //每页数计数
+    var pageCount = 0 //页码数计数
+    var exitCount = 0L //循环次数
+    val exit = 3000000L //最多循环次数
+    //各产品每页实际条数计数
+    var aCurPageCount = 0
+    var xCurPageCount = 0
+    var tCurPageCount = 0
+    while(pageCount < pageNow) {
+      pageCount += 1
+
+      aCurPageCount = 0
+      xCurPageCount = 0
+      tCurPageCount = 0
+      perPageCount = 0
+      //防止死循环
+      breakable {
+
+      while(true) {
+        exitCount += 1
+        if(exitCount >= exit) {
+          ids
+        }
+
+        var i = 0
+        while(i < aPageRatioCount && perPageCount < pageSize && aCount < aTotal ) {
+          aCurPageCount += 1
+          aCount += 1
+          perPageCount += 1
+          i += 1
+        }
+        i = 0
+        while(i < xPageRatioCount && perPageCount < pageSize && xCount < xTotal) {
+          xCurPageCount += 1
+          xCount += 1
+          perPageCount += 1
+          i += 1
+        }
+        i = 0
+        while(i < tPageRatioCount && perPageCount < pageSize && tCount < tTotal) {
+          tCurPageCount += 1
+          tCount += 1
+          perPageCount += 1
+          i += 1
+        }
+
+        if(perPageCount >= pageSize || (aCount >= aTotal && xCount >= xTotal && tCount >= tTotal)) {
+          break
+        }
+
+      }
+      }
+    }
+    val indexReader = searcher.getIndexReader()
+    if(aCurPageCount != 0) {
+      val tsdc: TopFieldCollector = TopFieldCollector.create(null, aTotal, false, false, false, false);
+      searcher.search(bqA, tsdc);
+      val topDocs: TopDocs = tsdc.topDocs(aCount - aCurPageCount, aCurPageCount);
+      val scoreDocs = topDocs.scoreDocs
+      var aIds = new ListBuffer[Int]
+      for (i <- 0 until scoreDocs.length) {
+        val indexDoc = indexReader.document(scoreDocs(i).doc)
+        aIds += Integer.valueOf(indexDoc.get("id"))
+      }
+      ids += aIds
+    }
+    if(xCurPageCount != 0) {
+      val tsdc: TopFieldCollector = TopFieldCollector.create(null, aTotal, false, false, false, false);
+      searcher.search(bqA, tsdc);
+      val topDocs: TopDocs = tsdc.topDocs(aCount - aCurPageCount, aCurPageCount);
+      val scoreDocs = topDocs.scoreDocs
+      val xIds = new ListBuffer[Int]
+      for (i <- 0 until scoreDocs.length) {
+        val indexDoc = indexReader.document(scoreDocs(i).doc)
+        xIds += Integer.valueOf(indexDoc.get("id"))
+      }
+      ids += xIds
+    }
+    if(tCurPageCount != 0) {
+      val tsdc: TopFieldCollector = TopFieldCollector.create(null, aTotal, false, false, false, false);
+      searcher.search(bqA, tsdc);
+      val topDocs: TopDocs = tsdc.topDocs(aCount - aCurPageCount, aCurPageCount);
+      val scoreDocs = topDocs.scoreDocs
+      val tIds = new ListBuffer[Int]
+      for (i <- 0 until scoreDocs.length) {
+        val indexDoc = indexReader.document(scoreDocs(i).doc)
+        tIds += Integer.valueOf(indexDoc.get("id"))
+      }
+      ids += tIds
+    }
+    indexReader.close()
+    ids
+  }
+
 }
