@@ -20,6 +20,8 @@ import scala.util.control.Breaks._
 import my.finder.index.service.DDService
 import java.sql.{ResultSet, Statement, Connection}
 import scala.collection.mutable.ListBuffer
+import org.springframework.jdbc.core.JdbcTemplate
+import org.springframework.jdbc.support.rowset.SqlRowSet
 
 /**
  *
@@ -46,8 +48,7 @@ class PartitionIndexTaskActor extends Actor with ActorLogging {
 
   def receive = {
     case msg: IndexIncremetionalTaskMessage => {
-      val i = IndexManage.get(Constants.DD_PRODUCT)
-      indexRootActor ! IndexIncremetionalTaskMessage(i.name, i.using)
+      indexRootActor ! IndexIncremetionalTaskMessage(msg.name, msg.date)
     }
 
     case msg: OldIndexIncremetionalTaskMessage => {
@@ -68,6 +69,10 @@ class PartitionIndexTaskActor extends Actor with ActorLogging {
 
     case msg:PartitionIndexLiftStyleTaskMessage => {
       partitionLiftStyle(msg)
+    }
+
+    case msg: ResolutionMessage => {
+      resolutionMessage()
     }
   }
 
@@ -287,5 +292,29 @@ class PartitionIndexTaskActor extends Actor with ActorLogging {
       DBMssql.colseConn(conn,stmt,rs)
     }
 
+  }
+
+  def resolutionMessage() = {
+    val dbMssql:JdbcTemplate = new JdbcTemplate(DBMssql.ds)
+    dbMssql.setFetchSize(1000)
+    val sql:String = "select k.ProductID_int from EC_Product k where k.IndexCode_nvarchar like '00220009%'"
+    val rs:SqlRowSet = dbMssql.queryForRowSet(sql)
+    val pIds:ListBuffer[Int] = new ListBuffer[Int]()
+    while ( rs.next() ){
+      val pid = rs.getInt("ProductID_int")
+      pIds += pid
+      if ( pIds.length == ddProductIndexSize ){
+        sendResolution( Constants.DD_PRODUCT_RESOLUTION, new Date(), ddProductIndexSize, pIds )
+        pIds.clear()
+      }
+    }
+    if ( pIds.length > 0 ){
+      sendResolution( Constants.DD_PRODUCT_RESOLUTION, new Date(), ddProductIndexSize, pIds )
+    }
+  }
+
+  private def sendResolution(name: String, date: Date, ddProductIndexSize: Int, ids:ListBuffer[Int]) {
+    indexRootActor ! IndexResolutionMessage(name,date,ddProductIndexSize,ids)
+    indexRootManager ! CreateSubTask(name, date, ddProductIndexSize)
   }
 }
