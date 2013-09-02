@@ -37,6 +37,7 @@ import my.finder.common.message.PartitionIndexAttributesTaskMessage
 import my.finder.common.message.OldIndexIncremetionalTaskMessage
 import my.finder.common.message.IndexIncremetionalTaskMessage
 import my.finder.common.message.CommandParseMessage
+import my.finder.console.service.KeyWordBrand
 ;
 
 object Application extends Controller {
@@ -61,6 +62,12 @@ object Application extends Controller {
     Ok(views.html.index("Your new application is ready."))
     //Ok("hello world")
   }
+
+  def keyWordBrand = Action {
+    KeyWordBrand.getKeyWord()
+    Ok("success")
+  }
+
   def hello(name: String) = Action { implicit request =>
     if(name == Constants.DD_PRODUCT) {
       rootActor ! CommandParseMessage(Constants.DD_PRODUCT)
