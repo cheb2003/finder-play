@@ -10,7 +10,8 @@ import org.apache.lucene.store.{FSDirectory, Directory}
 import java.io.File
 import org.apache.commons.lang.StringUtils
 
-object KeyWordBrand {
+class KeyWordBrand {
+
   def getKeyWord() = {
     val jsMysql:JdbcTemplate = new JdbcTemplate(DBMysql.ds)
     val sql = "select distinct k.Keyword_varchar from sea_keywordsTrace k where k.ProjectName_varchar like '%dinodirect%'"
@@ -36,6 +37,7 @@ object KeyWordBrand {
                 }
                 jsMysql.update(sql)
               }
+              jsMysql.update(sql)
           }
       }
     }
@@ -123,6 +125,5 @@ object KeyWordBrand {
       null
     }
   }
-
 
 }

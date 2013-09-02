@@ -20,19 +20,19 @@ object DBService {
   val productTypesBr = new HashMap[String, String]()
 
   def init = {
-    Class.forName(Config.get("dbDriver"))
+    Class.forName(Config[String]("dbDriver"))
     val ds = new BoneCPDataSource()
-    ds.setJdbcUrl(Config.get("dbUrl"))
-    ds.setUsername(Config.get("dbUser"))
-    ds.setPassword(Config.get("dbPassword"))
+    ds.setJdbcUrl(Config[String]("dbUrl"))
+    ds.setUsername(Config[String]("dbUser"))
+    ds.setPassword(Config[String]("dbPassword"))
     ds.setPartitionCount(3)
     ds.setMaxConnectionsPerPartition(15)
     ds.setReleaseHelperThreads(5)
 
     _ds = ds
 
-    _tag = new CWSTagger(Config.get("tag"))
-    val dictionary = new Dictionary(Config.get("dict"));
+    _tag = new CWSTagger(Config[String]("tag"))
+    val dictionary = new Dictionary(Config[String]("dict"));
     _tag.setDictionary(dictionary);
     loadProductTypeDatas
   }

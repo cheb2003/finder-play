@@ -1,24 +1,18 @@
 package my.finder.console.service
 
-import play.api.Play.current
+
 import java.sql.{ResultSet, Statement, Connection, DriverManager}
 import com.jolbox.bonecp.BoneCPDataSource
 import javax.sql.DataSource
+import my.finder.common.util.Config
 
-/**
- * Created with IntelliJ IDEA.
- * User: Administrator
- * Date: 13-7-25
- * Time: 上午10:02
- * To change this template use File | Settings | File Templates.
- */
 object DBMysql {
 
   private var _ds: DataSource = null
-  private val driver = current.configuration.getString("mysqlDBDriver").get
-  private val url = current.configuration.getString("mysqlDBUrl").get
-  private val user = current.configuration.getString("mysqlDBUser").get
-  private val password = current.configuration.getString("mysqlDBPassword").get
+  private val driver = Config[String]("mysqlDBDriver")
+  private val url = Config[String]("mysqlDBUrl")
+  private val user = Config[String]("mysqlDBUser")
+  private val password = Config[String]("mysqlDBPassword")
   def init = {
     Class.forName(driver)
     val ds = new BoneCPDataSource()

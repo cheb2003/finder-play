@@ -5,17 +5,13 @@ import my.finder.common.message._
 
 
 import com.mongodb.casbah.Imports._
-import my.finder.common.util.{Constants, Util}
+import my.finder.common.util.{Config, Constants, Util}
 import my.finder.console.service.DBMssql
 import java.util.Date
 
 
 
 import my.finder.console.service.{MongoManager, IndexManage}
-
-
-
-import play.api.Play.current
 import scala.util.control.Breaks._
 import my.finder.index.service.DDService
 import java.sql.{ResultSet, Statement, Connection}
@@ -31,8 +27,8 @@ case class  ProductAttr(val id:Int,value:String,name:String)
 
 class PartitionIndexTaskActor extends Actor with ActorLogging {
   var mongoClient:MongoClient = MongoManager()
-  val dinobuydb = current.configuration.getString("dinobuydb").get
-  val ddProductIndexSize: Int = Integer.valueOf(current.configuration.getString("indexBatchSize").get)
+  val dinobuydb = Config[String]("dinobuydb")
+  val ddProductIndexSize: Int = Config[Int]("indexBatchSize")
   //val dbProductIndexSize: Int = Integer.valueOf(current.configuration.getString("indexBatchSize").get)
   var productColl:MongoCollection = null
   //TODO 改回来 var q:DBObject = ("ec_productprice.unitprice_money" $gt 0) ++ ("ec_product.isstopsale_bit" -> false)
@@ -204,8 +200,8 @@ class PartitionIndexTaskActor extends Actor with ActorLogging {
     val minItem = productColl.find().sort(MongoDBObject("productid_int" -> 1)).limit(1)
     val maxItem = productColl.find().sort(MongoDBObject("productid_int" -> -1)).limit(1)
     val maxId = maxItem.next().as[Int]("productid_int")
-    val minId = if(current.configuration.getBoolean("debugIndex").get) {
-      maxId - current.configuration.getInt("debugItemCount").get
+    val minId = if(Config[Boolean]("debugIndex")) {
+      maxId - Config[Int]("debugItemCount")
     } else {
       minItem.next().as[Int]("productid_int")
     }
@@ -264,8 +260,8 @@ class PartitionIndexTaskActor extends Actor with ActorLogging {
 
       var total: Long = totalCount / ddProductIndexSize + 1
       //debug模式任务分发
-      if(current.configuration.getBoolean("debugIndex").get && total > current.configuration.getInt("debugTaskCount").get){
-        total = current.configuration.getInt("debugTaskCount").get
+      if(Config[Boolean]("debugIndex") && total > Config[Int]("debugTaskCount")){
+        total = Config[Int]("debugTaskCount")
       }
 
       log.info("maxId=========={}",maxId)

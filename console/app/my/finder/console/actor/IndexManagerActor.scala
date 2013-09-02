@@ -1,10 +1,8 @@
 package my.finder.console.actor
 
-import akka.actor.{Props, ActorLogging, Actor}
+import akka.actor.{ActorLogging, Actor}
 import my.finder.common.message.{CloseIndexWriterMessage, CreateSubTask, MergeIndexMessage, CompleteSubTask}
 import my.finder.common.util.Util
-
-import play.api.Play.current
 /**
  *
  */
