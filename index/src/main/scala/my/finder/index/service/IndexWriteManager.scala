@@ -19,8 +19,8 @@ object IndexWriteManager{
 
 
   private var writerMap = Map[String, IndexWriter]()
-  val workDir = Config.get("workDir")
-  val oldDir = Config.get("oldDir")
+  val workDir = Config[String]("workDir")
+  val oldDir = Config[String]("oldDir")
   private var oldIncWriter:IndexWriter = null
 
   def getIndexWriter(name: String, date: Date): IndexWriter = {
@@ -85,7 +85,7 @@ class IndexWriteManager extends Actor{
       writer.commit
       val console = context.actorFor(Util.getConsoleRootAkkaURLFromMyConfig)
       val incPath = Util.getKey(msg.name,msg.date)
-      val workDir = Config.get("workDir")
+      val workDir = Config[String]("workDir")
       val file = new File(workDir + "/" + incPath)
       val timeFile = new File(workDir + "/" + incPath + "/time")
       if(!file.exists()){

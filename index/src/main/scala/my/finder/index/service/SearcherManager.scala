@@ -10,8 +10,8 @@ import my.finder.common.util.{Util, Config}
  *
  */
 object SearcherManager {
-  val workDir = Config.get("workDir")
-  val oldDir = Config.get("oldDir")
+  val workDir = Config[String]("workDir")
+  val oldDir = Config[String]("oldDir")
   private var searcherMap = Map[String, IndexSearcher]()
   def getSearcher(path:String): IndexSearcher = {
     synchronized {

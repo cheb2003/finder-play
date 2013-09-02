@@ -1,19 +1,13 @@
 package my.finder.common.util
 
-import java.util.Properties
+import com.typesafe.config._
 
 /**
- *
+ * 读取配置文件
  */
 object Config {
-  val p:Properties = new Properties()
-  def init(s:String) = {
-    val in = this.getClass.getClassLoader.getResourceAsStream(s)
-    p.load(in)
-    in.close()
-  }
-  def get(key:String) = {
-    p.getProperty(key)
+  private val conf = ConfigFactory.load
+  def apply[A](s:String):A = {
+  	conf.getAnyRef(s).asInstanceOf[A]
   }
 }
-

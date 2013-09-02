@@ -10,15 +10,15 @@ import scala.collection.mutable.ListBuffer
  */
 object MongoManager {
   var mongoClient:MongoClient = null
-  val mongoCount = Integer.valueOf(Config.get("mongoCount"))
+  val mongoCount = Config[Int]("mongoCount")
   def apply():MongoClient = {
     def address:List[ServerAddress] = {
       var i = 0;
       val addresses = ListBuffer[ServerAddress]()
       while (i < mongoCount) {
         i += 1
-        val url: String = Config.get("mongoDBUrl" + i)
-        val port: Int = Integer.valueOf(Config.get("mongoDBPort" + i))
+        val url: String = Config[String]("mongoDBUrl" + i)
+        val port: Int = Config[Int]("mongoDBPort" + i)
         addresses += new ServerAddress(url, port)
       }
       addresses.toList
@@ -26,9 +26,9 @@ object MongoManager {
     def credentials:List[MongoCredential] = {
       val i = 1;
       val credentials = ListBuffer[MongoCredential]()
-      val user: String = Config.get("mongoDBUser" + i)
-      val password: String = Config.get("mongoDBPassword" + i)
-      val db: String = Config.get("mongoAuthDB" + i)
+      val user: String = Config[String]("mongoDBUser" + i)
+      val password: String = Config[String]("mongoDBPassword" + i)
+      val db: String = Config[String]("mongoAuthDB" + i)
       credentials += MongoCredential(user,db,password.toCharArray)
       credentials.toList
     }
