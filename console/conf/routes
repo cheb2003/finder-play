@@ -9,6 +9,7 @@ GET         /inc                              controllers.Application.inc
 GET         /incDD                            controllers.Application.incDD
 GET         /indexInfo                        controllers.Application.indexInfo
 GET         /query                            controllers.Application.query
+GET         /keyWordBrand                     controllers.Application.keyWordBrand
 GET         /resolution                       controllers.Application.searchResolution
 GET         /queryKeyword                     controllers.Application.queryKeyword
 GET         /generateSpellCheck               controllers.Application.generateSpellCheck
