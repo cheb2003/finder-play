@@ -33,9 +33,16 @@ object DDSearchService{
     val indexCode = Util.getParamString(queryParams, "indexcode", "")
     val shopId = Util.getParamString(queryParams, "shopid", "")
     val keyword = Util.getParamString(queryParams, "keyword", "")
+    val isFreeShipping = Util.getParamString(queryParams, "isfreeshipping", "")
   	def searchShop:IdsPageResult = {
       val bq = new BooleanQuery
-      
+
+      if(StringUtils.isNotBlank(isFreeShipping)){
+        val tIsFreeShipping:Term = new Term("isFreeShipping",isFreeShipping)
+        val tqIsFreeShipping = new TermQuery(tIsFreeShipping)
+        bq.add(tqIsFreeShipping,Occur.MUST)
+      }
+
       val tShopId:Term = new Term("shopIds",shopId)
       val tqShopId = new TermQuery(tShopId)
       bq.add(tqShopId,Occur.MUST)

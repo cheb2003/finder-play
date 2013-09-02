@@ -45,7 +45,9 @@ class Product(val id:String,
   var excludeAreas:String,
   val price:Double,
   var reviews:Int,
-  val isClearance:String)
+  var isClearance:String,
+  var isFreeShipping:String
+)
 
 class IndexUnitActorDD extends Actor with ActorLogging {
 
@@ -86,6 +88,7 @@ class IndexUnitActorDD extends Actor with ActorLogging {
   private val excludeAreasField = new TextField("excludeAreas","",Field.Store.YES)
   private val reviewsField = new IntField("reviews",0,Field.Store.YES)
   private val isClearanceField = new StringField("isClearance","",Field.Store.YES)
+  private val isFreeShippingField = new StringField("isFreeShipping","",Field.Store.YES)
 
   private var doc: Document = null
 
@@ -123,7 +126,7 @@ class IndexUnitActorDD extends Actor with ActorLogging {
                 IndexCode_nvarchar,IsOneSale_tinyint,IsAliExpress_tinyint,BusinessName_nvarchar,CreateTime_datetime,
                 ProductTypeID_int,IsQualityProduct_tinyint,VentureStatus_tinyint,VentureLevelNew_tinyint,
                 IsTaoBao_tinyint,ProductBrandID_int,productbrand_nvarchar,BusinessBrand_nvarchar,
-                ProductPrice_money,QDWProductStatus_int,isClearance_tinyint from ec_product with(nolock) where ProductID_int in ($ids)"""
+                ProductPrice_money,QDWProductStatus_int,isClearance_tinyint,isFreeShipping_bit from ec_product with(nolock) where ProductID_int in ($ids)"""
         stmt.setFetchSize(msg.batchSize)
         bSql = System.currentTimeMillis()
         rs = stmt.executeQuery(sql)
@@ -134,7 +137,7 @@ class IndexUnitActorDD extends Actor with ActorLogging {
             rs.getString("ProductID_int"),rs.getString("productaliasname_nvarchar"),rs.getString("ProductKeyID_nvarchar"),rs.getString("IndexCode_nvarchar"),rs.getString("IsOneSale_tinyint"),rs.getString("IsAliExpress_tinyint"),
             rs.getString("BusinessName_nvarchar"),rs.getTimestamp("CreateTime_datetime"),rs.getString("ProductTypeID_int"),rs.getString("IsQualityProduct_tinyint"),rs.getString("VentureStatus_tinyint"),rs.getString("VentureLevelNew_tinyint"),
             rs.getString("IsTaoBao_tinyint"),rs.getString("ProductBrandID_int"),rs.getString("productbrand_nvarchar"),"","","","",
-            "","","",Float.NaN,"","","","","",rs.getDouble("ProductPrice_money"),0,rs.getString("isClearance_tinyint")
+            "","","",Float.NaN,"","","","","",rs.getDouble("ProductPrice_money"),0,rs.getString("isClearance_tinyint"),rs.getString("isFreeShipping_bit")
           )
           lst += product
           //buffer1.append(rs.getInt("ProductID_int")).append(',')
@@ -529,11 +532,17 @@ class IndexUnitActorDD extends Actor with ActorLogging {
       excludeAreasField.setStringValue("")
       reviewsField.setIntValue(0)
       isClearanceField.setStringValue("")
+      isFreeShippingField.setStringValue("")
 
 
 
       //设置本次结果集的值
       doc = new Document()
+
+      if(StringUtils.isNotBlank(p.isFreeShipping)){
+        isFreeShippingField.setStringValue(p.isFreeShipping)
+        doc.add(isFreeShippingField)
+      }
 
       reviewsField.setIntValue(p.reviews)
       doc.add(reviewsField)
