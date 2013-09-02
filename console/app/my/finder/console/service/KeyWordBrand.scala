@@ -10,7 +10,7 @@ import org.apache.lucene.store.{FSDirectory, Directory}
 import java.io.File
 import org.apache.commons.lang.StringUtils
 
-class KeyWordBrand {
+object KeyWordBrand {
 
   def getKeyWord() = {
     val jsMysql:JdbcTemplate = new JdbcTemplate(DBMysql.ds)
