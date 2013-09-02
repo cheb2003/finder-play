@@ -21,6 +21,7 @@ GET     /search/liftStyle           controllers.SearchLiftStyle.searchLiftStyle
 #POST   /search/product/json		controllers.Dino.productJSON
 #POST   /search/product/xml		    controllers.Dino.productXML
 POST	/dd/search/product/json		controllers.Dino.productJSON
+GET  	/dd/search/product/json		controllers.Dino.productJSON
 #POST	/dd/search/categories		controllers.Dino.categories
 POST	/dd/search/shop		        controllers.Dino.shop
 POST 	/dd/search/brand			controllers.Dino.brand

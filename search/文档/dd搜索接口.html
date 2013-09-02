@@ -5,7 +5,7 @@
 	</head>
 	<body>
 		<b>站内搜索接口</b>
-		<form action="http://localhost:9000/dd/search/product/json" method="POST">
+		<form action="http://localhost:9001/dd/search/product/json" method="POST">
 			<table>
 				<tr>
 					<td>关键字keyword：</td>
@@ -52,6 +52,11 @@
 					<td><input type="text" name="tag"> </td>
 					<td>对应dd网站搜索结果页面4个标签：all显示所有结果，new显示新品，event显示事件营销产品，clear清仓产品</td>
 				</tr>
+                <tr>
+                    <td>是否包邮isfreeshipping</td>
+                    <td><input type="text" name="isfreeshipping"> </td>
+                    <td>不包邮0，包邮1</td>
+                </tr>
 				<tr>
 					<td>排除产品excludeid</td>
 					<td><input type="text" name="excludeid"></td>
@@ -68,7 +73,7 @@
 			</table>
 		</form>
 		<b>品类搜索接口</b>
-		<form action="http://localhost:9999/dd/search/categories" method="POST">
+		<form action="http://localhost:9001/dd/search/categories" method="POST">
 			<table>
 				<tr>
 					<td>页数page：</td>
@@ -153,6 +158,11 @@
 					<td><input type="text" name="country"> </td>
 					<td>eg:us ua</td>
 				</tr>
+                <tr>
+                    <td>是否包邮isfreeshipping</td>
+                    <td><input type="text" name="isfreeshipping"> </td>
+                    <td>不包邮0，包邮1</td>
+                </tr>
 				<tr>
 					<td>排除产品excludeid</td>
 					<td><input type="text" name="excludeid"></td>

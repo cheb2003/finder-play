@@ -369,9 +369,8 @@ object Dino extends Controller {
     val excludeIds = Util.getParamString(queryParams, "excludeids", "")
     val excludeAreas = Util.getParamString(queryParams, "excludeAreas", "")
     val ranges = Util.getParamString(queryParams, "ranges", "")
+    val isFreeShipping = Util.getParamString(queryParams, "isfreeshipping", "")
 
-    val AXTPage = Util.getPage(queryParams, 1)
-    val AXTSize = Util.getSize(queryParams, 15)
     val ddSearcher: IndexSearcher = SearcherManager.ddSearcher
     val bqAll: BooleanQuery = new BooleanQuery()
     val qKeyword = DDSearchService.getKeyWordQuery(keyword)
@@ -409,6 +408,12 @@ object Dino extends Controller {
       bqAll.add(qRanges, Occur.MUST)  
     }
 
+    if (StringUtils.isNotBlank(isFreeShipping)) {
+      val tIsFreeShipping:Term = new Term("isFreeShipping",isFreeShipping)
+      val tqIsFreeShipping = new TermQuery(tIsFreeShipping)
+      bqAll.add(tqIsFreeShipping,Occur.MUST)
+    }
+
     //search attributes query
     val bqAttr = bqAll.clone()
 
@@ -433,10 +438,10 @@ object Dino extends Controller {
     val tT = new Term("skuOrder","2")
     val tqT = new TermQuery(tT)
     bqT.add(tqT, Occur.MUST)
+    //查询AXT产品
+    val AXTIds = getAXT(ddSearcher,bqA,bqX,bqT,page,size,sort)
 
-    val AXTData = getAXT(ddSearcher,bqA,bqX,bqT,AXTPage,AXTSize)
-
-    //查询产品
+    /*//查询产品
     val sot: Sort = DDSearchService.sorts(sort);
     val ids = ListBuffer[Int]()
 
@@ -450,7 +455,7 @@ object Dino extends Controller {
     val total = tsdc.getTotalHits
     scoreDocs.map { s =>
       ids += java.lang.Integer.valueOf(ddSearcher.getIndexReader.document(s.doc).get("id"))
-    }
+    }*/
 
     //返回品类
     val groupingSearch = new GroupingSearch("indexCode");
@@ -464,7 +469,7 @@ object Dino extends Controller {
         buildCategoryGroupTree(categoryGroups,indexCode,topGroup.totalHits,1,null)
       }
     }
-    val result = new ProductSearchPageResult(ids,attrData,categoryGroups,page,size,total,bqAll.toString)
+    val result = new ProductSearchPageResult(AXTIds,attrData,categoryGroups,page,size,AXTTotal,bqAll.toString)
 
     Ok(toJson(result))
   }
@@ -694,19 +699,22 @@ object Dino extends Controller {
     } else null
     lst 
   }
+  private var AXTTotal: Int = 0
+  private def getAXT(searcher: IndexSearcher,bqA: BooleanQuery,bqX: BooleanQuery,bqT: BooleanQuery,pageNow: Int,pageSize: Int,sort: String):ListBuffer[Int] = {
 
-  private def getAXT(searcher: IndexSearcher,bqA: BooleanQuery,bqX: BooleanQuery,bqT: BooleanQuery,pageNow: Int,pageSize: Int):ListBuffer[ListBuffer[Int]] = {
-
-    val ids = new ListBuffer[ListBuffer[Int]]
-    val a = searcher.search(bqA, Integer.MAX_VALUE)
-    val aTotal = a.totalHits
-    val b = searcher.search(bqX, Integer.MAX_VALUE)
-    val xTotal = b.totalHits
-    val c = searcher.search(bqT, Integer.MAX_VALUE)
-    val tTotal = c.totalHits
+    val ids = new ListBuffer[Int]
+    val sot: Sort = DDSearchService.sorts(sort)
+    val a = searcher.search(bqA, Integer.MAX_VALUE,sot)
+    val aTotal: Int = a.totalHits
+    val b = searcher.search(bqX, Integer.MAX_VALUE,sot)
+    val xTotal: Int = b.totalHits
+    val c = searcher.search(bqT, Integer.MAX_VALUE,sot)
+    val tTotal: Int = c.totalHits
     if(aTotal == 0 && xTotal == 0 && tTotal == 0) {
-      ids
+      return ids
     }
+    //所有产品总数，目前产品均为AXT的产品
+    AXTTotal = aTotal + xTotal + tTotal
     //各产品总数计数
     var aCount = 0
     var xCount = 0
@@ -716,18 +724,30 @@ object Dino extends Controller {
     var xPageRatioCount = 0
     var tPageRatioCount = 0
     //每页占比
-    if(pageSize == 30) {
+    if(pageSize == 10) {
+      aPageRatioCount = 5
+      xPageRatioCount = 3
+      tPageRatioCount = 2
+    }else if(pageSize == 20) {
+      aPageRatioCount = 10
+      xPageRatioCount = 6
+      tPageRatioCount = 4
+    }else if(pageSize == 30) {
       aPageRatioCount = 15
       xPageRatioCount = 9
       tPageRatioCount = 6
+    }else if(pageSize == 40) {
+      aPageRatioCount = 20
+      xPageRatioCount = 12
+      tPageRatioCount = 8
     }else if(pageSize == 60) {
       aPageRatioCount = 30
       xPageRatioCount = 18
       tPageRatioCount = 12
     }else {
-      aPageRatioCount = 7
-      xPageRatioCount = 5
-      tPageRatioCount = 3
+      aPageRatioCount = 10
+      xPageRatioCount = 6
+      tPageRatioCount = 4
     }
     var perPageCount = 0 //每页数计数
     var pageCount = 0 //页码数计数
@@ -750,7 +770,7 @@ object Dino extends Controller {
       while(true) {
         exitCount += 1
         if(exitCount >= exit) {
-          ids
+          return ids
         }
 
         var i = 0
@@ -784,42 +804,26 @@ object Dino extends Controller {
     }
     val indexReader = searcher.getIndexReader()
     if(aCurPageCount != 0) {
-      val tsdc: TopFieldCollector = TopFieldCollector.create(null, aTotal, false, false, false, false);
-      searcher.search(bqA, tsdc);
-      val topDocs: TopDocs = tsdc.topDocs(aCount - aCurPageCount, aCurPageCount);
-      val scoreDocs = topDocs.scoreDocs
-      var aIds = new ListBuffer[Int]
-      for (i <- 0 until scoreDocs.length) {
-        val indexDoc = indexReader.document(scoreDocs(i).doc)
-        aIds += Integer.valueOf(indexDoc.get("id"))
+      val aScoreDocs = a.scoreDocs
+      for (i <- aCount-aCurPageCount until aCount) {
+        val indexDoc = indexReader.document(aScoreDocs(i).doc)
+        ids += Integer.valueOf(indexDoc.get("id"))
       }
-      ids += aIds
     }
     if(xCurPageCount != 0) {
-      val tsdc: TopFieldCollector = TopFieldCollector.create(null, aTotal, false, false, false, false);
-      searcher.search(bqA, tsdc);
-      val topDocs: TopDocs = tsdc.topDocs(aCount - aCurPageCount, aCurPageCount);
-      val scoreDocs = topDocs.scoreDocs
-      val xIds = new ListBuffer[Int]
-      for (i <- 0 until scoreDocs.length) {
-        val indexDoc = indexReader.document(scoreDocs(i).doc)
-        xIds += Integer.valueOf(indexDoc.get("id"))
+      val xScoreDocs = b.scoreDocs
+      for (i <- xCount-xCurPageCount until xCount) {
+        val indexDoc = indexReader.document(xScoreDocs(i).doc)
+        ids += Integer.valueOf(indexDoc.get("id"))
       }
-      ids += xIds
     }
     if(tCurPageCount != 0) {
-      val tsdc: TopFieldCollector = TopFieldCollector.create(null, aTotal, false, false, false, false);
-      searcher.search(bqA, tsdc);
-      val topDocs: TopDocs = tsdc.topDocs(aCount - aCurPageCount, aCurPageCount);
-      val scoreDocs = topDocs.scoreDocs
-      val tIds = new ListBuffer[Int]
-      for (i <- 0 until scoreDocs.length) {
-        val indexDoc = indexReader.document(scoreDocs(i).doc)
-        tIds += Integer.valueOf(indexDoc.get("id"))
+      val tScoreDocs = c.scoreDocs
+      for (i <- tCount-tCurPageCount until tCount) {
+        val indexDoc = indexReader.document(tScoreDocs(i).doc)
+        ids += Integer.valueOf(indexDoc.get("id"))
       }
-      ids += tIds
     }
-    indexReader.close()
     ids
   }
 
