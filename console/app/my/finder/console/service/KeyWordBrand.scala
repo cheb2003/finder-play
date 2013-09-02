@@ -37,7 +37,6 @@ class KeyWordBrand {
                 }
                 jsMysql.update(sql)
               }
-              jsMysql.update(sql)
           }
       }
     }
